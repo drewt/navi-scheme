@@ -30,28 +30,28 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 
 	int i = 0;
 	sexp_t sexp = make_string(size);
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct sexp_string *str = sexp_string(sexp);
 
 	sexp_list_for_each(cons, list) {
-		u_set_char((char*)vec->data, &i, sexp_char(car(cons)));
+		u_set_char((char*)str->data, &i, sexp_char(car(cons)));
 	}
 	return sexp;
 }
 
-char *scm_to_c_string(sexp_t string)
+char *scm_to_c_string(sexp_t sexp)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(string);
-	char *cstr = malloc(vec->size + 1);
+	struct sexp_string *string = sexp_string(sexp);
+	char *cstr = malloc(string->size + 1);
 
-	for (size_t i = 0; i < vec->size; i++)
-		cstr[i] = vec->data[i];
-	cstr[vec->size] = '\0';
+	for (size_t i = 0; i < string->size; i++)
+		cstr[i] = string->data[i];
+	cstr[string->size] = '\0';
 	return cstr;
 }
 
 size_t string_length(sexp_t string)
 {
-	return u_strlen((char*)sexp_bytevec(string)->data);
+	return u_strlen((char*)sexp_string(string)->data);
 }
 
 DEFUN(scm_stringp, args)
@@ -72,14 +72,14 @@ DEFUN(scm_make_string, args)
 		ch = char_cast(cadr(args));
 
 	/* FIXME: invalid codepoint? */
-	sexp_t string = make_string(length * u_char_size(ch));
+	sexp_t sexp = make_string(length * u_char_size(ch));
 
 	int j = 0;
-	struct sexp_bytevec *vec = sexp_bytevec(string);
+	struct sexp_string *string = sexp_string(sexp);
 	for (size_t i = 0; i < (size_t) length; i++)
-		u_set_char_raw((char*)vec->data, &j, ch);
+		u_set_char_raw((char*)string->data, &j, ch);
 
-	return string;
+	return sexp;
 }
 
 DEFUN(scm_string, args)
@@ -90,55 +90,58 @@ DEFUN(scm_string, args)
 DEFUN(scm_string_length, args)
 {
 	type_check(car(args), SEXP_STRING);
-	return make_num(u_strlen((char*)sexp_bytevec(car(args))->data));
+	// FIXME: use length field
+	return make_num(u_strlen((char*)sexp_string(car(args))->data));
 }
 
 DEFUN(scm_string_ref, args)
 {
 	long k;
-	struct sexp_bytevec *vec;
+	struct sexp_string *str;
 
 	type_check(car(args), SEXP_STRING);
 	type_check(cadr(args), SEXP_NUM);
 
-	vec = sexp_bytevec(car(args));
+	str = sexp_string(car(args));
 	k = sexp_num(cadr(args));
 
-	if (k < 0 || (size_t) k >= vec->size)
+	if (k < 0 || (size_t) k >= str->size)
 		die("string index out of bounds");
 
-	return make_char(vec->data[k]);
+	// FIXME: UTF-8
+	return make_char(str->data[k]);
 }
 
 DEFUN(scm_string_set, args)
 {
 	long k;
-	struct sexp_bytevec *vec;
+	struct sexp_string *str;
 
 	type_check(car(args),   SEXP_STRING);
 	type_check(cadr(args),  SEXP_NUM);
 	type_check(caddr(args), SEXP_CHAR);
 
-	vec = sexp_bytevec(car(args));
+	str = sexp_string(car(args));
 	k = sexp_num(cadr(args));
 
-	if (k < 0 || (size_t) k >= vec->size)
+	if (k < 0 || (size_t) k >= str->size)
 		die("string index out of bounds");
 
-	vec->data[k] = sexp_char(caddr(args));
+	// FIXME: UTF-8
+	str->data[k] = sexp_char(caddr(args));
 	return unspecified();
 }
 
 #define BINARY_PREDICATE(cname, op) \
 	DEFUN(cname, args) \
 	{ \
-		struct sexp_bytevec *fst, *snd; \
+		struct sexp_string *fst, *snd; \
 		\
 		type_check(car(args),  SEXP_STRING); \
 		type_check(cadr(args), SEXP_STRING); \
 		\
-		fst = sexp_bytevec(car(args)); \
-		snd = sexp_bytevec(cadr(args)); \
+		fst = sexp_string(car(args)); \
+		snd = sexp_string(cadr(args)); \
 		\
 		if (fst->size != snd->size) \
 			return make_bool(false); \
@@ -153,13 +156,13 @@ DEFUN(scm_string_set, args)
 #define BINARY_CI_PREDICATE(cname, op) \
 	DEFUN(cname, args) \
 	{ \
-		struct sexp_bytevec *fst, *snd; \
+		struct sexp_string *fst, *snd; \
 		\
 		type_check(car(args),  SEXP_STRING); \
 		type_check(cadr(args), SEXP_STRING); \
 		\
-		fst = sexp_bytevec(car(args)); \
-		snd = sexp_bytevec(cadr(args)); \
+		fst = sexp_string(car(args)); \
+		snd = sexp_string(cadr(args)); \
 		\
 		if (fst->size != snd->size) \
 			return make_bool(false); \
@@ -191,30 +194,31 @@ DEFUN(scm_substring, args)
 DEFUN(scm_string_append, args)
 {
 	sexp_t cons, sexp;
-	struct sexp_bytevec *vec;
+	struct sexp_string *str;
 	size_t i = 0, size = 0;
 
 	/* count combined size */
 	sexp_list_for_each(cons, args) {
-		size += bytevec_cast(car(cons), SEXP_STRING)->size;
+		size += string_cast(car(cons))->size;
 	}
 
 	/* allocate */
 	sexp = make_string(size);
-	vec = sexp_bytevec(sexp);
+	str = sexp_string(sexp);
 
 	/* copy */
 	sexp_list_for_each(cons, args) {
-		struct sexp_bytevec *other = sexp_bytevec(car(cons));
+		struct sexp_string *other = sexp_string(car(cons));
 		for (size_t j = 0; j < other->size; j++)
-			vec->data[i++] = other->data[j];
+			str->data[i++] = other->data[j];
 	}
 	return sexp;
 }
 
 DEFUN(scm_string_to_list, args)
 {
-	return bytevec_to_list(type_check(car(args), SEXP_STRING));
+	//return bytevec_to_list(type_check(car(args), SEXP_STRING));
+	return unspecified(); // FIXME
 }
 
 DEFUN(scm_list_to_string, args)
@@ -247,9 +251,9 @@ static bool indices_valid(size_t size, long start, long end)
 static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 		size_t end)
 {
-	struct sexp_bytevec *tov = sexp_bytevec(to), *fromv = sexp_bytevec(from);
+	struct sexp_string *tos = sexp_string(to), *froms = sexp_string(from);
 	for (size_t i = 0; i < end; i++)
-		tov->data[at++] = fromv->data[i];
+		tos->data[at++] = froms->data[i];
 	return to;
 }
 
@@ -257,31 +261,31 @@ DEFUN(scm_string_fill, args)
 {
 	sexp_t ch;
 	long end, start;
-	struct sexp_bytevec *vec;
+	struct sexp_string *str;
 	int nr_args = list_length(args);
 
-	vec = bytevec_cast(car(args), SEXP_STRING);
+	str = string_cast(car(args));
 	ch = type_check(cadr(args), SEXP_CHAR);
 	start = (nr_args > 2) ? fixnum_cast(caddr(args)) : 0;
-	end = (nr_args > 3) ? fixnum_cast(cadddr(args)) : (long) vec->size;
+	end = (nr_args > 3) ? fixnum_cast(cadddr(args)) : (long) str->size;
 
-	if (!indices_valid(vec->size, start, end))
+	if (!indices_valid(str->size, start, end))
 		die("invalid indices");
 
 	for (size_t i = start; i < (size_t) end; i++)
-		vec->data[i] = sexp_char(ch);
+		str->data[i] = sexp_char(ch);
 
 	return unspecified();
 }
 
 sexp_t string_copy(sexp_t string)
 {
-	struct sexp_bytevec *from_vec = sexp_bytevec(string);
-	sexp_t to = make_string(from_vec->size);
-	struct sexp_bytevec *to_vec = sexp_bytevec(to);
+	struct sexp_string *from_str = sexp_string(string);
+	sexp_t to = make_string(from_str->size);
+	struct sexp_string *to_str = sexp_string(to);
 
-	for (size_t i = 0; i < from_vec->size; i++)
-		to_vec->data[i] = from_vec->data[i];
+	for (size_t i = 0; i < from_str->size; i++)
+		to_str->data[i] = from_str->data[i];
 
 	return to;
 }
@@ -290,15 +294,15 @@ DEFUN(scm_string_copy, args)
 {
 	sexp_t from;
 	long start, end;
-	struct sexp_bytevec *vec;
+	struct sexp_string *str;
 	int nr_args = list_length(args);
 
 	from = type_check(car(args), SEXP_STRING);
-	vec = sexp_bytevec(from);
+	str = sexp_string(from);
 	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) str->size;
 
-	if (!indices_valid(vec->size, start, end))
+	if (!indices_valid(str->size, start, end))
 		die("invalid indices");
 
 	return copy_to(make_string(end - start), 0, from, start, end);
@@ -308,18 +312,18 @@ DEFUN(scm_string_copy_to, args)
 {
 	sexp_t to, from;
 	long at, start, end;
-	struct sexp_bytevec *from_vec, *to_vec;
+	struct sexp_string *from_str, *to_str;
 	int nr_args = list_length(args);
 
 	to = type_check(car(args), SEXP_STRING);
 	at = fixnum_cast(cadr(args));
 	from = type_check(caddr(args), SEXP_STRING);
-	to_vec = sexp_bytevec(to);
-	from_vec = sexp_bytevec(from);
+	to_str = sexp_string(to);
+	from_str = sexp_string(from);
 	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
-	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long) from_vec->size;
+	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long) from_str->size;
 
-	if (!copy_valid(to_vec->size, at, from_vec->size, start, end))
+	if (!copy_valid(to_str->size, at, from_str->size, start, end))
 		die("invalid indices");
 
 	copy_to(to, at, from, start, end);

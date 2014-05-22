@@ -61,16 +61,17 @@ bool is_proper_list(sexp_t list)
 
 sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)
 {
-	sexp_t args, argptr, cons;
+	sexp_t cons;
+	struct sexp_pair head, *ptr;
 
-	args = argptr = make_empty_pair();
+	ptr = &head;
 	sexp_list_for_each(cons, sexp) {
-		sexp_pair(argptr)->cdr = make_empty_pair();
-		argptr = cdr(argptr);
-		sexp_pair(argptr)->car = fn(car(cons), data);
+		ptr->cdr = make_empty_pair();
+		ptr = sexp_pair(ptr->cdr);
+		ptr->car = fn(car(cons), data);
 	}
-	sexp_pair(argptr)->cdr = make_nil();
-	return cdr(args);
+	ptr->cdr = make_nil();
+	return head.cdr;
 }
 
 DEFUN(scm_cons, args)

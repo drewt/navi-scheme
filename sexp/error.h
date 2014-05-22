@@ -89,6 +89,12 @@ static inline unsigned long _char_cast(sexp_t sexp, env_t env)
 	return sexp_char(_type_check(sexp, SEXP_CHAR, env));
 }
 
+#define string_cast(sexp) _string_cast(sexp, ____env)
+static inline struct sexp_string *_string_cast(sexp_t sexp, env_t env)
+{
+	return sexp_string(_type_check(sexp, SEXP_STRING, env));
+}
+
 #define bytevec_cast(sexp, type) _bytevec_cast(sexp, type, ____env)
 static inline struct sexp_bytevec *_bytevec_cast(sexp_t sexp,
 		enum sexp_type type, env_t env)

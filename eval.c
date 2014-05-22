@@ -84,7 +84,7 @@ static sexp_t eval_defun(sexp_t fundecl, sexp_t rest, env_t env)
 		error(env, "invalid defun list");
 
 	name = car(fundecl);
-	fun = make_function(cdr(fundecl), rest, scm_to_c_string(name), env);
+	fun = make_function(cdr(fundecl), rest, bytevec_to_c_string(name), env);
 	scope_set(env, name, fun);
 	return unspecified();
 }

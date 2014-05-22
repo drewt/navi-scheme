@@ -77,6 +77,17 @@ sexp_t bytevec_to_string(sexp_t bytevec)
 	return sexp;
 }
 
+char *bytevec_to_c_string(sexp_t sexp)
+{
+	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	char *cstr = malloc(vec->size + 1);
+
+	for (size_t i = 0; i < vec->size; i++)
+		cstr[i] = vec->data[i];
+	cstr[vec->size] = '\0';
+	return cstr;
+}
+
 DEFUN(scm_make_bytevector, args)
 {
 	sexp_t sexp;

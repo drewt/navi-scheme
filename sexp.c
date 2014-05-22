@@ -114,7 +114,7 @@ static sexp_t symbol_lookup(const char *str, unsigned long hashcode)
 	struct hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
 
 	hlist_for_each_entry(it, head, chain) {
-		if (string_equal(symbol_object(it), str))
+		if (bytevec_equal(symbol_object(it), str))
 			return symbol_object(it);
 	}
 	return (sexp_t) 0UL;
@@ -162,7 +162,7 @@ sexp_t to_string(const char *str)
 {
 	size_t len = strlen(str);
 	sexp_t sexp = make_string(len);
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct sexp_string *vec = sexp_string(sexp);
 
 	for (size_t i = 0; i < len; i++) {
 		vec->data[i] = str[i];
@@ -170,6 +170,16 @@ sexp_t to_string(const char *str)
 	vec->size = len;
 
 	return sexp;
+}
+
+sexp_t make_string(size_t size)
+{
+	struct sexp *sexp = make_sexp(SEXP_STRING, sizeof(struct sexp_string));
+	sexp->data->str.data = malloc(size + 1);
+	sexp->data->str.data[size] = '\0';
+	sexp->data->str.size = size + 1;
+	sexp->data->str.length = 0;
+	return (sexp_t) sexp;
 }
 
 sexp_t make_pair(sexp_t car, sexp_t cdr)
@@ -430,7 +440,7 @@ DEFUN(scm_gc_count, args)
 				sexp_fun((sexp_t)sexp)->builtin)
 			continue;
 		printf("<%p> ", sexp);
-		display((sexp_t)sexp);
+		sexp_write((sexp_t)sexp);
 		putchar('\n');
 	}
 	return unspecified();

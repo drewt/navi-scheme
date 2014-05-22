@@ -36,12 +36,12 @@ static _Noreturn void repl(void)
 		printf("\n#;%d> ", i);
 		if ((sexp = sexp_read()).n == 0)
 			continue;
-		printf("read: "); display(sexp); putchar('\n');
+		printf("read: "); sexp_write(sexp); putchar('\n');
 		if (is_eof(sexp))
 			break;
 		if ((sexp = trampoline(sexp, env)).n == 0)
 			continue;
-		display(sexp);
+		sexp_write(sexp);
 	}
 	putchar('\n');
 	exit(0);

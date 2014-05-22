@@ -74,9 +74,16 @@ static void display_bytevec(sexp_t sexp)
 	putchar(')');
 }
 
-static inline void display_string(sexp_t string)
+static void display_string(sexp_t sexp)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(string);
+	struct sexp_string *str = sexp_string(sexp);
+	for (size_t i = 0; i < str->size; i++)
+		putchar(str->data[i]);
+}
+
+static void display_symbol(sexp_t sexp)
+{
+	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vec->size; i++)
 		putchar(vec->data[i]);
 }
@@ -114,10 +121,10 @@ void _display(sexp_t sexp, bool write)
 		display_cdr(sexp, true, write);
 		break;
 	case SEXP_STRING:
-		printf(write ? "\"%s\"" : "%s", sexp_bytevec(sexp)->data);
+		printf(write ? "\"%s\"" : "%s", sexp_string(sexp)->data);
 		break;
 	case SEXP_SYMBOL:
-		display_string(sexp);
+		display_symbol(sexp);
 		break;
 	case SEXP_VECTOR:
 		display_vector(sexp, write);

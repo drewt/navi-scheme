@@ -95,6 +95,12 @@ struct sexp_bytevec {
 	unsigned char data[];
 };
 
+struct sexp_string {
+	size_t size;
+	size_t length;
+	char *data;
+};
+
 struct sexp_pair {
 	sexp_t car;
 	sexp_t cdr;
@@ -106,6 +112,7 @@ union sexp_object {
 	struct sexp_function fun;
 	struct sexp_vector vec;
 	struct sexp_bytevec bvec;
+	struct sexp_string str;
 	struct sexp_pair pair;
 };
 
@@ -181,6 +188,11 @@ static inline struct sexp_vector *sexp_vector(sexp_t sexp)
 static inline struct sexp_bytevec *sexp_bytevec(sexp_t sexp)
 {
 	return &sexp.p->data->bvec;
+}
+
+static inline struct sexp_string *sexp_string(sexp_t sexp)
+{
+	return &sexp.p->data->str;
 }
 
 static inline struct sexp_function *sexp_fun(sexp_t sexp)
@@ -321,6 +333,7 @@ sexp_t vector_to_list(sexp_t vector);
 sexp_t list_to_bytevec(sexp_t list, env_t env);
 sexp_t bytevec_to_list(sexp_t sexp);
 char *scm_to_c_string(sexp_t string);
+char *bytevec_to_c_string(sexp_t sexp);
 sexp_t string_to_bytevec(sexp_t string);
 sexp_t bytevec_to_string(sexp_t bytevec);
 
@@ -335,6 +348,7 @@ sexp_t make_pair(sexp_t car, sexp_t cdr);
 sexp_t make_empty_pair(void);
 sexp_t make_vector(size_t size);
 sexp_t make_bytevec(size_t size);
+sexp_t make_string(size_t size);
 sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env);
 sexp_t make_escape(void);
 sexp_t capture_env(env_t env);
@@ -353,14 +367,6 @@ static inline sexp_t make_macro(sexp_t args, sexp_t body, char *name, env_t env)
 	sexp_t macro = make_function(args, body, name, env);
 	macro.p->type = SEXP_MACRO;
 	return macro;
-}
-
-static inline sexp_t make_string(size_t size)
-{
-	sexp_t string = make_bytevec(size+1);
-	string.p->type = SEXP_STRING;
-	sexp_bytevec(string)->data[size] = '\0';
-	return string;
 }
 
 static inline sexp_t make_values(sexp_t values)
@@ -428,22 +434,31 @@ static inline sexp_t bytevec_ref(sexp_t sexp, size_t i)
 	return make_char(sexp_bytevec(sexp)->data[i]);
 }
 
-static inline bool string_equal(sexp_t sexp, const char *str)
+static inline bool bytevec_equal(sexp_t sexp, const char *cstr)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vec->size; i++)
-		if (vec->data[i] != str[i])
+		if (vec->data[i] != cstr[i])
+			return false;
+	return true;
+}
+
+static inline bool string_equal(sexp_t sexp, const char *cstr)
+{
+	struct sexp_string *string = sexp_string(sexp);
+	for (size_t i = 0; i < string->size; i++)
+		if (string->data[i] != cstr[i])
 			return false;
 	return true;
 }
 
 static inline bool sexp_string_equal(sexp_t a, sexp_t b)
 {
-	struct sexp_bytevec *va = sexp_bytevec(a), *vb = sexp_bytevec(b);
-	if (va->size != vb->size)
+	struct sexp_string *sa = sexp_string(a), *sb = sexp_string(b);
+	if (sa->size != sb->size || sa->length != sb->length)
 		return false;
-	for (size_t i = 0; i < va->size; i++)
-		if (va->data[i] != vb->data[i])
+	for (size_t i = 0; i < sa->size; i++)
+		if (sa->data[i] != sb->data[i])
 			return false;
 	return true;
 }

@@ -368,14 +368,17 @@ static sexp_t eval_cond(sexp_t cond, env_t env)
 static sexp_t eval_if(sexp_t sif, env_t env)
 {
 	sexp_t test;
+	int nr_args = list_length(sif);
 
-	if (list_length(sif) != 3)
+	if (nr_args != 2 && nr_args != 3)
 		error(env, "wrong number of arguments to 'if'");
 
 	test = eval(car(sif), env);
 	if (sexp_is_true(test))
 		return eval_tail(cadr(sif), env);
-	return eval_tail(caddr(sif), env);
+	if (nr_args == 3)
+		return eval_tail(caddr(sif), env);
+	return unspecified();
 }
 
 static sexp_t eval_and(sexp_t and, env_t env)

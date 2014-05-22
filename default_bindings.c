@@ -21,9 +21,9 @@
  * @ary:	the (minimum) arity of the function
  * @var:	non-zero if the function is variadic
  */
-#define FUNCTION(scmname, _fn, ary, var) \
+#define FUNCTION_TYPE(scmname, _fn, ary, var, _type) \
 { \
-	.type = SEXP_FUNCTION, \
+	.type = _type, \
 	.fun = { \
 		.fn       = _fn, \
 		.name     = scmname, \
@@ -33,6 +33,12 @@
 	}, \
 	.ident = scmname, \
 }
+
+#define FUNCTION(scmname, _fn, ary, var) \
+	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_FUNCTION)
+
+#define MACRO(scmname, _fn, ary, var) \
+	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_MACRO)
 
 #define NUMBER(scmname, val) \
 { \
@@ -52,6 +58,8 @@ static DECLARE(scm_toplevel_exn);
 
 struct sexp_spec default_bindings[] = {
 	[0] = FUNCTION("#exn",  scm_toplevel_exn, 1, 0),
+
+	FUNCTION("gensym", scm_gensym, 0, 0),
 
 	FUNCTION("read",  scm_read,  0, 0),
 	FUNCTION("eval",  scm_eval,  1, 0),

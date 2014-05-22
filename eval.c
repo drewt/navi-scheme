@@ -67,6 +67,24 @@ static sexp_t eval_lambda(sexp_t lambda, env_t env)
 	return make_function(car(lambda), cdr(lambda), "?", env);
 }
 
+static sexp_t eval_caselambda(sexp_t caselambda, env_t env)
+{
+	sexp_t cons, sexp;
+	struct sexp_vector *vec;
+	unsigned i = 0;
+
+	sexp = make_caselambda(list_length(caselambda));
+	vec = sexp_vector(sexp);
+
+	sexp_list_for_each(cons, caselambda) {
+		if (!lambda_valid(car(cons)))
+			error(env, "invalid case-lambda list");
+		vec->data[i++] = make_function(caar(cons), cdar(cons), "?", env);
+	}
+
+	return sexp;
+}
+
 static sexp_t eval_defvar(sexp_t sym, sexp_t rest, env_t env)
 {
 	if (sexp_type(cdr(rest)) != SEXP_NIL)
@@ -102,6 +120,20 @@ static sexp_t eval_define(sexp_t define, env_t env)
 	if (type == SEXP_PAIR)
 		return eval_defun(car(define), cdr(define), env);
 	error(env, "invalid define list");
+}
+
+static sexp_t eval_defmacro(sexp_t defmacro, env_t env)
+{
+	sexp_t macro, name;
+
+	if (list_length(defmacro) < 2 || !list_of(car(defmacro), SEXP_SYMBOL))
+		error(env, "invalid define-macro list");
+
+	name = caar(defmacro);
+	macro = make_macro(cdar(defmacro), cdr(defmacro),
+			bytevec_to_c_string(name), env);
+	scope_set(env, name, macro);
+	return unspecified();
 }
 
 sexp_t eval_begin(sexp_t begin, env_t env)
@@ -230,32 +262,36 @@ static sexp_t eval_unquote(sexp_t unquote, env_t env)
 	return trampoline(car(unquote), env);
 }
 
+/* FIXME: this is incredibly ugly */
 static sexp_t eval_qq(sexp_t sexp, env_t env)
 {
 	struct sexp_pair head, *last;
-	sexp_t cons, next;
+	sexp_t cons;
 
 	switch (sexp_type(sexp)) {
 	case SEXP_PAIR:
 		if (symbol_eq(car(sexp), sym_unquote))
 			return eval_unquote(cdr(sexp), env);
 
-		head.cdr = sexp;
 		last = &head;
-		sexp_list_for_each_safe(cons, next, sexp) {
-			if (is_pair(car(cons)) && symbol_eq(caar(cons), sym_splice)) {
+		sexp_list_for_each(cons, sexp) {
+			sexp_t elm = car(cons);
+			if (is_pair(elm) && symbol_eq(car(elm), sym_splice)) {
 				sexp_t list = eval_unquote(cdar(cons), env);
 				if (is_proper_list(list)) {
 					last->cdr = list;
-					set_cdr(last_cons(list), next);
-				}
+					last = sexp_pair(last_cons(list));
+				} // TODO: otherwise... ???
+			} else if (symbol_eq(elm, sym_unquote)) {
+				/* unquote in dotted tail */
+				break;
 			} else {
-				sexp_pair(cons)->car = eval_qq(car(cons), env);
+				last->cdr = make_empty_pair();
+				last = sexp_pair(last->cdr);
+				last->car = eval_qq(car(cons), env);
 			}
-			last = sexp_pair(cons);
 		}
-		if (!is_nil(cons))
-			last->cdr = eval_qq(cdr(cons), env);
+		last->cdr = is_nil(cons) ? make_nil() : eval_qq(cons, env);
 		return head.cdr;
 	case SEXP_VECTOR:
 		return list_to_vector(eval_qq(vector_to_list(sexp), env));
@@ -418,20 +454,61 @@ static inline sexp_t make_args(sexp_t args, env_t env)
 		return make_nil();
 	return map(args, map_eval, env);
 }
+
+static sexp_t map_quote(sexp_t sexp, void *data)
+{
+	return make_pair(sym_quote, make_pair(sexp, make_nil()));
+}
+
+static inline sexp_t macro_call(sexp_t macro, sexp_t args, env_t env)
+{
+	sexp_t result;
+	macro.p->type = SEXP_FUNCTION;
+	result = trampoline(make_pair(macro, map(args, map_quote, NULL)), env);
+	macro.p->type = SEXP_MACRO;
+	return result;
+}
+
+static sexp_t caselambda_call(sexp_t lambda, sexp_t args, env_t env)
+{
+	int nr_args = list_length(args);
+	struct sexp_vector *vec = sexp_vector(lambda);
+
+	for (size_t i = 0; i < vec->size; i++) {
+		if (is_function(vec->data[i]))
+			printf("FUNCTION: %lu\n", i);
+		else
+			printf("NOT FUNCTION: %lu\n", i);
+		struct sexp_function *fun = sexp_fun(vec->data[i]);
+		if (fun->arity == nr_args || (fun->arity < nr_args && fun->variadic))
+			return apply(fun, args, env);
+	}
+	error(env, "wrong number of arguments");
+}
+
 static sexp_t eval_call(sexp_t call, env_t env)
 {
+	int length;
+	sexp_t sexp;
 	sexp_t fun = eval(car(call), env);
 	enum sexp_type type = sexp_type(fun);
 
-	if (type == SEXP_ESCAPE) {
-		int length = list_length(call);
-		sexp_t arg = length < 2 ? make_nil() : cadr(call);
-		return call_escape(fun, arg);
-	} else if (type == SEXP_FUNCTION) {
-		sexp_t args = make_args(cdr(call), env);
-		return apply(sexp_fun(fun), args, env);
+	switch (type) {
+	case SEXP_FUNCTION:
+		sexp = make_args(cdr(call), env);
+		return apply(sexp_fun(fun), sexp, env);
+	case SEXP_MACRO:
+		sexp = macro_call(fun, cdr(call), env);
+		printf("expand: "); sexp_write(sexp); putchar('\n');
+		return eval(sexp, env);
+	case SEXP_ESCAPE:
+		length = list_length(call);
+		sexp = length < 2 ? make_nil() : cadr(call);
+		return call_escape(fun, sexp);
+	case SEXP_CASELAMBDA:
+		return caselambda_call(fun, cdr(call), env);
+	default: break;
 	}
-	display(fun); putchar('\n');
 	error(env, "call of non-procedure", make_apair("value", fun));
 }
 
@@ -474,7 +551,9 @@ sexp_t eval(sexp_t sexp, env_t env)
 				if (car(sexp).p == sym.p) \
 					return fun(cdr(sexp), env)
 			special(sym_lambda,     eval_lambda);
+			special(sym_caselambda, eval_caselambda);
 			special(sym_define,     eval_define);
+			special(sym_defmacro,   eval_defmacro);
 			special(sym_begin,      eval_begin);
 			special(sym_let,        eval_let);
 			special(sym_seqlet,     eval_sequential_let);

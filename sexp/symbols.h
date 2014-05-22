@@ -18,7 +18,9 @@
 
 /* automatically interned symbols */
 extern sexp_t sym_lambda;
+extern sexp_t sym_caselambda;
 extern sexp_t sym_define;
+extern sexp_t sym_defmacro;
 extern sexp_t sym_begin;
 extern sexp_t sym_let;
 extern sexp_t sym_seqlet;

@@ -343,6 +343,7 @@ struct sexp *make_sexp(enum sexp_type type, size_t size);
 
 /* constructors */
 sexp_t to_string(const char *str);
+sexp_t to_bytevec(const char *str);
 sexp_t make_symbol(const char *sym);
 sexp_t make_pair(sexp_t car, sexp_t cdr);
 sexp_t make_empty_pair(void);
@@ -357,7 +358,7 @@ bool eqvp(sexp_t fst, sexp_t snd);
 
 static inline sexp_t make_uninterned(const char *str)
 {
-	sexp_t sym = to_string(str);
+	sexp_t sym = to_bytevec(str);
 	sym.p->type = SEXP_SYMBOL;
 	return sym;
 }
@@ -374,6 +375,13 @@ static inline sexp_t make_values(sexp_t values)
 	values = list_to_vector(values);
 	values.p->type = SEXP_VALUES;
 	return values;
+}
+
+static inline sexp_t make_caselambda(size_t size)
+{
+	sexp_t lambda = make_vector(size);
+	lambda.p->type = SEXP_CASELAMBDA;
+	return lambda;
 }
 
 static inline sexp_t make_apair(const char *sym, sexp_t val)

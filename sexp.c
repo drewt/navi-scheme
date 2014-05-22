@@ -35,7 +35,9 @@ struct hlist_head symbol_table[SYMTAB_SIZE];
 LIST_HEAD(heap);
 
 sexp_t sym_lambda;
+sexp_t sym_caselambda;
 sexp_t sym_define;
+sexp_t sym_defmacro;
 sexp_t sym_begin;
 sexp_t sym_let;
 sexp_t sym_seqlet;
@@ -83,7 +85,9 @@ void symbol_table_init(void)
 
 	#define intern(cname, name) cname = make_symbol(name)
 	intern(sym_lambda,     "lambda");
+	intern(sym_caselambda, "case-lambda");
 	intern(sym_define,     "define");
+	intern(sym_defmacro,   "define-macro");
 	intern(sym_begin,      "begin");
 	intern(sym_let,        "let");
 	intern(sym_seqlet,     "let*");
@@ -140,6 +144,16 @@ static sexp_t new_symbol(const char *str, unsigned long hashcode)
 	return (sexp_t) &symbol->object;
 }
 
+DEFUN(scm_gensym, args)
+{
+	char buf[64];
+	static unsigned count = 0;
+
+	snprintf(buf, 64, "g%u", count++);
+	buf[63] = '\0';
+	return make_uninterned(buf);
+}
+
 struct sexp *make_sexp(enum sexp_type type, size_t size)
 {
 	struct sexp *sexp = malloc(sizeof(struct sexp) + size);
@@ -169,6 +183,18 @@ sexp_t to_string(const char *str)
 	}
 	vec->size = len;
 
+	return sexp;
+}
+
+sexp_t to_bytevec(const char *str)
+{
+	size_t len = strlen(str);
+	sexp_t sexp = make_bytevec(len);
+	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+
+	for (size_t i = 0; i < len; i++)
+		vec->data[i] = str[i];
+	vec->size = len;
 	return sexp;
 }
 
@@ -273,12 +299,8 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 	case SEXP_BYTEVEC:
 		return make_bytevec(spec->size);
 	case SEXP_MACRO:
-		sexp = make_sexp(SEXP_MACRO, sizeof(struct sexp_function));
-		fun = (void*) sexp->data;
-		memcpy(fun, &spec->fun, sizeof(struct sexp_function));
-		return (sexp_t) sexp;
 	case SEXP_FUNCTION:
-		sexp = make_sexp(SEXP_FUNCTION, sizeof(struct sexp_function));
+		sexp = make_sexp(spec->type, sizeof(struct sexp_function));
 		fun = (void*) sexp->data;
 		memcpy(fun, &spec->fun, sizeof(struct sexp_function));
 		return (sexp_t) sexp;

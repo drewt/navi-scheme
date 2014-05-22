@@ -20,6 +20,8 @@
 
 #define DECLARE(fname) sexp_t fname (sexp_t,env_t)
 
+DECLARE(scm_gensym);
+
 DECLARE(scm_read);
 DECLARE(scm_eval);
 DECLARE(scm_apply);

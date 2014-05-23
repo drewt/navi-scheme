@@ -144,6 +144,10 @@ struct sexp_scope *extend_environment(struct sexp_scope *env, sexp_t vars,
 	sexp_zipped_for_each(vcons, acons, vars, args) {
 		scope_set(new, car(vcons), car(acons));
 	}
+	/* dotted tail */
+	if (!is_nil(vcons)) {
+		scope_set(new, vcons, acons);
+	}
 	return new;
 }
 

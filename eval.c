@@ -31,7 +31,7 @@ static bool list_of(sexp_t list, unsigned type)
 		if (sexp_type(car(cons)) != type)
 			return false;
 	}
-	return sexp_type(cons) == SEXP_NIL;
+	return true;
 }
 
 static inline bool can_bounce(sexp_t sexp)

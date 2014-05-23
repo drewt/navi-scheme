@@ -16,9 +16,11 @@
 #ifndef _SEXP_TYPES_H
 #define _SEXP_TYPES_H
 
+#include <stdbool.h>
 #include <setjmp.h>
 
 #include "clist.h"
+#include "macros.h"
 #include "uchar.h"
 
 #define ENV_HT_SIZE 64
@@ -81,8 +83,8 @@ struct sexp_function {
 	char *name;
 	env_t env;
 	unsigned short arity;
-	char variadic;
-	char builtin;
+	bool variadic;
+	bool builtin;
 };
 
 struct sexp_vector {
@@ -527,8 +529,15 @@ TYPE_PREDICATE(is_caselambda, SEXP_CASELAMBDA)
 TYPE_PREDICATE(is_escape, SEXP_ESCAPE)
 TYPE_PREDICATE(is_environment, SEXP_ENVIRONMENT)
 TYPE_PREDICATE(is_bounce, SEXP_BOUNCE)
+#undef TYPE_PREDICATE
 
 bool is_proper_list(sexp_t list);
 
-#undef TYPE_PREDICATE
+static inline bool list_is_proper(sexp_t list)
+{
+	sexp_t cons;
+	sexp_list_for_each(cons, list);
+	return is_nil(cons);
+}
+
 #endif

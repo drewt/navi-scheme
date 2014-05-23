@@ -246,11 +246,11 @@ sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env)
 	fun->name = name;
 	fun->args = args;
 	fun->body = body;
-	fun->builtin = 0;
-	fun->arity = list_length((sexp_t)args);
+	fun->builtin = false;
+	fun->arity = count_pairs((sexp_t)args);
+	fun->variadic = !list_is_proper((sexp_t)args);
 	fun->env = env;
 	scope_ref(env);
-	/* TODO: analyse args for arity, variadic */
 	return (sexp_t) sexp;
 }
 

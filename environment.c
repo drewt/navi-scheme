@@ -162,6 +162,11 @@ struct sexp_scope *make_default_environment(void)
 			sexp_fun(object)->env = env;
 		env_set(env, symbol, object);
 	}
+
+	env_set(env, sym_current_input,  make_stdio_port(stdin));
+	env_set(env, sym_current_output, make_stdio_port(stdout));
+	env_set(env, sym_current_error,  make_stdio_port(stderr));
+
 	return env;
 }
 

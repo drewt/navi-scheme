@@ -359,6 +359,9 @@ static sexp_t read_sharp(void)
 				break;
 		}
 		return make_void();
+	case '/':
+		while (getchar() != '\n');
+		return make_void();
 
 	}
 	die("unknown literal: #%c", c); // TODO: error

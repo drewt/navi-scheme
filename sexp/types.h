@@ -46,6 +46,7 @@ struct sexp_scope {
 };
 typedef struct sexp_scope *env_t;
 
+typedef sexp_t (*builtin_t)(sexp_t,env_t);
 
 enum sexp_type {
 	SEXP_VOID,
@@ -55,6 +56,7 @@ enum sexp_type {
 	SEXP_BOOL,
 	SEXP_CHAR,
 	SEXP_PAIR,
+	SEXP_PORT,
 	SEXP_STRING,
 	SEXP_SYMBOL,
 	SEXP_VECTOR,
@@ -108,6 +110,14 @@ struct sexp_pair {
 	sexp_t cdr;
 };
 
+struct sexp_port {
+	sexp_t (*read_char)(struct sexp_port *port);
+	void (*write_char)(sexp_t, struct sexp_port *port);
+	sexp_t buffer;
+	bool buffer_full;
+	void *specific;
+};
+
 union sexp_object {
 	struct sexp_scope *env;
 	struct sexp_escape esc;
@@ -116,6 +126,7 @@ union sexp_object {
 	struct sexp_bytevec bvec;
 	struct sexp_string str;
 	struct sexp_pair pair;
+	struct sexp_port port;
 };
 
 struct sexp {
@@ -205,6 +216,11 @@ static inline struct sexp_function *sexp_fun(sexp_t sexp)
 static inline struct sexp_escape *sexp_escape(sexp_t sexp)
 {
 	return &sexp.p->data->esc;
+}
+
+static inline struct sexp_port *sexp_port(sexp_t sexp)
+{
+	return &sexp.p->data->port;
 }
 
 static inline env_t sexp_env(sexp_t sexp)
@@ -329,6 +345,9 @@ static inline sexp_t last_cons(sexp_t list)
 	return list;
 }
 
+sexp_t port_read_char(struct sexp_port *port);
+void port_write_char(sexp_t ch, struct sexp_port *port);
+
 /* conversion */
 sexp_t list_to_vector(sexp_t list);
 sexp_t vector_to_list(sexp_t vector);
@@ -349,6 +368,9 @@ sexp_t to_bytevec(const char *str);
 sexp_t make_symbol(const char *sym);
 sexp_t make_pair(sexp_t car, sexp_t cdr);
 sexp_t make_empty_pair(void);
+sexp_t make_port(sexp_t(*read)(struct sexp_port*),
+		void(*write)(sexp_t,struct sexp_port*), void *specific);
+sexp_t make_stdio_port(FILE *stream);
 sexp_t make_vector(size_t size);
 sexp_t make_bytevec(size_t size);
 sexp_t make_string(size_t size);
@@ -484,6 +506,7 @@ static inline const char *strtype(enum sexp_type type)
 	case SEXP_CHAR:        return "character";
 	case SEXP_VALUES:      return "values";
 	case SEXP_PAIR:        return "pair";
+	case SEXP_PORT:        return "port";
 	case SEXP_STRING:      return "string";
 	case SEXP_SYMBOL:      return "symbol";
 	case SEXP_VECTOR:      return "vector";

@@ -109,6 +109,12 @@ static inline struct sexp_vector *_vector_cast(sexp_t sexp,
 	return sexp_vector(_type_check(sexp, type, env));
 }
 
+#define port_cast(sexp) _port_cast(sexp, ____env)
+static inline struct sexp_port *_port_cast(sexp_t sexp, env_t env)
+{
+	return sexp_port(_type_check(sexp, SEXP_PORT, env));
+}
+
 #define type_check_byte(sexp) _type_check_byte(sexp, ____env)
 static inline unsigned char _type_check_byte(sexp_t sexp, env_t env)
 {

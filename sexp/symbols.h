@@ -40,6 +40,9 @@ extern sexp_t sym_else;
 extern sexp_t sym_eq_lt;
 extern sexp_t sym_question;
 extern sexp_t sym_exn;
+extern sexp_t sym_current_input;
+extern sexp_t sym_current_output;
+extern sexp_t sym_current_error;
 extern sexp_t sym_repl;
 
 #endif

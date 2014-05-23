@@ -62,6 +62,9 @@ sexp_t sym_thunk;
 sexp_t sym_question;
 
 sexp_t sym_exn;
+sexp_t sym_current_input;
+sexp_t sym_current_output;
+sexp_t sym_current_error;
 sexp_t sym_repl;
 
 static inline sexp_t symbol_object(struct sexp_symbol *sym)
@@ -84,31 +87,34 @@ void symbol_table_init(void)
 		INIT_HLIST_HEAD(&symbol_table[i]);
 
 	#define intern(cname, name) cname = make_symbol(name)
-	intern(sym_lambda,     "lambda");
-	intern(sym_caselambda, "case-lambda");
-	intern(sym_define,     "define");
-	intern(sym_defmacro,   "define-macro");
-	intern(sym_begin,      "begin");
-	intern(sym_let,        "let");
-	intern(sym_seqlet,     "let*");
-	intern(sym_letrec,     "letrec");
-	intern(sym_seqletrec,  "letrec*");
-	intern(sym_set,        "set!");
-	intern(sym_quote,      "quote");
-	intern(sym_quasiquote, "quasiquote");
-	intern(sym_unquote,    "unquote");
-	intern(sym_splice,     "unquote-splice");
-	intern(sym_case,       "case");
-	intern(sym_cond,       "cond");
-	intern(sym_if,         "if");
-	intern(sym_and,        "and");
-	intern(sym_or,         "or");
-	intern(sym_else,       "else");
-	intern(sym_eq_lt,      "=>");
-	intern(sym_thunk,      "#thunk");
-	intern(sym_question,   "?");
-	intern(sym_exn,        "#exn");
-	intern(sym_repl,       "#repl");
+	intern(sym_lambda,         "lambda");
+	intern(sym_caselambda,     "case-lambda");
+	intern(sym_define,         "define");
+	intern(sym_defmacro,       "define-macro");
+	intern(sym_begin,          "begin");
+	intern(sym_let,            "let");
+	intern(sym_seqlet,         "let*");
+	intern(sym_letrec,         "letrec");
+	intern(sym_seqletrec,      "letrec*");
+	intern(sym_set,            "set!");
+	intern(sym_quote,          "quote");
+	intern(sym_quasiquote,     "quasiquote");
+	intern(sym_unquote,        "unquote");
+	intern(sym_splice,         "unquote-splice");
+	intern(sym_case,           "case");
+	intern(sym_cond,           "cond");
+	intern(sym_if,             "if");
+	intern(sym_and,            "and");
+	intern(sym_or,             "or");
+	intern(sym_else,           "else");
+	intern(sym_eq_lt,          "=>");
+	intern(sym_thunk,          "#thunk");
+	intern(sym_question,       "?");
+	intern(sym_exn,            "#exn");
+	intern(sym_current_input,  "#current-input-port");
+	intern(sym_current_output, "#current-output-port");
+	intern(sym_current_error,  "#current-error-port");
+	intern(sym_repl,           "#repl");
 	#undef intern
 }
 
@@ -221,6 +227,17 @@ sexp_t make_empty_pair(void)
 	return (sexp_t) make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
 }
 
+sexp_t make_port(sexp_t(*read)(struct sexp_port*),
+		void(*write)(sexp_t,struct sexp_port*), void *specific)
+{
+	struct sexp *sexp = make_sexp(SEXP_PORT, sizeof(struct sexp_port));
+	sexp->data->port.read_char = read;
+	sexp->data->port.write_char = write;
+	sexp->data->port.buffer_full = false;
+	sexp->data->port.specific = specific;
+	return (sexp_t) sexp;
+}
+
 sexp_t make_vector(size_t size)
 {
 	struct sexp *sexp = make_sexp(SEXP_VECTOR,
@@ -305,6 +322,7 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 		memcpy(fun, &spec->fun, sizeof(struct sexp_function));
 		return (sexp_t) sexp;
 	case SEXP_VOID:
+	case SEXP_PORT:
 	case SEXP_VALUES:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
@@ -312,7 +330,7 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 	case SEXP_BOUNCE:
 		break;
 	}
-	die("unknown type");
+	die("sexp_from_spec: unknown or unsupported type");
 }
 
 bool eqvp(sexp_t fst, sexp_t snd)
@@ -332,6 +350,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 	case SEXP_CHAR:
 		return sexp_char(fst) == sexp_char(snd);
 	case SEXP_PAIR:
+	case SEXP_PORT:
 	case SEXP_SYMBOL:
 	case SEXP_VECTOR:
 	case SEXP_VALUES:
@@ -378,6 +397,7 @@ static void gc_mark_obj(sexp_t obj)
 		gc_mark_obj(car(obj));
 		gc_mark_obj(cdr(obj));
 		break;
+	case SEXP_PORT:
 	case SEXP_SYMBOL:
 	case SEXP_STRING:
 	case SEXP_BYTEVEC:

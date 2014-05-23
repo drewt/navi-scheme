@@ -90,7 +90,7 @@ static sexp_t eval_defvar(sexp_t sym, sexp_t rest, env_t env)
 	if (sexp_type(cdr(rest)) != SEXP_NIL)
 		error(env, "too many arguments to define");
 
-	scope_set(env, sym, eval(car(rest), env));
+	scope_set(env, sym, trampoline(car(rest), env));
 	return unspecified();
 }
 
@@ -174,7 +174,7 @@ static env_t let_extend_env(sexp_t def_list, env_t env)
 
 	sexp_list_for_each(cons, def_list) {
 		sexp_t defn = car(cons);
-		sexp_t val = eval(cadr(defn), env);
+		sexp_t val = trampoline(cadr(defn), env);
 		scope_set(new, car(defn), val);
 	}
 
@@ -202,7 +202,7 @@ static env_t sequential_let_extend_env(sexp_t def_list, env_t env)
 
 	sexp_list_for_each(cons, def_list) {
 		sexp_t defn = car(cons);
-		sexp_t val = eval(cadr(defn), new);
+		sexp_t val = trampoline(cadr(defn), new);
 		scope_set(new, car(defn), val);
 	}
 
@@ -242,7 +242,7 @@ static sexp_t eval_set(sexp_t set, env_t env)
 	if (binding == NULL)
 		unbound_identifier(car(set), env);
 
-	value = eval(cadr(set), env);
+	value = trampoline(cadr(set), env);
 	binding->object = value;
 
 	return unspecified();
@@ -327,7 +327,7 @@ static bool case_valid(sexp_t scase)
 static sexp_t eval_clause(sexp_t arg, sexp_t begin, env_t env)
 {
 	if (symbol_eq(car(begin), sym_eq_lt)) {
-		sexp_t fun  = eval(cadr(begin), env);
+		sexp_t fun  = trampoline(cadr(begin), env);
 		sexp_t call = make_pair(fun, make_pair(arg, make_nil()));
 		return eval(call, env);
 	}
@@ -341,7 +341,7 @@ static sexp_t eval_case(sexp_t scase, env_t env)
 	if (!case_valid(scase))
 		error(env, "invalid case list");
 
-	test = eval(car(scase), env);
+	test = trampoline(car(scase), env);
 	sexp_list_for_each(cons, cdr(scase)) {
 		sexp_t fst = car(cons);
 		if (symbol_eq(car(fst), sym_else))
@@ -374,7 +374,7 @@ static bool cond_valid(sexp_t cond)
 static sexp_t eval_cond_clause(sexp_t test, sexp_t clause, env_t env)
 {
 	if (symbol_eq(car(clause), sym_eq_lt)) {
-		sexp_t fun = eval(cadr(clause), env);
+		sexp_t fun = trampoline(cadr(clause), env);
 		sexp_t call = make_pair(fun, make_pair(test, make_nil()));
 		return eval(call, env);
 	}
@@ -394,7 +394,7 @@ static sexp_t eval_cond(sexp_t cond, env_t env)
 		if (symbol_eq(car(fst), sym_else))
 			return eval_clause(make_bool(true), cdr(fst), env);
 
-		test = eval(car(fst), env);
+		test = trampoline(car(fst), env);
 		if (sexp_is_true(test))
 			return eval_cond_clause(test, cdr(fst), env);
 	}
@@ -409,7 +409,7 @@ static sexp_t eval_if(sexp_t sif, env_t env)
 	if (nr_args != 2 && nr_args != 3)
 		error(env, "wrong number of arguments to 'if'");
 
-	test = eval(car(sif), env);
+	test = trampoline(car(sif), env);
 	if (sexp_is_true(test))
 		return eval_tail(cadr(sif), env);
 	if (nr_args == 3)
@@ -445,7 +445,7 @@ static sexp_t eval_or(sexp_t or, env_t env)
 
 static sexp_t map_eval(sexp_t sexp, void *data)
 {
-	return eval(sexp, data);
+	return trampoline(sexp, data);
 }
 
 static inline sexp_t make_args(sexp_t args, env_t env)
@@ -490,7 +490,7 @@ static sexp_t eval_call(sexp_t call, env_t env)
 {
 	int length;
 	sexp_t sexp;
-	sexp_t fun = eval(car(call), env);
+	sexp_t fun = trampoline(car(call), env);
 	enum sexp_type type = sexp_type(fun);
 
 	switch (type) {
@@ -523,6 +523,7 @@ sexp_t eval(sexp_t sexp, env_t env)
 	case SEXP_NUM:
 	case SEXP_BOOL:
 	case SEXP_CHAR:
+	case SEXP_PORT:
 	case SEXP_STRING:
 	case SEXP_VECTOR:
 	case SEXP_BYTEVEC:

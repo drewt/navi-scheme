@@ -40,6 +40,17 @@ DECLARE(scm_error_objectp);
 DECLARE(scm_error_object_message);
 DECLARE(scm_error_object_irritants);
 
+DECLARE(scm_current_input_port);
+DECLARE(scm_current_output_port);
+DECLARE(scm_current_error_port);
+
+DECLARE(scm_read_u8);
+DECLARE(scm_peek_u8);
+DECLARE(scm_read_char);
+DECLARE(scm_peek_char);
+DECLARE(scm_write_u8);
+DECLARE(scm_write_char);
+
 DECLARE(scm_write);
 DECLARE(scm_display);
 DECLARE(scm_newline);

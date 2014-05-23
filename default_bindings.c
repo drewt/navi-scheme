@@ -79,6 +79,17 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("error-object-message", scm_error_object_message, 1, 0),
 	FUNCTION("error-object-irritants", scm_error_object_irritants, 1, 0),
 
+	FUNCTION("current-input-port",  scm_current_input_port,  0, 0),
+	FUNCTION("current-output-port", scm_current_output_port, 0, 0),
+	FUNCTION("current-error-port",  scm_current_error_port,  0, 0),
+
+	FUNCTION("read-u8",    scm_read_u8,    0, 1),
+	FUNCTION("peek-u8",    scm_peek_u8,    0, 1),
+	FUNCTION("read-char",  scm_read_char,  0, 1),
+	FUNCTION("peek-char",  scm_peek_char,  0, 1),
+	FUNCTION("write-u8",   scm_write_u8,   1, 1),
+	FUNCTION("write-char", scm_write_char, 1, 1),
+
 	FUNCTION("write",   scm_write,   1, 0),
 	FUNCTION("display", scm_display, 1, 0),
 	FUNCTION("newline", scm_newline, 0, 0),

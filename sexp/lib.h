@@ -50,7 +50,7 @@ DECLARE(scm_read_char);
 DECLARE(scm_peek_char);
 DECLARE(scm_write_u8);
 DECLARE(scm_write_char);
-
+DECLARE(scm_write_string);
 DECLARE(scm_write);
 DECLARE(scm_display);
 DECLARE(scm_newline);

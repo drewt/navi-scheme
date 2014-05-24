@@ -41,12 +41,12 @@ static _Noreturn void repl(void)
 		printf("\n#;%d> ", i);
 		if ((sexp = call_read(env)).n == 0)
 			continue;
-		printf("read: "); sexp_write(sexp); putchar('\n');
+		printf("read: "); sexp_write(sexp, env); putchar('\n');
 		if (is_eof(sexp))
 			break;
 		if ((sexp = trampoline(sexp, env)).n == 0)
 			continue;
-		sexp_write(sexp);
+		sexp_write(sexp, env);
 	}
 	putchar('\n');
 	exit(0);
@@ -60,7 +60,7 @@ static _Noreturn void script(void)
 		sexp_t sexp = call_read(env);
 		if (is_eof(sexp))
 			break;
-		display(trampoline(sexp, env));
+		sexp_write(trampoline(sexp, env), env);
 	}
 	putchar('\n');
 	exit(0);

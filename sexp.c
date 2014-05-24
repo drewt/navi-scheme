@@ -231,8 +231,8 @@ sexp_t make_port(sexp_t(*read)(struct sexp_port*),
 		void(*write)(sexp_t,struct sexp_port*), void *specific)
 {
 	struct sexp *sexp = make_sexp(SEXP_PORT, sizeof(struct sexp_port));
-	sexp->data->port.read_char = read;
-	sexp->data->port.write_char = write;
+	sexp->data->port.read_u8 = read;
+	sexp->data->port.write_u8 = write;
 	sexp->data->port.buffer_full = false;
 	sexp->data->port.specific = specific;
 	return (sexp_t) sexp;
@@ -482,7 +482,7 @@ DEFUN(scm_gc_count, args)
 				sexp_fun((sexp_t)sexp)->builtin)
 			continue;
 		printf("<%p> ", sexp);
-		sexp_write((sexp_t)sexp);
+		sexp_write((sexp_t)sexp, ____env);
 		putchar('\n');
 	}
 	return unspecified();

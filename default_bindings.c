@@ -82,17 +82,17 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("current-output-port", scm_current_output_port, 0, 0),
 	FUNCTION("current-error-port",  scm_current_error_port,  0, 0),
 
-	FUNCTION("read-u8",    scm_read_u8,    0, 1),
-	FUNCTION("peek-u8",    scm_peek_u8,    0, 1),
-	FUNCTION("read-char",  scm_read_char,  0, 1),
-	FUNCTION("read",       scm_read,       0, 1),
-	FUNCTION("peek-char",  scm_peek_char,  0, 1),
-	FUNCTION("write-u8",   scm_write_u8,   1, 1),
-	FUNCTION("write-char", scm_write_char, 1, 1),
-
-	FUNCTION("write",   scm_write,   1, 0),
-	FUNCTION("display", scm_display, 1, 0),
-	FUNCTION("newline", scm_newline, 0, 0),
+	FUNCTION("read-u8",      scm_read_u8,      0, 1),
+	FUNCTION("peek-u8",      scm_peek_u8,      0, 1),
+	FUNCTION("read-char",    scm_read_char,    0, 1),
+	FUNCTION("peek-char",    scm_peek_char,    0, 1),
+	FUNCTION("read",         scm_read,         0, 1),
+	FUNCTION("write-u8",     scm_write_u8,     1, 1),
+	FUNCTION("write-char",   scm_write_char,   1, 1),
+	FUNCTION("write-string", scm_write_string, 1, 1),
+	FUNCTION("write",        scm_write,        1, 1),
+	FUNCTION("display",      scm_display,      1, 1),
+	FUNCTION("newline",      scm_newline,      0, 1),
 
 	FUNCTION("eqv?", scm_eqvp, 2, 0),
 
@@ -192,7 +192,7 @@ static DEFUN(scm_toplevel_exn, args)
 {
 	sexp_t cont;
 
-	sexp_write(car(args));
+	sexp_write(car(args), ____env);
 	putchar('\n');
 
 	cont = env_lookup(____env, sym_repl);

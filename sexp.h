@@ -36,9 +36,9 @@ typedef sexp_t(*sexp_leaf_t)(sexp_t, void*);
 
 sexp_t sexp_read(struct sexp_port *port);
 
-#define sexp_write(sexp) _display(sexp, true)
-#define display(sexp) _display(sexp, false)
-void _display(sexp_t sexp, bool write);
+#define sexp_write(sexp, env) scm_write(make_pair(sexp, make_nil()), env)
+#define display(sexp, env) scm_display(make_pair(sexp, make_nil()), env)
+void _display(struct sexp_port *port, sexp_t sexp, bool write);
 
 /* environment.c */
 struct sexp_binding *env_binding(env_t env, sexp_t symbol);

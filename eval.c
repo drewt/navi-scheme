@@ -499,7 +499,7 @@ static sexp_t eval_call(sexp_t call, env_t env)
 		return apply(sexp_fun(fun), sexp, env);
 	case SEXP_MACRO:
 		sexp = macro_call(fun, cdr(call), env);
-		printf("expand: "); sexp_write(sexp); putchar('\n');
+		printf("expand: "); sexp_write(sexp, env); putchar('\n');
 		return eval(sexp, env);
 	case SEXP_ESCAPE:
 		length = list_length(call);

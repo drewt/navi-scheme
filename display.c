@@ -17,155 +17,157 @@
 
 #include "sexp.h"
 
-static void display_cdr(sexp_t cdr, bool head, bool write)
+static void display_cdr(struct sexp_port *port, sexp_t cdr, bool head,
+		bool write)
 {
 	switch (sexp_type(cdr)) {
 	case SEXP_PAIR:
-		if (!head)
-			putchar(' ');
-		_display(sexp_pair(cdr)->car, write);
-		display_cdr(sexp_pair(cdr)->cdr, false, write);
+		if (!head) port_write_c_string(" ", port);
+		_display(port, sexp_pair(cdr)->car, write);
+		display_cdr(port, sexp_pair(cdr)->cdr, false, write);
 		break;
 	case SEXP_NIL:
-		putchar(')');
+		port_write_c_string(")", port);
 		break;
 	default:
-		printf(" . ");
-		_display(cdr, write);
-		putchar(')');
+		port_write_c_string(" . ", port);
+		_display(port, cdr, write);
+		port_write_c_string(")", port);
 		break;
 	}
 }
 
-static void display_vector(sexp_t sexp, bool write)
+static void display_vector(struct sexp_port *port, sexp_t sexp, bool write)
 {
 	struct sexp_vector *vec = sexp_vector(sexp);
 
 	if (vec->size == 0) {
-		printf("#()");
+		port_write_c_string("#()", port);
 		return;
 	}
 
-	printf("#(");
-	_display(vec->data[0], write);
+	port_write_c_string("#(", port);
+	_display(port, vec->data[0], write);
 
 	for (size_t i = 1; i < vec->size; i++) {
-		printf(", ");
-		_display(vec->data[i], write);
+		port_write_c_string(" ", port);
+		_display(port, vec->data[i], write);
 	}
 
-	putchar(')');
+	port_write_c_string(")", port);
 }
 
-static void display_bytevec(sexp_t sexp)
+static void display_bytevec(struct sexp_port *port, sexp_t sexp)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 
 	if (vec->size == 0) {
-		printf("#u8()");
+		port_write_c_string("#u8(", port);
 		return;
 	}
 
-	printf("#u8(%u", vec->data[0]);
+	port_write_c_string("#u8(", port);
+	_display(port, make_num(vec->data[0]), false);
 
-	for (size_t i = 1; i < vec->size; i++)
-		printf(", %u", vec->data[i]);
+	for (size_t i = 1; i < vec->size; i++) {
+		port_write_c_string(" ", port);
+		_display(port, make_num(vec->data[i]), false);
+	}
 
-	putchar(')');
+	port_write_c_string(")", port);
 }
 
-static void display_symbol(sexp_t sexp)
+static void display_symbol(struct sexp_port *port, sexp_t sexp)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vec->size; i++)
-		putchar(vec->data[i]);
+		port_write_char(make_char(vec->data[i]), port);
 }
 
-void _display(sexp_t sexp, bool write)
+void _display(struct sexp_port *port, sexp_t sexp, bool write)
 {
+	char buf[128];
 	switch (sexp_type(sexp)) {
 	case SEXP_VOID:
 		break;
 	case SEXP_NIL:
-		printf("()");
+		port_write_c_string("()", port);
 		break;
 	case SEXP_EOF:
-		printf("#!eof");
+		port_write_c_string("#!eof", port);
 		break;
 	case SEXP_NUM:
-		printf("%ld", sexp_num(sexp));
+		snprintf(buf, 128, "%ld", sexp_num(sexp));
+		buf[127] = '\0';
+		port_write_c_string(buf, port);
 		break;
 	case SEXP_BOOL:
-		printf("#%c", sexp_bool(sexp) ? 't' : 'f');
+		port_write_c_string("#", port);
+		port_write_c_string(sexp_bool(sexp) ? "t" : "f", port);
 		break;
 	case SEXP_CHAR:
-		if (sexp_char(sexp) > 127)
-			printf("#\\x%lx", sexp_char(sexp));
-		else
-			printf("#\\%c", (char) sexp_char(sexp));
+		if (sexp_char(sexp) > 127) {
+			snprintf(buf, 128, "#\\x%lx", sexp_char(sexp));
+			buf[127] = '\0';
+			port_write_c_string(buf, port);
+		} else {
+			port_write_c_string("#\\", port);
+			port_write_char(sexp, port);
+		}
 		break;
 	case SEXP_VALUES:
-		printf("#<values ");
-		display_vector(sexp, write);
-		putchar('>');
+		port_write_c_string("#<values ", port);
+		display_vector(port, sexp, write);
+		port_write_c_string(">", port);
 		break;
 	case SEXP_PAIR:
-		putchar('(');
-		display_cdr(sexp, true, write);
+		port_write_c_string("(", port);
+		display_cdr(port, sexp, true, write);
 		break;
 	case SEXP_PORT:
-		printf("#<port>");
+		port_write_c_string("#<port>", port);
 		break;
 	case SEXP_STRING:
-		printf(write ? "\"%s\"" : "%s", sexp_string(sexp)->data);
+		if (write) port_write_c_string("\"", port);
+		port_write_c_string(sexp_string(sexp)->data, port);
+		if (write) port_write_c_string("\"", port);
 		break;
 	case SEXP_SYMBOL:
-		display_symbol(sexp);
+		display_symbol(port, sexp);
 		break;
 	case SEXP_VECTOR:
-		display_vector(sexp, write);
+		display_vector(port, sexp, write);
 		break;
 	case SEXP_BYTEVEC:
-		display_bytevec(sexp);
+		display_bytevec(port, sexp);
 		break;
 	case SEXP_MACRO:
-		printf("#<macro %s>", sexp_fun(sexp)->name);
+		port_write_c_string("#<macro ", port);
+		port_write_c_string(sexp_fun(sexp)->name, port);
+		port_write_c_string(">", port);
 		break;
 	case SEXP_FUNCTION:
-		if (sexp_fun(sexp)->builtin)
-			printf("#<builtin-procedure %s>", sexp_fun(sexp)->name);
-		else
-			printf("#<interpreted-procedure %s>", sexp_fun(sexp)->name);
+		if (sexp_fun(sexp)->builtin) {
+			port_write_c_string("#<builtin-procedure ", port);
+			port_write_c_string(sexp_fun(sexp)->name, port);
+			port_write_c_string(">", port);
+		} else {
+			port_write_c_string("#<interpreted-procedure ", port);
+			port_write_c_string(sexp_fun(sexp)->name, port);
+			port_write_c_string(">", port);
+		}
 		break;
 	case SEXP_CASELAMBDA:
-		printf("#<case-lambda>");
+		port_write_c_string("#<case-lambda>", port);
 		break;
 	case SEXP_ESCAPE:
-		printf("#<escape continuation>");
+		port_write_c_string("#<escape continuation>", port);
 		break;
 	case SEXP_ENVIRONMENT:
-		printf("#<environment>");
+		port_write_c_string("#<environment>", port);
 		break;
 	case SEXP_BOUNCE:
-		printf("#<bounce>");
+		port_write_c_string("#<bounce>", port);
 		break;
 	}
-}
-
-DEFUN(scm_display, args)
-{
-	display(sexp_pair(args)->car);
-	return unspecified();
-}
-
-DEFUN(scm_write, args)
-{
-	sexp_write(car(args));
-	return unspecified();
-}
-
-DEFUN(scm_newline, args)
-{
-	putchar('\n');
-	return unspecified();
 }

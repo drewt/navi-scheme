@@ -33,7 +33,7 @@ sexp_t make_stdio_port(FILE *stream)
 sexp_t port_peek_char(struct sexp_port *port)
 {
 	if (!port->buffer_full) {
-		port->buffer = port->read_char(port);
+		port->buffer = port->read_u8(port);
 		port->buffer_full = true;
 	}
 	return port->buffer;
@@ -45,12 +45,18 @@ sexp_t port_read_char(struct sexp_port *port)
 		port->buffer_full = false;
 		return port->buffer;
 	}
-	return port->read_char(port);
+	return port->read_u8(port);
 }
 
 void port_write_char(sexp_t ch, struct sexp_port *port)
 {
-	port->write_char(ch, port);
+	port->write_u8(ch, port);
+}
+
+void port_write_c_string(const char *str, struct sexp_port *port)
+{
+	while (*str != '\0')
+		port_write_char(make_char(*str++), port);
 }
 
 DEFUN(scm_current_input_port, args)
@@ -111,4 +117,30 @@ DEFUN(scm_write_u8, args)
 DEFUN(scm_write_char, args)
 {
 	return CALL(scm_write_u8, args); // TODO: encode UTF-8
+}
+
+DEFUN(scm_write_string, args)
+{
+	type_check(car(args), SEXP_STRING);
+	port_write_c_string(sexp_string(car(args))->data,
+			get_port(scm_current_output_port, cdr(args)));
+	return unspecified();
+}
+
+DEFUN(scm_display, args)
+{
+	_display(get_port(scm_current_output_port, cdr(args)), car(args), false);
+	return unspecified();
+}
+
+DEFUN(scm_write, args)
+{
+	_display(get_port(scm_current_output_port, cdr(args)), car(args), true);
+	return unspecified();
+}
+
+DEFUN(scm_newline, args)
+{
+	CALL(scm_write_u8, make_pair(make_char('\n'), args));
+	return unspecified();
 }

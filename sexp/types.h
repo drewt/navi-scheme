@@ -111,8 +111,8 @@ struct sexp_pair {
 };
 
 struct sexp_port {
-	sexp_t (*read_char)(struct sexp_port *port);
-	void (*write_char)(sexp_t, struct sexp_port *port);
+	sexp_t (*read_u8)(struct sexp_port *port);
+	void (*write_u8)(sexp_t, struct sexp_port *port);
 	sexp_t buffer;
 	bool buffer_full;
 	void *specific;
@@ -348,6 +348,7 @@ static inline sexp_t last_cons(sexp_t list)
 sexp_t port_read_char(struct sexp_port *port);
 sexp_t port_peek_char(struct sexp_port *port);
 void port_write_char(sexp_t ch, struct sexp_port *port);
+void port_write_c_string(const char *str, struct sexp_port *port);
 
 /* conversion */
 sexp_t list_to_vector(sexp_t list);

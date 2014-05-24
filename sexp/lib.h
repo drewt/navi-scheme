@@ -43,9 +43,9 @@ DECLARE(scm_error_object_irritants);
 DECLARE(scm_current_input_port);
 DECLARE(scm_current_output_port);
 DECLARE(scm_current_error_port);
-
 DECLARE(scm_open_input_string);
-
+DECLARE(scm_eof_objectp);
+DECLARE(scm_eof_object);
 DECLARE(scm_read_u8);
 DECLARE(scm_peek_u8);
 DECLARE(scm_read_char);

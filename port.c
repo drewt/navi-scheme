@@ -104,6 +104,16 @@ DEFUN(scm_open_input_string, args)
 	return make_string_input_port(type_check(car(args), SEXP_STRING));
 }
 
+DEFUN(scm_eof_objectp, args)
+{
+	return make_bool(is_eof(car(args)));
+}
+
+DEFUN(scm_eof_object, args)
+{
+	return make_eof();
+}
+
 #define get_port(fallback, args) _get_port(fallback, args, ____env)
 static struct sexp_port *_get_port(builtin_t fallback, sexp_t args, env_t env)
 {

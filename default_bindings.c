@@ -82,6 +82,8 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("current-output-port", scm_current_output_port, 0, 0),
 	FUNCTION("current-error-port",  scm_current_error_port,  0, 0),
 	FUNCTION("open-input-string",   scm_open_input_string,   1, 0),
+	FUNCTION("eof-object?",  scm_eof_objectp,  1, 0),
+	FUNCTION("eof-object",   scm_eof_object,   0, 0),
 	FUNCTION("read-u8",      scm_read_u8,      0, 1),
 	FUNCTION("peek-u8",      scm_peek_u8,      0, 1),
 	FUNCTION("read-char",    scm_read_char,    0, 1),

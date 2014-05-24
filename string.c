@@ -38,6 +38,21 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 	return sexp;
 }
 
+static sexp_t string_to_list(sexp_t sexp)
+{
+	struct sexp_pair head, *ptr;
+	struct sexp_string *string = sexp_string(sexp);
+
+	ptr = &head;
+	for (size_t i = 0; i < string->size; i++) {
+		ptr->cdr = make_empty_pair();
+		ptr = sexp_pair(ptr->cdr);
+		ptr->car = make_char(string->data[i]);
+	}
+	ptr->cdr = make_nil();
+	return head.cdr;
+}
+
 char *scm_to_c_string(sexp_t sexp)
 {
 	struct sexp_string *string = sexp_string(sexp);
@@ -217,8 +232,7 @@ DEFUN(scm_string_append, args)
 
 DEFUN(scm_string_to_list, args)
 {
-	//return bytevec_to_list(type_check(car(args), SEXP_STRING));
-	return unspecified(); // FIXME
+	return string_to_list(type_check(car(args), SEXP_STRING));
 }
 
 DEFUN(scm_list_to_string, args)

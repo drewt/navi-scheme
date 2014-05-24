@@ -218,15 +218,15 @@ DEFUN(scm_map, args)
 	return map(cadr(args), map_apply, &arg);
 }
 
-static sexp_t string_map_ip(sexp_t fun, sexp_t str, env_t env)
+static sexp_t string_map_ip(sexp_t fun, sexp_t sexp, env_t env)
 {
-	struct sexp_vector *vec = _vector_cast(str, SEXP_STRING, env);
+	struct sexp_string *vec = _string_cast(sexp, env);
 
 	for (size_t i = 0; i < vec->size; i++) {
-		sexp_t call = make_pair(fun, make_pair(vec->data[i], make_nil()));
-		vec->data[i] = _type_check(trampoline(call, env), SEXP_CHAR, env);
+		sexp_t call = list(fun, make_char(vec->data[i]), make_void());
+		vec->data[i] = _char_cast(trampoline(call, env), env);
 	}
-	return str;
+	return sexp;
 }
 
 DEFUN(scm_string_map_ip, args)

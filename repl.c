@@ -20,6 +20,11 @@
 
 #include "sexp.h"
 
+static sexp_t call_read(env_t env)
+{
+	return scm_read(make_nil(), env);
+}
+
 static _Noreturn void repl(void)
 {
 	env_t env = make_default_environment();
@@ -34,7 +39,7 @@ static _Noreturn void repl(void)
 		setjmp(escape->state);
 
 		printf("\n#;%d> ", i);
-		if ((sexp = sexp_read()).n == 0)
+		if ((sexp = call_read(env)).n == 0)
 			continue;
 		printf("read: "); sexp_write(sexp); putchar('\n');
 		if (is_eof(sexp))
@@ -52,7 +57,7 @@ static _Noreturn void script(void)
 	env_t env = make_default_environment();
 
 	for (;;) {
-		sexp_t sexp = sexp_read();
+		sexp_t sexp = call_read(env);
 		if (is_eof(sexp))
 			break;
 		display(trampoline(sexp, env));

@@ -96,6 +96,11 @@ DEFUN(scm_peek_char, args)
 	return CALL(scm_peek_u8, args); // TODO: decode UTF-8
 }
 
+DEFUN(scm_read, args)
+{
+	return sexp_read(get_port(scm_current_input_port, args));
+}
+
 DEFUN(scm_write_u8, args)
 {
 	port_write_char(type_check(car(args), SEXP_CHAR),

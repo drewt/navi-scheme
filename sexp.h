@@ -34,7 +34,7 @@ extern struct list_head active_environments;
 
 typedef sexp_t(*sexp_leaf_t)(sexp_t, void*);
 
-sexp_t sexp_read(void);
+sexp_t sexp_read(struct sexp_port *port);
 
 #define sexp_write(sexp) _display(sexp, true)
 #define display(sexp) _display(sexp, false)

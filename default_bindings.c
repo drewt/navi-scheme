@@ -61,7 +61,6 @@ struct sexp_spec default_bindings[] = {
 
 	FUNCTION("gensym", scm_gensym, 0, 0),
 
-	FUNCTION("read",  scm_read,  0, 0),
 	FUNCTION("eval",  scm_eval,  1, 0),
 	FUNCTION("apply", scm_apply, 2, 1),
 	FUNCTION("map",    scm_map,    2, 0),
@@ -86,6 +85,7 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("read-u8",    scm_read_u8,    0, 1),
 	FUNCTION("peek-u8",    scm_peek_u8,    0, 1),
 	FUNCTION("read-char",  scm_read_char,  0, 1),
+	FUNCTION("read",       scm_read,       0, 1),
 	FUNCTION("peek-char",  scm_peek_char,  0, 1),
 	FUNCTION("write-u8",   scm_write_u8,   1, 1),
 	FUNCTION("write-char", scm_write_char, 1, 1),

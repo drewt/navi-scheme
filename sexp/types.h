@@ -346,6 +346,7 @@ static inline sexp_t last_cons(sexp_t list)
 }
 
 sexp_t port_read_char(struct sexp_port *port);
+sexp_t port_peek_char(struct sexp_port *port);
 void port_write_char(sexp_t ch, struct sexp_port *port);
 
 /* conversion */

@@ -65,6 +65,7 @@ sexp_t sym_exn;
 sexp_t sym_current_input;
 sexp_t sym_current_output;
 sexp_t sym_current_error;
+sexp_t sym_read_error;
 sexp_t sym_repl;
 
 static inline sexp_t symbol_object(struct sexp_symbol *sym)
@@ -114,6 +115,7 @@ void symbol_table_init(void)
 	intern(sym_current_input,  "#current-input-port");
 	intern(sym_current_output, "#current-output-port");
 	intern(sym_current_error,  "#current-error-port");
+	intern(sym_read_error,     "#read-error");
 	intern(sym_repl,           "#repl");
 	#undef intern
 }

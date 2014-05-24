@@ -22,6 +22,9 @@
 #define error(env, msg, ...) _error(env, msg, ##__VA_ARGS__, make_void())
 _Noreturn void _error(env_t env, const char *msg, ...);
 
+#define read_error(env, msg, ...) error(env, msg, sym_read_error, \
+		##__VA_ARGS__, make_void())
+
 /*
  * Type Checking
  *

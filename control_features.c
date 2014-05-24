@@ -109,6 +109,8 @@ DEFUN(scm_with_exception_handler, args)
 	env_t exn_env = env_new_scope(thunk->env);
 	scope_set(exn_env, sym_exn, car(args));
 
+	if (thunk->builtin)
+		return thunk->fn(make_nil(), exn_env);
 	return eval_begin(thunk->body, exn_env);
 }
 
@@ -191,6 +193,15 @@ DEFUN(scm_error_object_irritants, args)
 {
 	type_check_error(car(args));
 	return cdar(args);
+}
+
+DEFUN(scm_read_errorp, args)
+{
+	if (!sexp_bool(CALL(scm_error_objectp, args)))
+		return make_bool(false);
+	if (list_length(car(args)) < 2)
+		return make_bool(false);
+	return make_bool(symbol_eq(cadr(car(args)), sym_read_error));
 }
 
 struct map_apply_arg {

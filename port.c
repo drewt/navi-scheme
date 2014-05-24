@@ -144,7 +144,7 @@ DEFUN(scm_peek_char, args)
 
 DEFUN(scm_read, args)
 {
-	return sexp_read(get_port(scm_current_input_port, args));
+	return sexp_read(get_port(scm_current_input_port, args), ____env);
 }
 
 DEFUN(scm_write_u8, args)

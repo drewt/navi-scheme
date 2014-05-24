@@ -234,6 +234,9 @@ sexp_t make_port(sexp_t(*read)(struct sexp_port*),
 	sexp->data->port.read_u8 = read;
 	sexp->data->port.write_u8 = write;
 	sexp->data->port.buffer_full = false;
+	sexp->data->port.eof = false;
+	sexp->data->port.sexp = make_void();
+	sexp->data->port.pos = 0;
 	sexp->data->port.specific = specific;
 	return (sexp_t) sexp;
 }
@@ -398,6 +401,9 @@ static void gc_mark_obj(sexp_t obj)
 		gc_mark_obj(cdr(obj));
 		break;
 	case SEXP_PORT:
+		gc_set_mark(obj);
+		gc_mark_obj(sexp_port(obj)->sexp);
+		break;
 	case SEXP_SYMBOL:
 	case SEXP_STRING:
 	case SEXP_BYTEVEC:

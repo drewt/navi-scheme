@@ -115,6 +115,9 @@ struct sexp_port {
 	void (*write_u8)(sexp_t, struct sexp_port *port);
 	sexp_t buffer;
 	bool buffer_full;
+	bool eof;
+	sexp_t sexp;
+	size_t pos;
 	void *specific;
 };
 

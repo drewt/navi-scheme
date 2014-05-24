@@ -17,7 +17,8 @@
 
 static sexp_t stdio_read(struct sexp_port *port)
 {
-	return make_char(getc(port->specific));
+	int c = getc(port->specific);
+	return c == EOF ? make_eof() : make_char(c);
 }
 
 static void stdio_write(sexp_t ch, struct sexp_port *port)
@@ -30,8 +31,23 @@ sexp_t make_stdio_port(FILE *stream)
 	return make_port(stdio_read, stdio_write, stream);
 }
 
+static sexp_t string_read(struct sexp_port *port)
+{
+	char c = sexp_string(port->sexp)->data[port->pos++];
+	return c == '\0' ? make_eof() : make_char(c);
+}
+
+sexp_t make_string_input_port(sexp_t string)
+{
+	sexp_t port = make_port(string_read, NULL, NULL);
+	port.p->data->port.sexp = string;
+	return port;
+}
+
 sexp_t port_peek_char(struct sexp_port *port)
 {
+	if (port->eof)
+		return make_eof();
 	if (!port->buffer_full) {
 		port->buffer = port->read_u8(port);
 		port->buffer_full = true;
@@ -39,13 +55,22 @@ sexp_t port_peek_char(struct sexp_port *port)
 	return port->buffer;
 }
 
+static sexp_t check_return(struct sexp_port *port, sexp_t sexp)
+{
+	if (is_eof(sexp))
+		port->eof = true;
+	return sexp;
+}
+
 sexp_t port_read_char(struct sexp_port *port)
 {
+	if (port->eof)
+		return make_eof();
 	if (port->buffer_full) {
 		port->buffer_full = false;
-		return port->buffer;
+		return check_return(port, port->buffer);
 	}
-	return port->read_u8(port);
+	return check_return(port, port->read_u8(port));
 }
 
 void port_write_char(sexp_t ch, struct sexp_port *port)
@@ -72,6 +97,11 @@ DEFUN(scm_current_output_port, args)
 DEFUN(scm_current_error_port, args)
 {
 	return env_lookup(____env, sym_current_error);
+}
+
+DEFUN(scm_open_input_string, args)
+{
+	return make_string_input_port(type_check(car(args), SEXP_STRING));
 }
 
 #define get_port(fallback, args) _get_port(fallback, args, ____env)

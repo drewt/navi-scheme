@@ -19,37 +19,42 @@
 	do { \
 		sexp_t ____MAF_CONS; \
 		type_check(car(args), SEXP_NUM); \
-		acc = sexp_num(car(args)); \
+		acc = car(args); \
 		sexp_list_for_each(____MAF_CONS, cdr(args)) { \
 			type_check(car(____MAF_CONS), SEXP_NUM); \
-			acc operator ## = sexp_num(car(____MAF_CONS)); \
+			acc.n = operator(acc.n, car(____MAF_CONS).n); \
 		} \
 	} while (0)
 
 #define ARITHMETIC_DEFUN(cname, operator) \
 	DEFUN(cname, ____MAD_ARGS) \
 	{ \
-		long ____MAD_ACC; \
+		sexp_t ____MAD_ACC; \
 		ARITHMETIC_FOLD(operator, ____MAD_ARGS, ____MAD_ACC); \
-		return make_num(____MAD_ACC); \
+		return ____MAD_ACC; \
 	}
 
-ARITHMETIC_DEFUN(scm_add, +)
-ARITHMETIC_DEFUN(scm_sub, -)
-ARITHMETIC_DEFUN(scm_mul, *)
-ARITHMETIC_DEFUN(scm_div, /)
+ARITHMETIC_DEFUN(scm_add, fixnum_plus)
+ARITHMETIC_DEFUN(scm_sub, fixnum_minus)
+ARITHMETIC_DEFUN(scm_mul, fixnum_times)
+ARITHMETIC_DEFUN(scm_div, fixnum_divide)
 
 DEFUN(scm_quotient, args)
 {
+	type_check(car(args),  SEXP_NUM);
+	type_check(cadr(args), SEXP_NUM);
 	return make_num(sexp_num(car(args)) / sexp_num(cadr(args)));
 }
 
 DEFUN(scm_remainder, args)
 {
+	type_check(car(args),  SEXP_NUM);
+	type_check(cadr(args), SEXP_NUM);
 	return make_num(sexp_num(car(args)) % sexp_num(cadr(args)));
 }
 
-bool fold_pairs(sexp_t list, bool (*compare)(sexp_t,sexp_t,env_t), env_t env)
+static bool fold_pairs(sexp_t list, bool (*compare)(sexp_t,sexp_t,env_t),
+		env_t env)
 {
 	sexp_t cons;
 

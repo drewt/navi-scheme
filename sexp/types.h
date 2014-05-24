@@ -27,14 +27,14 @@
 
 #define IMMEDIATE_TAG_SIZE 0x4
 #define IMMEDIATE_TAG_MASK 0xF
-#define VOID_TAG 0x0UL
-#define BOOL_TAG 0x2UL
-#define CHAR_TAG 0x6UL
-#define NIL_TAG  0xAUL
-#define EOF_TAG  0xEUL
+#define VOID_TAG 0x0L
+#define BOOL_TAG 0x2L
+#define CHAR_TAG 0x6L
+#define NIL_TAG  0xAL
+#define EOF_TAG  0xEL
 
 typedef union {
-	unsigned long n;
+	long n;
 	struct sexp *p;
 } sexp_t;
 

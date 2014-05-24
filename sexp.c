@@ -127,7 +127,7 @@ static sexp_t symbol_lookup(const char *str, unsigned long hashcode)
 		if (bytevec_equal(symbol_object(it), str))
 			return symbol_object(it);
 	}
-	return (sexp_t) 0UL;
+	return (sexp_t) 0L;
 }
 
 /* Only called if symbol doesn't already exist */

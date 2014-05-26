@@ -63,6 +63,7 @@ enum sexp_type {
 	SEXP_BYTEVEC,
 	SEXP_VALUES,
 	SEXP_MACRO,
+	SEXP_SPECIAL,
 	SEXP_FUNCTION,
 	SEXP_CASELAMBDA,
 	SEXP_ESCAPE,
@@ -178,7 +179,6 @@ static inline void scope_ref(env_t env)
 static inline long sexp_num(sexp_t sexp)
 {
 	return sexp.n >> 1;
-	//return (long) (((unsigned long)sexp) >> 1);
 }
 
 static inline bool sexp_bool(sexp_t sexp)
@@ -517,6 +517,7 @@ static inline const char *strtype(enum sexp_type type)
 	case SEXP_VECTOR:      return "vector";
 	case SEXP_BYTEVEC:     return "bytevector";
 	case SEXP_MACRO:       return "macro";
+	case SEXP_SPECIAL:     return "special";
 	case SEXP_FUNCTION:    return "function";
 	case SEXP_CASELAMBDA:  return "case-lambda";
 	case SEXP_ESCAPE:      return "escape";

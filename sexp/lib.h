@@ -20,6 +20,22 @@
 
 #define DECLARE(fname) sexp_t fname (sexp_t,env_t)
 
+DECLARE(eval_lambda);
+DECLARE(eval_caselambda);
+DECLARE(eval_define);
+DECLARE(eval_defmacro);
+DECLARE(eval_begin);
+DECLARE(eval_let);
+DECLARE(eval_sequential_let);
+DECLARE(eval_set);
+DECLARE(eval_quote);
+DECLARE(eval_quasiquote);
+DECLARE(eval_case);
+DECLARE(eval_cond);
+DECLARE(eval_if);
+DECLARE(eval_and);
+DECLARE(eval_or);
+
 DECLARE(scm_gensym);
 
 DECLARE(scm_read);

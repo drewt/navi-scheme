@@ -321,6 +321,7 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 	case SEXP_BYTEVEC:
 		return make_bytevec(spec->size);
 	case SEXP_MACRO:
+	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
 		sexp = make_sexp(spec->type, sizeof(struct sexp_function));
 		fun = (void*) sexp->data;
@@ -361,6 +362,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 	case SEXP_VALUES:
 	case SEXP_BYTEVEC:
 	case SEXP_MACRO:
+	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
@@ -420,6 +422,7 @@ static void gc_mark_obj(sexp_t obj)
 			gc_mark_obj(vec->data[i]);
 		break;
 	case SEXP_MACRO:
+	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
 		gc_set_mark(obj);
 		fun = sexp_fun(obj);

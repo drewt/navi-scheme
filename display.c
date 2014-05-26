@@ -146,6 +146,11 @@ void _display(struct sexp_port *port, sexp_t sexp, bool write)
 		port_write_c_string(sexp_fun(sexp)->name, port);
 		port_write_c_string(">", port);
 		break;
+	case SEXP_SPECIAL:
+		port_write_c_string("#<special form ", port);
+		port_write_c_string(sexp_fun(sexp)->name, port);
+		port_write_c_string(">", port);
+		break;
 	case SEXP_FUNCTION:
 		if (sexp_fun(sexp)->builtin) {
 			port_write_c_string("#<builtin-procedure ", port);

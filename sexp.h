@@ -59,7 +59,6 @@ sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data);
 
 /* eval.c */
 sexp_t eval(sexp_t sexp, env_t env);
-sexp_t eval_begin(sexp_t sexp, env_t env);
 sexp_t apply(struct sexp_function *fun, sexp_t args, env_t env);
 sexp_t trampoline(sexp_t sexp, env_t env);
 

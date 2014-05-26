@@ -34,6 +34,9 @@
 	.ident = scmname, \
 }
 
+#define SPECIAL(scmname, _fn, ary, var) \
+	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_SPECIAL)
+
 #define FUNCTION(scmname, _fn, ary, var) \
 	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_FUNCTION)
 
@@ -55,9 +58,28 @@
 }
 
 static DECLARE(scm_toplevel_exn);
+#define TOPLEVEL_EXN_INDEX 0
 
 struct sexp_spec default_bindings[] = {
-	[0] = FUNCTION("#exn",  scm_toplevel_exn, 1, 0),
+	[TOPLEVEL_EXN_INDEX] = FUNCTION("#exn",  scm_toplevel_exn, 1, 0),
+
+	SPECIAL("lambda",       eval_lambda,         2, 1),
+	SPECIAL("case-lambda",  eval_caselambda,     2, 1),
+	SPECIAL("define",       eval_define,         2, 1),
+	SPECIAL("define-macro", eval_defmacro,       2, 1),
+	SPECIAL("begin",        eval_begin,          1, 1),
+	SPECIAL("let",          eval_let,            2, 1),
+	SPECIAL("let*",         eval_sequential_let, 2, 1),
+	SPECIAL("letrec",       eval_let,            2, 1),
+	SPECIAL("letrec*",      eval_sequential_let, 2, 1),
+	SPECIAL("set!",         eval_set,            2, 0),
+	SPECIAL("quote",        eval_quote,          1, 0),
+	SPECIAL("quasiquote",   eval_quasiquote,     1, 0),
+	SPECIAL("case",         eval_case,           2, 1),
+	SPECIAL("cond",         eval_cond,           1, 1),
+	SPECIAL("if",           eval_if,             2, 1),
+	SPECIAL("and",          eval_and,            0, 1),
+	SPECIAL("or",           eval_or,             0, 1),
 
 	FUNCTION("gensym", scm_gensym, 0, 0),
 

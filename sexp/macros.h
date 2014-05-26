@@ -16,9 +16,12 @@
 #ifndef _SEXP_MACROS_H
 #define _SEXP_MACROS_H
 
+#define DEFSPECIAL(fname, aname, ename) \
+	sexp_t fname (sexp_t aname, env_t ename)
 #define DEFUN(fname, aname) \
-	sexp_t fname (sexp_t aname, env_t  ____env)
+	DEFSPECIAL(fname, aname, ____env)
 #define DEFMACRO DEFUN
+
 #define CALL(fname, args) fname(args, ____env)
 
 #define sexp_list_for_each(cons, head) \

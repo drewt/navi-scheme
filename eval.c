@@ -59,7 +59,7 @@ static bool lambda_valid(sexp_t lambda)
 	return true;
 }
 
-static sexp_t eval_lambda(sexp_t lambda, env_t env)
+DEFSPECIAL(eval_lambda, lambda, env)
 {
 	if (!lambda_valid(lambda))
 		error(env, "invalid lambda list");
@@ -67,7 +67,7 @@ static sexp_t eval_lambda(sexp_t lambda, env_t env)
 	return make_function(car(lambda), cdr(lambda), "?", env);
 }
 
-static sexp_t eval_caselambda(sexp_t caselambda, env_t env)
+DEFSPECIAL(eval_caselambda, caselambda, env)
 {
 	sexp_t cons, sexp;
 	struct sexp_vector *vec;
@@ -107,7 +107,7 @@ static sexp_t eval_defun(sexp_t fundecl, sexp_t rest, env_t env)
 	return unspecified();
 }
 
-static sexp_t eval_define(sexp_t define, env_t env)
+DEFSPECIAL(eval_define, define, env)
 {
 	enum sexp_type type;
 
@@ -122,7 +122,7 @@ static sexp_t eval_define(sexp_t define, env_t env)
 	error(env, "invalid define list");
 }
 
-static sexp_t eval_defmacro(sexp_t defmacro, env_t env)
+DEFSPECIAL(eval_defmacro, defmacro, env)
 {
 	sexp_t macro, name;
 
@@ -136,7 +136,7 @@ static sexp_t eval_defmacro(sexp_t defmacro, env_t env)
 	return unspecified();
 }
 
-sexp_t eval_begin(sexp_t begin, env_t env)
+DEFSPECIAL(eval_begin, begin, env)
 {
 	sexp_t cons, result;
 
@@ -181,7 +181,7 @@ static env_t let_extend_env(sexp_t def_list, env_t env)
 	return new;
 }
 
-static sexp_t eval_let(sexp_t let, env_t env)
+DEFSPECIAL(eval_let, let, env)
 {
 	sexp_t result;
 	env_t new_env;
@@ -209,7 +209,7 @@ static env_t sequential_let_extend_env(sexp_t def_list, env_t env)
 	return new;
 }
 
-static sexp_t eval_sequential_let(sexp_t let, env_t env)
+DEFSPECIAL(eval_sequential_let, let, env)
 {
 	sexp_t result;
 	env_t new_env;
@@ -230,7 +230,7 @@ static inline bool set_valid(sexp_t set)
 		sexp_type(cddr(set)) == SEXP_NIL;
 }
 
-static sexp_t eval_set(sexp_t set, env_t env)
+DEFSPECIAL(eval_set, set, env)
 {
 	struct sexp_binding *binding;
 	sexp_t value;
@@ -248,14 +248,14 @@ static sexp_t eval_set(sexp_t set, env_t env)
 	return unspecified();
 }
 
-static sexp_t eval_quote(sexp_t quote, env_t env)
+DEFSPECIAL(eval_quote, quote, env)
 {
 	if (sexp_type(cdr(quote)) != SEXP_NIL)
 		error(env, "invalid argument to quote");
 	return car(quote);
 }
 
-static sexp_t eval_unquote(sexp_t unquote, env_t env)
+DEFSPECIAL(eval_unquote, unquote, env)
 {
 	if (list_length(unquote) != 1)
 		error(env, "wrong number of arguments to unquote");
@@ -300,7 +300,7 @@ static sexp_t eval_qq(sexp_t sexp, env_t env)
 	return sexp;
 }
 
-static sexp_t eval_quasiquote(sexp_t quote, env_t env)
+DEFSPECIAL(eval_quasiquote, quote, env)
 {
 	if (!is_nil(cdr(quote)))
 		error(env, "too many arguments to quasiquote");
@@ -334,7 +334,7 @@ static sexp_t eval_clause(sexp_t arg, sexp_t begin, env_t env)
 	return eval_begin(begin, env);
 }
 
-static sexp_t eval_case(sexp_t scase, env_t env)
+DEFSPECIAL(eval_case, scase, env)
 {
 	sexp_t test, cons, inner;
 
@@ -381,7 +381,7 @@ static sexp_t eval_cond_clause(sexp_t test, sexp_t clause, env_t env)
 	return eval_begin(clause, env);
 }
 
-static sexp_t eval_cond(sexp_t cond, env_t env)
+DEFSPECIAL(eval_cond, cond, env)
 {
 	sexp_t cons;
 
@@ -401,7 +401,7 @@ static sexp_t eval_cond(sexp_t cond, env_t env)
 	return unspecified();
 }
 
-static sexp_t eval_if(sexp_t sif, env_t env)
+DEFSPECIAL(eval_if, sif, env)
 {
 	sexp_t test;
 	int nr_args = list_length(sif);
@@ -417,7 +417,7 @@ static sexp_t eval_if(sexp_t sif, env_t env)
 	return unspecified();
 }
 
-static sexp_t eval_and(sexp_t and, env_t env)
+DEFSPECIAL(eval_and, and, env)
 {
 	sexp_t cons;
 
@@ -430,7 +430,7 @@ static sexp_t eval_and(sexp_t and, env_t env)
 	return make_bool(true);
 }
 
-static sexp_t eval_or(sexp_t or, env_t env)
+DEFSPECIAL(eval_or, or, env)
 {
 	sexp_t cons;
 
@@ -475,10 +475,6 @@ static sexp_t caselambda_call(sexp_t lambda, sexp_t args, env_t env)
 	struct sexp_vector *vec = sexp_vector(lambda);
 
 	for (size_t i = 0; i < vec->size; i++) {
-		if (is_function(vec->data[i]))
-			printf("FUNCTION: %lu\n", i);
-		else
-			printf("NOT FUNCTION: %lu\n", i);
 		struct sexp_function *fun = sexp_fun(vec->data[i]);
 		if (fun->arity == nr_args || (fun->arity < nr_args && fun->variadic))
 			return apply(fun, args, env);
@@ -494,17 +490,23 @@ static sexp_t eval_call(sexp_t call, env_t env)
 	enum sexp_type type = sexp_type(fun);
 
 	switch (type) {
+	/* special: pass args unevaluated, return result */
+	case SEXP_SPECIAL:
+		return apply(sexp_fun(fun), cdr(call), env);
+	/* function: pass args evaluated, return result */
 	case SEXP_FUNCTION:
 		sexp = make_args(cdr(call), env);
 		return apply(sexp_fun(fun), sexp, env);
+	/* macro: pass args unevaluated, return eval(result) */
 	case SEXP_MACRO:
 		sexp = macro_call(fun, cdr(call), env);
-		printf("expand: "); sexp_write(sexp, env); putchar('\n');
 		return eval(sexp, env);
+	/* escape: magic */
 	case SEXP_ESCAPE:
 		length = list_length(call);
 		sexp = length < 2 ? make_nil() : cadr(call);
 		return call_escape(fun, sexp);
+	/* caselambda: magic */
 	case SEXP_CASELAMBDA:
 		return caselambda_call(fun, cdr(call), env);
 	default: break;
@@ -528,6 +530,7 @@ sexp_t eval(sexp_t sexp, env_t env)
 	case SEXP_VECTOR:
 	case SEXP_BYTEVEC:
 	case SEXP_MACRO:
+	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
@@ -544,32 +547,8 @@ sexp_t eval(sexp_t sexp, env_t env)
 		return val;
 	case SEXP_PAIR:
 		if (!is_proper_list(sexp))
-			error(env, "malformed expression");
-
-		/* -- special forms -- */
-		if (sexp_type(car(sexp)) == SEXP_SYMBOL) {
-			#define special(sym, fun) \
-				if (car(sexp).p == sym.p) \
-					return fun(cdr(sexp), env)
-			special(sym_lambda,     eval_lambda);
-			special(sym_caselambda, eval_caselambda);
-			special(sym_define,     eval_define);
-			special(sym_defmacro,   eval_defmacro);
-			special(sym_begin,      eval_begin);
-			special(sym_let,        eval_let);
-			special(sym_seqlet,     eval_sequential_let);
-			special(sym_letrec,     eval_let);
-			special(sym_seqletrec,  eval_sequential_let);
-			special(sym_set,        eval_set);
-			special(sym_quote,      eval_quote);
-			special(sym_quasiquote, eval_quasiquote);
-			special(sym_case,       eval_case);
-			special(sym_cond,       eval_cond);
-			special(sym_if,         eval_if);
-			special(sym_and,        eval_and);
-			special(sym_or,         eval_or);
-			#undef special
-		}
+			error(env, "malformed expression",
+					make_apair("expression", sexp));
 
 		return eval_call(sexp, env);
 	}

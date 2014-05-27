@@ -68,7 +68,7 @@ sexp_t string_to_bytevec(sexp_t string)
 sexp_t bytevec_to_string(sexp_t bytevec)
 {
 	struct sexp_bytevec *bvec = sexp_bytevec(bytevec);
-	sexp_t sexp = make_string(bvec->size);
+	sexp_t sexp = make_string(bvec->size, bvec->size);
 	struct sexp_vector *svec = sexp_vector(sexp);
 
 	for (size_t i = 0; i < bvec->size; i++)

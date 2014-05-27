@@ -21,15 +21,16 @@
 static sexp_t list_to_string(sexp_t list, env_t env)
 {
 	sexp_t cons;
-	size_t size = 0;
+	size_t size = 0, length = 0;
 
 	sexp_list_for_each(cons, list) {
 		_type_check(car(cons), SEXP_CHAR, env);
 		size += u_char_size(sexp_char(car(cons)));
+		length++;
 	}
 
 	unsigned i = 0;
-	sexp_t sexp = make_string(size);
+	sexp_t sexp = make_string(size, length);
 	struct sexp_string *str = sexp_string(sexp);
 
 	sexp_list_for_each(cons, list) {
@@ -64,11 +65,6 @@ char *scm_to_c_string(sexp_t sexp)
 	return cstr;
 }
 
-size_t string_length(sexp_t string)
-{
-	return u_strlen((char*)sexp_string(string)->data);
-}
-
 DEFUN(scm_stringp, args)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_STRING);
@@ -87,7 +83,7 @@ DEFUN(scm_make_string, args)
 		ch = char_cast(cadr(args));
 
 	/* FIXME: invalid codepoint? */
-	sexp_t sexp = make_string(length * u_char_size(ch));
+	sexp_t sexp = make_string(length * u_char_size(ch), length);
 
 	unsigned j = 0;
 	struct sexp_string *string = sexp_string(sexp);
@@ -104,9 +100,7 @@ DEFUN(scm_string, args)
 
 DEFUN(scm_string_length, args)
 {
-	type_check(car(args), SEXP_STRING);
-	// FIXME: use length field
-	return make_num(u_strlen((char*)sexp_string(car(args))->data));
+	return make_num(string_cast(car(args))->length);
 }
 
 DEFUN(scm_string_ref, args)
@@ -218,7 +212,7 @@ DEFUN(scm_string_append, args)
 	}
 
 	/* allocate */
-	sexp = make_string(size);
+	sexp = make_string(size, size);
 	str = sexp_string(sexp);
 
 	/* copy */
@@ -295,7 +289,7 @@ DEFUN(scm_string_fill, args)
 sexp_t string_copy(sexp_t string)
 {
 	struct sexp_string *from_str = sexp_string(string);
-	sexp_t to = make_string(from_str->size);
+	sexp_t to = make_string(from_str->size, from_str->size);
 	struct sexp_string *to_str = sexp_string(to);
 
 	for (size_t i = 0; i < from_str->size; i++)
@@ -319,7 +313,7 @@ DEFUN(scm_string_copy, args)
 	if (!indices_valid(str->size, start, end))
 		die("invalid indices");
 
-	return copy_to(make_string(end - start), 0, from, start, end);
+	return copy_to(make_string(end - start, end - start), 0, from, start, end);
 }
 
 DEFUN(scm_string_copy_to, args)

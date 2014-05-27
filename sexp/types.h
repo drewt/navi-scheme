@@ -378,7 +378,7 @@ sexp_t make_port(sexp_t(*read)(struct sexp_port*),
 sexp_t make_stdio_port(FILE *stream);
 sexp_t make_vector(size_t size);
 sexp_t make_bytevec(size_t size);
-sexp_t make_string(size_t size);
+sexp_t make_string(size_t size, size_t length);
 sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env);
 sexp_t make_escape(void);
 sexp_t capture_env(env_t env);

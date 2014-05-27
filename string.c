@@ -105,20 +105,12 @@ DEFUN(scm_string_length, args)
 
 DEFUN(scm_string_ref, args)
 {
-	long k;
-	struct sexp_string *str;
+	unsigned i = 0;
+	struct sexp_string *str = string_cast(car(args));	
+	long k = type_check_range(cadr(args), 0, str->length);
 
-	type_check(car(args), SEXP_STRING);
-	type_check(cadr(args), SEXP_NUM);
-
-	str = sexp_string(car(args));
-	k = sexp_num(cadr(args));
-
-	if (k < 0 || (size_t) k >= str->size)
-		die("string index out of bounds");
-
-	// FIXME: UTF-8
-	return make_char(str->data[k]);
+	u_skip_chars(str->data, k, &i);
+	return make_char(u_get_char(str->data, &i));
 }
 
 DEFUN(scm_string_set, args)

@@ -49,7 +49,7 @@ static inline sexp_t _type_check(sexp_t sexp, enum sexp_type type, env_t env)
 }
 
 #define type_check_range(n, min, max) _type_check_range(n, min, max, ____env)
-static inline sexp_t _type_check_range(sexp_t n, long min, long max, env_t env)
+static inline long _type_check_range(sexp_t n, long min, long max, env_t env)
 {
 	_type_check(n, SEXP_NUM, env);
 	if (sexp_num(n) < min || sexp_num(n) >= max)
@@ -57,7 +57,7 @@ static inline sexp_t _type_check_range(sexp_t n, long min, long max, env_t env)
 				make_apair("min", make_num(min)),
 				make_apair("max", make_num(max)),
 				make_apair("actual", n));
-	return n;
+	return sexp_num(n);
 }
 
 #define type_check_list(sexp) _type_check_list(sexp, ____env)
@@ -121,7 +121,7 @@ static inline struct sexp_port *_port_cast(sexp_t sexp, env_t env)
 #define type_check_byte(sexp) _type_check_byte(sexp, ____env)
 static inline unsigned char _type_check_byte(sexp_t sexp, env_t env)
 {
-	return sexp_num(_type_check_range(sexp, 0, 256, env));
+	return _type_check_range(sexp, 0, 256, env);
 }
 
 #endif

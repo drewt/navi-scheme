@@ -211,7 +211,7 @@ sexp_t make_string(size_t size)
 	struct sexp *sexp = make_sexp(SEXP_STRING, sizeof(struct sexp_string));
 	sexp->data->str.data = malloc(size + 1);
 	sexp->data->str.data[size] = '\0';
-	sexp->data->str.size = size + 1;
+	sexp->data->str.size = size;
 	sexp->data->str.length = 0;
 	return (sexp_t) sexp;
 }

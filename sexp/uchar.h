@@ -100,17 +100,17 @@ size_t u_strlen_safe(const char *str);
  * Returns unicode character at @str[*@idx] or @str[0] if @idx is NULL.
  * Stores byte index of the next char back to @idx if set.
  */
-uchar u_get_char(const char *str, int *idx);
+uchar u_get_char(const char *str, unsigned *idx);
 
 /*
  * @str  destination buffer
  * @idx  pointer to byte index in @str (not UTF-8 character index!)
  * @uch  unicode character
  */
-void u_set_char_raw(char *str, int *idx, uchar uch);
-void u_set_char(char *str, int *idx, uchar uch);
+void u_set_char_raw(char *str, unsigned *idx, uchar uch);
+void u_set_char(char *str, unsigned *idx, uchar uch);
 
-static inline void u_skip_chars(const char *str, int n, int *idx)
+static inline void u_skip_chars(const char *str, int n, unsigned *idx)
 {
 	while (n-- > 0)
 		u_get_char(str, idx);

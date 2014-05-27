@@ -167,10 +167,11 @@ single_char:
 	return len;
 }
 
-uchar u_get_char(const char *str, int *idx)
+uchar u_get_char(const char *str, unsigned *idx)
 {
 	const unsigned char *s = (const unsigned char *)str;
-	int len, i, x = 0;
+	int len, i;
+	unsigned x = 0;
 	uchar ch, u;
 
 	if (idx)
@@ -204,7 +205,7 @@ invalid:
 	return u | U_INVALID_MASK;
 }
 
-void u_set_char_raw(char *str, int *idx, uchar uch)
+void u_set_char_raw(char *str, unsigned *idx, uchar uch)
 {
 	int i = *idx;
 
@@ -240,7 +241,7 @@ void u_set_char_raw(char *str, int *idx, uchar uch)
  * Printing functions, these lose information
  */
 
-void u_set_char(char *str, int *idx, uchar uch)
+void u_set_char(char *str, unsigned *idx, uchar uch)
 {
 	int i = *idx;
 

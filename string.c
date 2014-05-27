@@ -28,7 +28,7 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 		size += u_char_size(sexp_char(car(cons)));
 	}
 
-	int i = 0;
+	unsigned i = 0;
 	sexp_t sexp = make_string(size);
 	struct sexp_string *str = sexp_string(sexp);
 
@@ -41,13 +41,13 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 static sexp_t string_to_list(sexp_t sexp)
 {
 	struct sexp_pair head, *ptr;
-	struct sexp_string *string = sexp_string(sexp);
+	struct sexp_string *string = sexp_string (sexp);
 
 	ptr = &head;
-	for (size_t i = 0; i < string->size; i++) {
+	for (unsigned i = 0; i < string->size;) {
 		ptr->cdr = make_empty_pair();
 		ptr = sexp_pair(ptr->cdr);
-		ptr->car = make_char(string->data[i]);
+		ptr->car = make_char(u_get_char(string->data, &i));
 	}
 	ptr->cdr = make_nil();
 	return head.cdr;
@@ -89,7 +89,7 @@ DEFUN(scm_make_string, args)
 	/* FIXME: invalid codepoint? */
 	sexp_t sexp = make_string(length * u_char_size(ch));
 
-	int j = 0;
+	unsigned j = 0;
 	struct sexp_string *string = sexp_string(sexp);
 	for (size_t i = 0; i < (size_t) length; i++)
 		u_set_char_raw((char*)string->data, &j, ch);

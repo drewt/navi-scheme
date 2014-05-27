@@ -196,15 +196,17 @@ DEFUN(scm_string_append, args)
 {
 	sexp_t cons, sexp;
 	struct sexp_string *str;
-	size_t i = 0, size = 0;
+	size_t i = 0, size = 0, length = 0;
 
-	/* count combined size */
+	/* count combined size/length */
 	sexp_list_for_each(cons, args) {
-		size += string_cast(car(cons))->size;
+		struct sexp_string *s = string_cast(car(cons));
+		size += s->size;
+		length += s->length;
 	}
 
 	/* allocate */
-	sexp = make_string(size, size);
+	sexp = make_string(size, length);
 	str = sexp_string(sexp);
 
 	/* copy */

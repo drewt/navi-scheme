@@ -322,6 +322,7 @@ static sexp_t read_list(struct sexp_port *port, env_t env)
 			elmptr->cdr = sexp_read(port, env);
 			if ((c = peek_first_char(port)) != ')')
 				read_error(env, "missing list terminator");
+			read_char(port);
 			return head.cdr;
 		case '#':
 			read_char(port);

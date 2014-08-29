@@ -271,6 +271,11 @@ static inline sexp_t caddr(sexp_t sexp)
 	return sexp_pair(cddr(sexp))->car;
 }
 
+static inline sexp_t cadar(sexp_t sexp)
+{
+	return sexp_pair(cdar(sexp))->car;
+}
+
 static inline sexp_t cdddr(sexp_t sexp)
 {
 	return sexp_pair(cddr(sexp))->cdr;
@@ -464,6 +469,11 @@ static inline sexp_t unspecified(void)
 static inline sexp_t vector_ref(sexp_t sexp, size_t i)
 {
 	return sexp_vector(sexp)->data[i];
+}
+
+static inline size_t vector_length(sexp_t sexp)
+{
+	return sexp.p->data->vec.size;
 }
 
 static inline sexp_t bytevec_ref(sexp_t sexp, size_t i)

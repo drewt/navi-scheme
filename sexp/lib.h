@@ -23,10 +23,12 @@
 DECLARE(eval_lambda);
 DECLARE(eval_caselambda);
 DECLARE(eval_define);
+DECLARE(eval_define_values);
 DECLARE(eval_defmacro);
 DECLARE(eval_begin);
 DECLARE(eval_let);
 DECLARE(eval_sequential_let);
+DECLARE(eval_let_values);
 DECLARE(eval_set);
 DECLARE(eval_quote);
 DECLARE(eval_quasiquote);

@@ -122,6 +122,35 @@ DEFSPECIAL(eval_define, define, env)
 	error(env, "invalid define list");
 }
 
+static void extend_with_values(sexp_t vars, sexp_t vals, env_t env)
+{
+	sexp_t cons;
+	size_t i = 0;
+
+	if (sexp_type(vals) != SEXP_VALUES) {
+		if (list_length(vars) != 1)
+			error(env, "wrong number of values");
+		scope_set(env, car(vars), vals);
+		return;
+	}
+
+	if ((size_t)list_length(vars) != vector_length(vals))
+		error(env, "wrong number of values");
+
+	sexp_list_for_each(cons, vars) {
+		scope_set(env, car(cons), vector_ref(vals, i++));
+	}
+}
+
+DEFSPECIAL(eval_define_values, defvals, env)
+{
+	if (list_length(defvals) != 2)
+		error(env, "invalid define-values list");
+
+	extend_with_values(car(defvals), trampoline(cadr(defvals), env), env);
+	return unspecified();
+}
+
 DEFSPECIAL(eval_defmacro, defmacro, env)
 {
 	sexp_t macro, name;
@@ -167,6 +196,25 @@ static bool let_defs_valid(sexp_t list)
 	return sexp_type(cons) == SEXP_NIL;
 }
 
+static bool let_values_def_valid(sexp_t def)
+{
+	return sexp_type(def) == SEXP_PAIR &&
+		sexp_type(cdr(def)) == SEXP_PAIR &&
+		sexp_type(cddr(def)) == SEXP_NIL &&
+		list_of(car(def), SEXP_SYMBOL);
+}
+
+static bool letvals_defs_valid(sexp_t list)
+{
+	sexp_t cons;
+
+	sexp_list_for_each(cons, list) {
+		if (!let_values_def_valid(car(cons)))
+			return false;
+	}
+	return sexp_type(cons) == SEXP_NIL;
+}
+
 static env_t let_extend_env(sexp_t def_list, env_t env)
 {
 	sexp_t cons;
@@ -179,20 +227,6 @@ static env_t let_extend_env(sexp_t def_list, env_t env)
 	}
 
 	return new;
-}
-
-DEFSPECIAL(eval_let, let, env)
-{
-	sexp_t result;
-	env_t new_env;
-
-	if (!let_defs_valid(car(let)))
-		error(env, "invalid let list");
-
-	new_env = let_extend_env(car(let), env);
-	result = eval_begin(cdr(let), new_env);
-	scope_unref(new_env);
-	return result;
 }
 
 static env_t sequential_let_extend_env(sexp_t def_list, env_t env)
@@ -209,19 +243,37 @@ static env_t sequential_let_extend_env(sexp_t def_list, env_t env)
 	return new;
 }
 
-DEFSPECIAL(eval_sequential_let, let, env)
+static env_t letvals_extend_env(sexp_t def_list, env_t env)
 {
-	sexp_t result;
-	env_t new_env;
+	sexp_t cons;
+	env_t new = env_new_scope(env);
 
-	if (!let_defs_valid(car(let)))
-		error(env, "invalid let* list");
+	sexp_list_for_each(cons, def_list) {
+		sexp_t vals = trampoline(cadar(cons), env);
+		extend_with_values(caar(cons), vals, env);
+	}
 
-	new_env = sequential_let_extend_env(car(let), env);
-	result = eval_begin(cdr(let), new_env);
-	scope_unref(new_env);
-	return result;
+	return new;
 }
+
+#define DEFLET(name, strname, validate, extend) \
+	DEFSPECIAL(name, let, env) \
+	{ \
+		sexp_t result; \
+		env_t new_env; \
+		\
+		if (!validate(car(let))) \
+			error(env, "invalid " strname " list"); \
+		\
+		new_env = extend(car(let), env); \
+		result = eval_begin(cdr(let), new_env); \
+		scope_unref(new_env); \
+		return result; \
+	}
+
+DEFLET(eval_let, "let", let_defs_valid, let_extend_env)
+DEFLET(eval_sequential_let, "let*", let_defs_valid, sequential_let_extend_env)
+DEFLET(eval_let_values, "let-values", letvals_defs_valid, letvals_extend_env)
 
 static inline bool set_valid(sexp_t set)
 {

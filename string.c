@@ -228,33 +228,11 @@ DEFUN(scm_list_to_string, args)
 	return list_to_string(type_check_list(car(args)), ____env);
 }
 
-static bool copy_valid(size_t to, long at, size_t from, long start, long end)
-{
-	if (at < 0 || (size_t) at >= to)
-		return false;
-
-	if (start < 0 || (size_t) start >= from)
-		return false;
-
-	if (end < start || (size_t) end > from)
-		return false;
-
-	if (to - at < (size_t) (end - start))
-		return false;
-
-	return true;
-}
-
-static bool indices_valid(size_t size, long start, long end)
-{
-	return start >= 0 && end >= 0 && end > start && (size_t) (end - start) <= size;
-}
-
 static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 		size_t end)
 {
 	struct sexp_string *tos = sexp_string(to), *froms = sexp_string(from);
-	for (size_t i = 0; i < end; i++)
+	for (size_t i = start; i < end; i++)
 		tos->data[at++] = froms->data[i];
 	return to;
 }
@@ -271,8 +249,7 @@ DEFUN(scm_string_fill, args)
 	start = (nr_args > 2) ? fixnum_cast(caddr(args)) : 0;
 	end = (nr_args > 3) ? fixnum_cast(cadddr(args)) : (long) str->size;
 
-	if (!indices_valid(str->size, start, end))
-		die("invalid indices");
+	check_copy(str->size, start, end);
 
 	for (size_t i = start; i < (size_t) end; i++)
 		str->data[i] = sexp_char(ch);
@@ -304,8 +281,7 @@ DEFUN(scm_string_copy, args)
 	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
 	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) str->size;
 
-	if (!indices_valid(str->size, start, end))
-		die("invalid indices");
+	check_copy(str->size, start, end);
 
 	return copy_to(make_string(end - start, end - start), 0, from, start, end);
 }
@@ -325,8 +301,7 @@ DEFUN(scm_string_copy_to, args)
 	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
 	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long) from_str->size;
 
-	if (!copy_valid(to_str->size, at, from_str->size, start, end))
-		die("invalid indices");
+	check_copy_to(to_str->size, at, from_str->size, start, end);
 
 	copy_to(to, at, from, start, end);
 	return unspecified();

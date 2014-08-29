@@ -124,4 +124,19 @@ static inline unsigned char _type_check_byte(sexp_t sexp, env_t env)
 	return _type_check_range(sexp, 0, 256, env);
 }
 
+#define check_copy_to(to, at, from, start, end) \
+	_check_copy_to(to, at, from, start, end, ____env)
+static inline void _check_copy_to(size_t to, long at, size_t from, long start,
+		long end, env_t env)
+{
+	if (at < 0 || (size_t)at >= to || start < 0 || (size_t)start >= from
+			|| end < start || (size_t)end > from
+			|| to - at < (size_t)(end - start))
+		error(env, "invalid indices for copy");
+}
+
+#define check_copy(size, start, end) _check_copy(size, start, end, ____env)
+#define _check_copy(size, start, end, env) \
+	_check_copy_to(size, 0, size, start, end, env)
+
 #endif

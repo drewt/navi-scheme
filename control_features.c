@@ -229,6 +229,15 @@ DEFUN(scm_map, args)
 	return map(cadr(args), map_apply, &arg);
 }
 
+/* FIXME: This is unsafe for UTF-8 (or any other variable-width encoding).
+ *
+ *        Safe implementation:
+ *
+ *            (define (string-map f s)
+ *              (vector->string
+ *                (vector-map f (string->vector s))))
+ */
+
 static sexp_t string_map_ip(sexp_t fun, sexp_t sexp, env_t env)
 {
 	struct sexp_string *vec = _string_cast(sexp, env);
@@ -254,4 +263,31 @@ DEFUN(scm_string_map, args)
 	type_check(cadr(args), SEXP_STRING);
 
 	return string_map_ip(car(args), string_copy(cadr(args)), ____env);
+}
+
+static sexp_t vector_map(sexp_t fun, sexp_t to, sexp_t from, env_t env)
+{
+	struct sexp_vector *tov = _vector_cast(to, SEXP_VECTOR, env);
+	struct sexp_vector *fromv = _vector_cast(from, SEXP_VECTOR, env);
+
+	for (size_t i = 0; i < tov->size; i++) {
+		sexp_t call = list(fun, fromv->data[i], make_void());
+		tov->data[i] = trampoline(call, env);
+	}
+	return to;
+}
+
+DEFUN(scm_vector_map_ip, args)
+{
+	type_check_fun(car(args), 1);
+	type_check(cadr(args), SEXP_VECTOR);
+	return vector_map(car(args), cadr(args), cadr(args), ____env);
+}
+
+DEFUN(scm_vector_map, args)
+{
+	type_check_fun(car(args), 1);
+	type_check(cadr(args), SEXP_VECTOR);
+	return vector_map(car(args), make_vector(vector_length(cadr(args))),
+			cadr(args), ____env);
 }

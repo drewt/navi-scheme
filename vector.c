@@ -115,9 +115,76 @@ DEFUN(scm_list_to_vector, args)
 	return list_to_vector(car(args));
 }
 
-DEFUN(scm_vector_fill, args)
+static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
+		size_t end)
+{
+	struct sexp_vector *tov = sexp_vector(to), *fromv = sexp_vector(from);
+	for (size_t i = start; i < end; i++)
+		tov->data[at++] = fromv->data[i];
+	return to;
+}
+
+DEFUN(_scm_vector_fill, args)
 {
 	type_check(car(args), SEXP_VECTOR);
 	vector_fill(car(args), cadr(args));
+	return unspecified();
+}
+
+DEFUN(scm_vector_fill, args)
+{
+	sexp_t fill;
+	long end, start;
+	struct sexp_vector *vec;
+	int nr_args = list_length(args);
+
+	vec = vector_cast(car(args), SEXP_VECTOR);
+	fill = cadr(args);
+	start = (nr_args > 2) ? fixnum_cast(caddr(args)) : 0;
+	end = (nr_args > 3) ? fixnum_cast(cadddr(args)) : (long) vec->size;
+
+	check_copy(vec->size, start, end);
+
+	for (size_t i = start; i < (size_t) end; i++)
+		vec->data[i] = fill;
+
+	return unspecified();
+}
+
+DEFUN(scm_vector_copy, args)
+{
+	sexp_t from;
+	long start, end;
+	struct sexp_vector *vec;
+	int nr_args = list_length(args);
+
+	from = type_check(car(args), SEXP_VECTOR);
+	vec = sexp_vector(from);
+	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
+
+	check_copy(vec->size, start, end);
+
+	return copy_to(make_vector(end-start), 0, from, start, end);
+}
+
+DEFUN(scm_vector_copy_to, args)
+{
+	sexp_t to, from;
+	long at, start, end;
+	struct sexp_vector *fromv, *tov;
+	int nr_args = list_length(args);
+
+	to = type_check(car(args), SEXP_VECTOR);
+	at = fixnum_cast(cadr(args));
+	from = type_check(caddr(args), SEXP_VECTOR);
+	tov = sexp_vector(to);
+	fromv = sexp_vector(from);
+	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
+	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long) fromv->size;
+
+	check_copy_to(tov->size, at, fromv->size, start, end);
+
+	copy_to(to, at, from, start, end);
 	return unspecified();
 }

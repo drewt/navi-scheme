@@ -46,6 +46,8 @@ DECLARE(scm_apply);
 DECLARE(scm_map);
 DECLARE(scm_string_map);
 DECLARE(scm_string_map_ip);
+DECLARE(scm_vector_map);
+DECLARE(scm_vector_map_ip);
 
 DECLARE(scm_call_ec);
 DECLARE(scm_values);
@@ -159,6 +161,8 @@ DECLARE(scm_vector_set);
 DECLARE(scm_vector_to_list);
 DECLARE(scm_list_to_vector);
 DECLARE(scm_vector_fill);
+DECLARE(scm_vector_copy);
+DECLARE(scm_vector_copy_to);
 
 DECLARE(scm_env_count);
 DECLARE(scm_gc_collect);

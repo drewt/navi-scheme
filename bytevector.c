@@ -157,16 +157,12 @@ DEFUN(scm_bytevector_append, args)
 	return sexp;
 }
 
-static bool indices_valid(size_t size, long start, long end)
-{
-	return start >= 0 && end >= 0 && end > start && (size_t) (end - start) > size;
-}
-
 static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 		size_t end)
 {
+	struct sexp_bytevec *tov = sexp_bytevec(to), *fromv = sexp_bytevec(from);
 	for (size_t i = start; i < end; i++)
-		sexp_bytevec(to)->data[at++] = sexp_bytevec(from)->data[i];
+		tov->data[at++] = fromv->data[i];
 	return to;
 }
 
@@ -182,60 +178,9 @@ DEFUN(scm_bytevector_copy, args)
 	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
 	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
 
-	if (!indices_valid(vec->size, start, end))
-		error(____env, "invalid indices");
+	check_copy(vec->size, start, end);
 
 	return copy_to(make_bytevec(end - start), 0, from, start, end);
-}
-
-/*DEFUN(scm_bytevector_copy_, args)
-{
-	sexp_t to;
-	long end, start = 0;
-	int nr_args = list_length(args);
-
-	type_check(car(args), SEXP_BYTEVEC);
-
-	if (nr_args > 1) {
-		type_check(cadr(args), SEXP_NUM);
-		start = sexp_num(cadr(args));
-	}
-
-	if (nr_args > 2) {
-		type_check(caddr(args), SEXP_NUM);
-		end = sexp_num(caddr(args));
-	} else {
-		end = sexp_string_size(car(args));
-	}
-
-	if (end < start)
-		die("invalid arguments");
-
-	to = make_empty_string(end - start);
-	to.p->type = SEXP_BYTEVEC;
-
-	if (!bytevec_copy_valid(to, 0, car(args), start, end))
-		die("invalid arguments");
-
-	bytevec_copy_to(to, 0, car(args), start, end);
-	return to;
-}*/
-
-static bool copy_valid(size_t to, long at, size_t from, long start, long end)
-{
-	if (at < 0 || (size_t) at >= to)
-		return false;
-
-	if (start < 0 || (size_t) start >= from)
-		return false;
-
-	if (end < start || (size_t) end > from)
-		return false;
-
-	if (to - at < (size_t) (end - start))
-		return false;
-
-	return true;
 }
 
 DEFUN(scm_bytevector_copy_to, args)
@@ -253,42 +198,8 @@ DEFUN(scm_bytevector_copy_to, args)
 	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
 	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long)from_vec->size;
 
-	if (!copy_valid(to_vec->size, at, from_vec->size, start, end))
-		error(____env, "invalid indices");
+	check_copy_to(to_vec->size, at, from_vec->size, start, end);
 
 	copy_to(to, at, from, start, end);
 	return unspecified();
 }
-
-/*DEFUN(scm_bytevector_copy_to, args)
-{
-	sexp_t to, from;
-	long at, start = 0, end;
-	int nr_args = list_length(args);
-
-	type_check(car(args),   SEXP_BYTEVEC);
-	type_check(cadr(args),  SEXP_NUM);
-	type_check(caddr(args), SEXP_BYTEVEC);
-
-	to = car(args);
-	at = sexp_num(cadr(args));
-	from = caddr(args);
-
-	if (nr_args > 3) {
-		type_check(cadddr(args), SEXP_NUM);
-		start = sexp_num(cadddr(args));
-	}
-	
-	if (nr_args > 4) {
-		type_check(caddddr(args), SEXP_NUM);
-		end = sexp_num(caddddr(args));
-	} else {
-		end = sexp_string_size(from);
-	}
-
-	if (!bytevec_copy_valid(to, at, from, start, end))
-		die("invalid arguments");
-
-	bytevec_copy_to(to, at, from, start, end);
-	return unspecified();
-}*/

@@ -54,6 +54,8 @@ static bool lambda_valid(sexp_t lambda)
 		return false;
 	if (sexp_type(cdr(lambda)) != SEXP_PAIR)
 		return false;
+	if (sexp_type(car(lambda)) == SEXP_SYMBOL)
+		return true;
 	if (!list_of(car(lambda), SEXP_SYMBOL))
 		return false;
 	return true;

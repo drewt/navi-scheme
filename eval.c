@@ -23,7 +23,7 @@ static _Noreturn void unbound_identifier(sexp_t ident, env_t env)
 	error(env, "unbound identifier", make_apair("identifier", ident));
 }
 
-static bool list_of(sexp_t list, unsigned type)
+static bool list_of(sexp_t list, unsigned type, bool allow_dotted_tail)
 {
 	sexp_t cons;
 
@@ -31,6 +31,10 @@ static bool list_of(sexp_t list, unsigned type)
 		if (sexp_type(car(cons)) != type)
 			return false;
 	}
+	if (!allow_dotted_tail && sexp_type(cons) != SEXP_NIL)
+		return false;
+	if (allow_dotted_tail && sexp_type(cons) != type)
+		return false;
 	return true;
 }
 
@@ -56,7 +60,7 @@ static bool lambda_valid(sexp_t lambda)
 		return false;
 	if (sexp_type(car(lambda)) == SEXP_SYMBOL)
 		return true;
-	if (!list_of(car(lambda), SEXP_SYMBOL))
+	if (!list_of(car(lambda), SEXP_SYMBOL, true))
 		return false;
 	return true;
 }
@@ -100,7 +104,7 @@ static sexp_t eval_defun(sexp_t fundecl, sexp_t rest, env_t env)
 {
 	sexp_t fun, name;
 
-	if (!list_of(fundecl, SEXP_SYMBOL))
+	if (!list_of(fundecl, SEXP_SYMBOL, true))
 		error(env, "invalid defun list");
 
 	name = car(fundecl);
@@ -157,7 +161,7 @@ DEFSPECIAL(eval_defmacro, defmacro, env)
 {
 	sexp_t macro, name;
 
-	if (list_length(defmacro) < 2 || !list_of(car(defmacro), SEXP_SYMBOL))
+	if (list_length(defmacro) < 2 || !list_of(car(defmacro), SEXP_SYMBOL, true))
 		error(env, "invalid define-macro list");
 
 	name = caar(defmacro);
@@ -203,7 +207,7 @@ static bool let_values_def_valid(sexp_t def)
 	return sexp_type(def) == SEXP_PAIR &&
 		sexp_type(cdr(def)) == SEXP_PAIR &&
 		sexp_type(cddr(def)) == SEXP_NIL &&
-		list_of(car(def), SEXP_SYMBOL);
+		list_of(car(def), SEXP_SYMBOL, false);
 }
 
 static bool letvals_defs_valid(sexp_t list)

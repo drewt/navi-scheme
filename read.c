@@ -106,13 +106,6 @@ static int isbdigit(int c)
 	return c == '0' || c == '1';
 }
 
-static int isquote(int c, env_t env)
-{
-	if (c == EOF)
-		unexpected_eof(env);
-	return c == '"';
-}
-
 static int ispipe(int c, env_t env)
 {
 	if (c == EOF)
@@ -154,46 +147,53 @@ static long hex_value(char c, env_t env)
 			make_apair("digit", make_char(c)));
 }
 
-static sexp_t read_num(struct sexp_port *port, int radix, int (*ctype)(int),
-		long (*tonum)(char,env_t), env_t env)
+static unsigned long read_unum(struct sexp_port *port, int radix,
+		int (*ctype)(int), long (*tonum)(char,env_t), env_t env)
 {
 	char c;
-	long sign = 1, n = 0;
-
-	if ((c = peek_char(port)) == '-') {
-		sign = 0;
-		read_char(port);
-	} else if (c == '-') {
-		sign = 1;
-		read_char(port);
-	}
-
+	unsigned long n = 0;
 	while (ctype((c = peek_char(port)))) {
 		n *= radix;
 		n += tonum(c, env);
 		read_char(port);
 	}
-	return make_num(n * sign);
+	return n;
+}
+
+static long read_num(struct sexp_port *port, int radix, int (*ctype)(int),
+		long (*tonum)(char,env_t), env_t env)
+{
+	char c;
+	long sign = 1;
+
+	if ((c = peek_char(port)) == '-') {
+		sign = -1;
+		read_char(port);
+	} else if (c == '+') {
+		sign = 1;
+		read_char(port);
+	}
+	return sign * read_unum(port, radix, ctype, tonum, env);
 }
 
 static sexp_t read_decimal(struct sexp_port *port, env_t env)
 {
-	return read_num(port, 10, isdigit, decimal_value, env);
+	return make_num(read_num(port, 10, isdigit, decimal_value, env));
 }
 
 static sexp_t read_hex(struct sexp_port *port, env_t env)
 {
-	return read_num(port, 16, isxdigit, hex_value, env);
+	return make_num(read_num(port, 16, isxdigit, hex_value, env));
 }
 
 static sexp_t read_octal(struct sexp_port *port, env_t env)
 {
-	return read_num(port, 8, isodigit, decimal_value, env);
+	return make_num(read_num(port, 8, isodigit, decimal_value, env));
 }
 
 static sexp_t read_binary(struct sexp_port *port, env_t env)
 {
-	return read_num(port, 2, isbdigit, decimal_value, env);
+	return make_num(read_num(port, 2, isbdigit, decimal_value, env));
 }
 
 static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t env)
@@ -216,11 +216,53 @@ static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t en
 	return str;
 }
 
-static inline sexp_t read_string(struct sexp_port *port, env_t env)
+static unsigned long read_string_escape(struct sexp_port *port, env_t env)
+{
+	unsigned long c = iread_char(port, env);
+	switch (c) {
+	case 'a': return 0x7;
+	case 'b': return 0x8;
+	case 't': return 0x9;
+	case 'n': return 0xA;
+	case 'r': return 0xD;
+	case '"': case '\\': case '|': return c;
+	case ' ': case '\t': case '\n': case '\r':
+	case '\f': case '\v':
+		while (isspace((c = iread_char(port, env))))
+			/* nothing */;
+		return c;
+	case 'x':
+		c = read_unum(port, 16, isxdigit, hex_value, env);
+		if (ipeek_char(port, env) != ';')
+			read_error(env, "missing terminator on string hex escape");
+		read_char(port);
+		return c;
+	}
+	read_error(env, "unknown string escape", make_apair("char", make_char(c)));
+}
+
+static sexp_t read_string(struct sexp_port *port, env_t env)
 {
 	sexp_t r;
-	char *str = read_until(port, isquote, env);
-	read_char(port); /* consume end-quote */
+	unsigned long c;
+	size_t pos = 0;
+	size_t buf_len = STR_BUF_LEN;
+	char *str = malloc(buf_len);
+
+	while ((c = iread_char(port, env)) != '"') {
+		if (c == '\\')
+			c = read_string_escape(port, env);
+		if (pos + u_char_size(c) >= buf_len) {
+			buf_len += STR_BUF_STEP;
+			str = realloc(str, buf_len);
+		}
+		if (c > 0xFF)
+			u_set_char_raw(str, &pos, c);
+		else
+			str[pos++] = c;
+	}
+
+	str[pos] = '\0';
 	r = to_string(str);
 	free(str);
 	return r;

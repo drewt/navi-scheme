@@ -21,6 +21,7 @@
 #include "sexp/uchar.h"
 
 #include <stdio.h> // XXX: remove
+#include <stdint.h>
 
 const char hex_tab[16] = "0123456789abcdef";
 
@@ -92,16 +93,21 @@ static unsigned int max_val[4] = { 0x00007f, 0x0007ff, 0x00ffff, 0x10ffff };
 /* get value bits from the first UTF-8 sequence byte */
 static unsigned int first_byte_mask[4] = { 0x7f, 0x1f, 0x0f, 0x07 };
 
-int u_is_valid(const char *str)
+int u_is_valid(const char *str, size_t start, size_t end)
 {
 	const unsigned char *s = (const unsigned char *)str;
-	int i = 0;
+	size_t i = start;
 
-	while (s[i]) {
+	if (end == 0)
+		end = SIZE_MAX;
+
+	while (i < end && s[i]) {
 		unsigned char ch = s[i++];
 		int len = len_tab[ch];
 
 		if (len <= 0)
+			return 0;
+		if ((i - 1) + len > end)
 			return 0;
 
 		if (len > 1) {
@@ -132,6 +138,17 @@ size_t u_strlen(const char *str)
 	for (len = 0; *str; len++)
 		str = u_next_char(str);
 	return len;
+}
+
+size_t u_strsize(const char *str, size_t start, size_t end)
+{
+	size_t size = 0, idx = 0;
+
+	u_skip_chars(str, start, &idx);
+	for (size_t i = 0; i < end - start; i++) {
+		size += u_char_size(u_get_char(str, &idx));
+	}
+	return size;
 }
 
 size_t u_strlen_safe(const char *str)

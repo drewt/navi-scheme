@@ -218,6 +218,8 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("bytevector-append",  scm_bytevector_append,  0, 1),
 	FUNCTION("bytevector-copy",    scm_bytevector_copy,    1, 1),
 	FUNCTION("bytevector-copy!",   scm_bytevector_copy_to, 3, 1),
+	FUNCTION("utf8->string",       scm_utf8_to_string,     1, 1),
+	FUNCTION("string->utf8",       scm_string_to_utf8,     1, 1),
 
 	FUNCTION("env-count",     scm_env_count,     0, 0),
 	FUNCTION("gc-collect",    scm_gc_collect,    0, 0),

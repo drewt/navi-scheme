@@ -208,3 +208,46 @@ DEFUN(scm_bytevector_copy_to, args)
 	copy_to(to, at, from, start, end);
 	return unspecified();
 }
+
+DEFUN(scm_utf8_to_string, args)
+{
+	sexp_t r;
+	long start, end;
+	struct sexp_bytevec *vec = bytevec_cast(car(args), SEXP_BYTEVEC);
+	int nr_args = list_length(args);
+
+	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
+
+	check_copy(vec->size, start, end);
+	if (!u_is_valid((char*)vec->data, start, end))
+		error(____env, "invalid UTF-8");
+
+	r = make_string(end - start, end - start);
+	memcpy(sexp_string(r)->data, vec->data + start, end - start);
+	sexp_string(r)->length = u_strlen(sexp_string(r)->data);
+
+	return r;
+}
+
+DEFUN(scm_string_to_utf8, args)
+{
+	sexp_t r;
+	long start, end;
+	struct sexp_string *str = string_cast(car(args));
+	int nr_args = list_length(args);
+	size_t size, i = 0;
+
+	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args))
+		: (long) u_strlen((char*)str->data);
+
+	check_copy(str->length, start, end);
+
+	u_skip_chars(str->data, start, &i);
+	size = u_strsize(str->data + i, 0, end - start);
+	r = make_bytevec(size);
+	memcpy(sexp_bytevec(r)->data, str->data + i, size);
+
+	return r;
+}

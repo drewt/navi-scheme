@@ -65,7 +65,7 @@ static inline int u_char_size(uchar uch)
  *
  * Returns 1 if @str is valid UTF-8 string, 0 otherwise.
  */
-int u_is_valid(const char *str);
+int u_is_valid(const char *str, size_t start, size_t end);
 
 /*
  * @str  valid, null-terminated UTF-8 string
@@ -92,6 +92,15 @@ size_t u_strlen(const char *str);
  * Invalid chars are counted as single characters.
  */
 size_t u_strlen_safe(const char *str);
+
+/*
+ * @str   UTF-8 string
+ * @start character index at which to start counting
+ * @end   character index at which to stop counting
+ *
+ * Returns the size of @str between @start and @end in bytes.
+ */
+size_t u_strsize(const char *str, size_t start, size_t end);
 
 /*
  * @str  null-terminated UTF-8 string

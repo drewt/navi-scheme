@@ -173,6 +173,8 @@ DECLARE(scm_bytevector_u8_set);
 DECLARE(scm_bytevector_append);
 DECLARE(scm_bytevector_copy);
 DECLARE(scm_bytevector_copy_to);
+DECLARE(scm_utf8_to_string);
+DECLARE(scm_string_to_utf8);
 
 DECLARE(scm_env_count);
 DECLARE(scm_gc_collect);

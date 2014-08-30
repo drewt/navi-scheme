@@ -478,7 +478,7 @@ static inline size_t vector_length(sexp_t sexp)
 
 static inline sexp_t bytevec_ref(sexp_t sexp, size_t i)
 {
-	return make_char(sexp_bytevec(sexp)->data[i]);
+	return make_num(sexp_bytevec(sexp)->data[i]);
 }
 
 static inline bool bytevec_equal(sexp_t sexp, const char *cstr)

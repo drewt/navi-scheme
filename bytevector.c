@@ -88,6 +88,11 @@ char *bytevec_to_c_string(sexp_t sexp)
 	return cstr;
 }
 
+DEFUN(scm_bytevectorp, args)
+{
+	return make_bool(sexp_type(car(args)) == SEXP_BYTEVEC);
+}
+
 DEFUN(scm_make_bytevector, args)
 {
 	sexp_t sexp;

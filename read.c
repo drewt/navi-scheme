@@ -344,6 +344,11 @@ static sexp_t read_vector(struct sexp_port *port, env_t env)
 	return list_to_vector(read_list(port, env));
 }
 
+static sexp_t read_bytevec(struct sexp_port *port, env_t env)
+{
+	return list_to_bytevec(read_list(port, env), env);
+}
+
 static sexp_t read_sharp_bang(struct sexp_port *port, env_t env)
 {
 	char *str = read_until(port, isterminal, env);
@@ -369,7 +374,7 @@ static sexp_t read_sharp_bang(struct sexp_port *port, env_t env)
 
 static sexp_t read_sharp(struct sexp_port *port, env_t env)
 {
-	char c;
+	char c, n;
 
 	switch ((c = iread_char(port, env))) {
 	case 't':
@@ -380,6 +385,11 @@ static sexp_t read_sharp(struct sexp_port *port, env_t env)
 		return read_character(port, env);
 	case '(':
 		return read_vector(port, env);
+	case 'u':
+		if ((n = iread_char(port, env)) != '8' ||
+			(n = iread_char(port, env)) != '(')
+			break;
+		return read_bytevec(port, env);
 	case 'b':
 		return read_binary(port, env);
 	case 'o':

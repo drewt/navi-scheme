@@ -209,6 +209,16 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("vector-copy",   scm_vector_copy,    1, 1),
 	FUNCTION("vector-copy!",  scm_vector_copy_to, 3, 1),
 
+	FUNCTION("bytevector?",        scm_bytevectorp,        1, 0),
+	FUNCTION("make-bytevector",    scm_make_bytevector,    1, 1),
+	FUNCTION("bytevector",         scm_bytevector,         0, 1),
+	FUNCTION("bytevector-length",  scm_bytevector_length,  1, 0),
+	FUNCTION("bytevector-u8-ref",  scm_bytevector_u8_ref,  2, 0),
+	FUNCTION("bytevector-u8-set!", scm_bytevector_u8_set,  3, 0),
+	FUNCTION("bytevector-append",  scm_bytevector_append,  0, 1),
+	FUNCTION("bytevector-copy",    scm_bytevector_copy,    1, 1),
+	FUNCTION("bytevector-copy!",   scm_bytevector_copy_to, 3, 1),
+
 	FUNCTION("env-count",     scm_env_count,     0, 0),
 	FUNCTION("gc-collect",    scm_gc_collect,    0, 0),
 	FUNCTION("gc-count",      scm_gc_count,      0, 0),

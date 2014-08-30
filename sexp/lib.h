@@ -164,6 +164,16 @@ DECLARE(scm_vector_fill);
 DECLARE(scm_vector_copy);
 DECLARE(scm_vector_copy_to);
 
+DECLARE(scm_bytevectorp);
+DECLARE(scm_make_bytevector);
+DECLARE(scm_bytevector);
+DECLARE(scm_bytevector_length);
+DECLARE(scm_bytevector_u8_ref);
+DECLARE(scm_bytevector_u8_set);
+DECLARE(scm_bytevector_append);
+DECLARE(scm_bytevector_copy);
+DECLARE(scm_bytevector_copy_to);
+
 DECLARE(scm_env_count);
 DECLARE(scm_gc_collect);
 DECLARE(scm_gc_count);

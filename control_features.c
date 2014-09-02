@@ -291,3 +291,13 @@ DEFUN(scm_vector_map, args)
 	return vector_map(car(args), make_vector(vector_length(cadr(args))),
 			cadr(args), ____env);
 }
+
+DEFUN(scm_promisep, args)
+{
+	return make_bool(sexp_type(car(args)) == SEXP_PROMISE);
+}
+
+DEFUN(scm_make_promise, args)
+{
+	return make_promise(car(args), ____env);
+}

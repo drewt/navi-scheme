@@ -64,6 +64,7 @@ enum sexp_type {
 	SEXP_VALUES,
 	SEXP_MACRO,
 	SEXP_SPECIAL,
+	SEXP_PROMISE,
 	SEXP_FUNCTION,
 	SEXP_CASELAMBDA,
 	SEXP_ESCAPE,
@@ -80,7 +81,7 @@ struct sexp_escape {
 struct sexp_function {
 	union {
 		sexp_t body;
-		sexp_t (*fn)(sexp_t,struct sexp_scope*);
+		builtin_t fn;
 	};
 	sexp_t args;
 	char *name;
@@ -390,6 +391,36 @@ sexp_t capture_env(env_t env);
 sexp_t sexp_from_spec(struct sexp_spec *spec);
 bool eqvp(sexp_t fst, sexp_t snd);
 
+static inline sexp_t make_void(void)
+{
+	return (sexp_t) VOID_TAG;
+}
+
+static inline sexp_t make_nil(void)
+{
+	return (sexp_t) NIL_TAG;
+}
+
+static inline sexp_t make_eof(void)
+{
+	return (sexp_t) EOF_TAG;
+}
+
+static inline sexp_t make_num(long num)
+{
+	return (sexp_t) { .n = (num << 1) | 1 };
+}
+
+static inline sexp_t make_bool(bool b)
+{
+	return (sexp_t) { .n = (b << IMMEDIATE_TAG_SIZE) | BOOL_TAG };
+}
+
+static inline sexp_t make_char(unsigned long c)
+{
+	return (sexp_t) { .n = (c << IMMEDIATE_TAG_SIZE) | CHAR_TAG };
+}
+
 static inline sexp_t make_uninterned(const char *str)
 {
 	sexp_t sym = to_bytevec(str);
@@ -402,6 +433,14 @@ static inline sexp_t make_macro(sexp_t args, sexp_t body, char *name, env_t env)
 	sexp_t macro = make_function(args, body, name, env);
 	macro.p->type = SEXP_MACRO;
 	return macro;
+}
+
+static inline sexp_t make_promise(sexp_t e, env_t env)
+{
+	sexp_t body = make_pair(e, make_nil());
+	sexp_t promise = make_function(make_nil(), body, "", env);
+	promise.p->type = SEXP_PROMISE;
+	return promise;
 }
 
 static inline sexp_t make_values(sexp_t values)
@@ -421,36 +460,6 @@ static inline sexp_t make_caselambda(size_t size)
 static inline sexp_t make_apair(const char *sym, sexp_t val)
 {
 	return make_pair(make_symbol(sym), val);
-}
-
-static inline sexp_t make_void(void)
-{
-	return (sexp_t) VOID_TAG;
-}
-
-static inline sexp_t make_nil(void)
-{
-	return (sexp_t) NIL_TAG;
-}
-
-static inline sexp_t make_eof(void)
-{
-	return (sexp_t) EOF_TAG;	
-}
-
-static inline sexp_t make_num(long num)
-{
-	return (sexp_t) { .n = (num << 1) | 1 };
-}
-
-static inline sexp_t make_bool(bool b)
-{
-	return (sexp_t) { .n = (b << IMMEDIATE_TAG_SIZE) | BOOL_TAG };
-}
-
-static inline sexp_t make_char(unsigned long c)
-{
-	return (sexp_t) { .n = (c << IMMEDIATE_TAG_SIZE) | CHAR_TAG };
 }
 
 static inline sexp_t make_bounce(sexp_t object, sexp_t env)
@@ -528,6 +537,7 @@ static inline const char *strtype(enum sexp_type type)
 	case SEXP_BYTEVEC:     return "bytevector";
 	case SEXP_MACRO:       return "macro";
 	case SEXP_SPECIAL:     return "special";
+	case SEXP_PROMISE:     return "promise";
 	case SEXP_FUNCTION:    return "function";
 	case SEXP_CASELAMBDA:  return "case-lambda";
 	case SEXP_ESCAPE:      return "escape";

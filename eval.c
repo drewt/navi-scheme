@@ -501,6 +501,19 @@ DEFSPECIAL(eval_or, or, env)
 	return make_bool(false);
 }
 
+DEFSPECIAL(eval_delay, args, env)
+{
+	return make_promise(car(args), env);
+}
+
+DEFUN(scm_force, args)
+{
+	struct sexp_function *fun = sexp_fun(car(args));
+	sexp_t r = trampoline(make_pair(sym_begin, fun->body), fun->env);
+	fun->body = make_pair(sym_quote, make_pair(r, make_nil()));
+	return r;
+}
+
 static sexp_t map_eval(sexp_t sexp, void *data)
 {
 	return trampoline(sexp, data);
@@ -590,6 +603,7 @@ sexp_t eval(sexp_t sexp, env_t env)
 	case SEXP_MACRO:
 	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
+	case SEXP_PROMISE:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
 	case SEXP_ENVIRONMENT:

@@ -82,6 +82,7 @@ struct sexp_spec default_bindings[] = {
 	SPECIAL("if",            eval_if,             2, 1),
 	SPECIAL("and",           eval_and,            0, 1),
 	SPECIAL("or",            eval_or,             0, 1),
+	SPECIAL("delay",         eval_delay,          1, 0),
 
 	FUNCTION("gensym", scm_gensym, 0, 0),
 
@@ -92,6 +93,10 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("string-map!", scm_string_map_ip, 2, 0),
 	FUNCTION("vector-map",  scm_vector_map, 2, 0),
 	FUNCTION("vector-map!", scm_vector_map_ip, 2, 0),
+
+	FUNCTION("force",        scm_force,        1, 0),
+	FUNCTION("promise?",     scm_promisep,     1, 0),
+	FUNCTION("make-promise", scm_make_promise, 1, 0),
 
 	FUNCTION("call/ec", scm_call_ec, 0, 1),
 	FUNCTION("values", scm_values, 1, 1),

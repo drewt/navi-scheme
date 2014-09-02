@@ -151,6 +151,9 @@ void _display(struct sexp_port *port, sexp_t sexp, bool write)
 		port_write_c_string(sexp_fun(sexp)->name, port);
 		port_write_c_string(">", port);
 		break;
+	case SEXP_PROMISE:
+		port_write_c_string("#<promise>", port);
+		break;
 	case SEXP_FUNCTION:
 		if (sexp_fun(sexp)->builtin) {
 			port_write_c_string("#<builtin-procedure ", port);

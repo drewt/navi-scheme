@@ -331,6 +331,7 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 	case SEXP_VOID:
 	case SEXP_PORT:
 	case SEXP_VALUES:
+	case SEXP_PROMISE:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
 	case SEXP_ENVIRONMENT:
@@ -364,6 +365,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 	case SEXP_BYTEVEC:
 	case SEXP_MACRO:
 	case SEXP_SPECIAL:
+	case SEXP_PROMISE:
 	case SEXP_FUNCTION:
 	case SEXP_CASELAMBDA:
 	case SEXP_ESCAPE:
@@ -373,7 +375,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 	case SEXP_STRING:
 		return sexp_string_equal(fst, snd);
 	}
-	die("unknown type");
+	die("eqvp: unknown type");
 }
 
 DEFUN(scm_eqvp, args)
@@ -424,6 +426,7 @@ static void gc_mark_obj(sexp_t obj)
 		break;
 	case SEXP_MACRO:
 	case SEXP_SPECIAL:
+	case SEXP_PROMISE:
 	case SEXP_FUNCTION:
 		gc_set_mark(obj);
 		fun = sexp_fun(obj);

@@ -37,6 +37,7 @@ DECLARE(eval_cond);
 DECLARE(eval_if);
 DECLARE(eval_and);
 DECLARE(eval_or);
+DECLARE(eval_delay);
 
 DECLARE(scm_gensym);
 
@@ -48,6 +49,10 @@ DECLARE(scm_string_map);
 DECLARE(scm_string_map_ip);
 DECLARE(scm_vector_map);
 DECLARE(scm_vector_map_ip);
+
+DECLARE(scm_force);
+DECLARE(scm_promisep);
+DECLARE(scm_make_promise);
 
 DECLARE(scm_call_ec);
 DECLARE(scm_values);

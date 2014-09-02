@@ -74,29 +74,29 @@ sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)
 	return head.cdr;
 }
 
-DEFUN(scm_cons, args)
+DEFUN(scm_cons, args, env)
 {
 	return make_pair(car((sexp_t)args), cadr((sexp_t)args));
 }
 
-DEFUN(scm_car, args)
+DEFUN(scm_car, args, env)
 {
-	type_check(car(args), SEXP_PAIR);
+	type_check(car(args), SEXP_PAIR, env);
 	return car(car(args));
 }
 
-DEFUN(scm_cdr, args)
+DEFUN(scm_cdr, args, env)
 {
-	type_check(car(args), SEXP_PAIR);
+	type_check(car(args), SEXP_PAIR, env);
 	return cdr(car(args));
 }
 
-DEFUN(scm_pairp, args)
+DEFUN(scm_pairp, args, env)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_PAIR);
 }
 
-DEFUN(scm_listp, args)
+DEFUN(scm_listp, args, env)
 {
 	sexp_t cons, list = car(args);
 	enum sexp_type type = sexp_type(list);
@@ -106,17 +106,17 @@ DEFUN(scm_listp, args)
 	return make_bool(sexp_type(cons) == SEXP_NIL);
 }
 
-DEFUN(scm_nullp, args)
+DEFUN(scm_nullp, args, env)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_NIL);
 }
 
-DEFUN(scm_length, args)
+DEFUN(scm_length, args, env)
 {
 	return make_num(list_length(car(args)));
 }
 
-DEFUN(scm_list, args)
+DEFUN(scm_list, args, env)
 {
 	return args;
 }

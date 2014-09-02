@@ -24,7 +24,7 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 	size_t size = 0, length = 0;
 
 	sexp_list_for_each(cons, list) {
-		_type_check(car(cons), SEXP_CHAR, env);
+		type_check(car(cons), SEXP_CHAR, env);
 		size += u_char_size(sexp_char(car(cons)));
 		length++;
 	}
@@ -65,22 +65,22 @@ char *scm_to_c_string(sexp_t sexp)
 	return cstr;
 }
 
-DEFUN(scm_stringp, args)
+DEFUN(scm_stringp, args, env)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_STRING);
 }
 
-DEFUN(scm_make_string, args)
+DEFUN(scm_make_string, args, env)
 {
 	uchar ch = ' ';
 	int nr_args = list_length(args);
 
-	long length = fixnum_cast(car(args));
+	long length = fixnum_cast(car(args), env);
 
 	if (length < 0)
-		error(____env, "invalid length");
+		error(env, "invalid length");
 	if (nr_args > 1)
-		ch = char_cast(cadr(args));
+		ch = char_cast(cadr(args), env);
 
 	/* FIXME: invalid codepoint? */
 	sexp_t sexp = make_string(length * u_char_size(ch), length);
@@ -93,34 +93,34 @@ DEFUN(scm_make_string, args)
 	return sexp;
 }
 
-DEFUN(scm_string, args)
+DEFUN(scm_string, args, env)
 {
-	return list_to_string(args, ____env);
+	return list_to_string(args, env);
 }
 
-DEFUN(scm_string_length, args)
+DEFUN(scm_string_length, args, env)
 {
-	return make_num(string_cast(car(args))->length);
+	return make_num(string_cast(car(args), env)->length);
 }
 
-DEFUN(scm_string_ref, args)
+DEFUN(scm_string_ref, args, env)
 {
 	size_t i = 0;
-	struct sexp_string *str = string_cast(car(args));	
-	long k = type_check_range(cadr(args), 0, str->length);
+	struct sexp_string *str = string_cast(car(args), env);
+	long k = type_check_range(cadr(args), 0, str->length, env);
 
 	u_skip_chars(str->data, k, &i);
 	return make_char(u_get_char(str->data, &i));
 }
 
-DEFUN(scm_string_set, args)
+DEFUN(scm_string_set, args, env)
 {
 	long k;
 	struct sexp_string *str;
 
-	type_check(car(args),   SEXP_STRING);
-	type_check(cadr(args),  SEXP_NUM);
-	type_check(caddr(args), SEXP_CHAR);
+	type_check(car(args),   SEXP_STRING, env);
+	type_check(cadr(args),  SEXP_NUM,    env);
+	type_check(caddr(args), SEXP_CHAR,   env);
 
 	str = sexp_string(car(args));
 	k = sexp_num(cadr(args));
@@ -134,12 +134,12 @@ DEFUN(scm_string_set, args)
 }
 
 #define BINARY_PREDICATE(cname, op) \
-	DEFUN(cname, args) \
+	DEFUN(cname, args, env) \
 	{ \
 		struct sexp_string *fst, *snd; \
 		\
-		type_check(car(args),  SEXP_STRING); \
-		type_check(cadr(args), SEXP_STRING); \
+		type_check(car(args),  SEXP_STRING, env); \
+		type_check(cadr(args), SEXP_STRING, env); \
 		\
 		fst = sexp_string(car(args)); \
 		snd = sexp_string(cadr(args)); \
@@ -155,12 +155,12 @@ DEFUN(scm_string_set, args)
 	}
 
 #define BINARY_CI_PREDICATE(cname, op) \
-	DEFUN(cname, args) \
+	DEFUN(cname, args, env) \
 	{ \
 		struct sexp_string *fst, *snd; \
 		\
-		type_check(car(args),  SEXP_STRING); \
-		type_check(cadr(args), SEXP_STRING); \
+		type_check(car(args),  SEXP_STRING, env); \
+		type_check(cadr(args), SEXP_STRING, env); \
 		\
 		fst = sexp_string(car(args)); \
 		snd = sexp_string(cadr(args)); \
@@ -187,12 +187,12 @@ BINARY_CI_PREDICATE(scm_string_ci_eq,  ==)
 BINARY_CI_PREDICATE(scm_string_ci_lte, <=)
 BINARY_CI_PREDICATE(scm_string_ci_gte, >=)
 
-DEFUN(scm_substring, args)
+DEFUN(scm_substring, args, env)
 {
-	return CALL(scm_string_copy, args);
+	return scm_string_copy(args, env);
 }
 
-DEFUN(scm_string_append, args)
+DEFUN(scm_string_append, args, env)
 {
 	sexp_t cons, sexp;
 	struct sexp_string *str;
@@ -200,7 +200,7 @@ DEFUN(scm_string_append, args)
 
 	/* count combined size/length */
 	sexp_list_for_each(cons, args) {
-		struct sexp_string *s = string_cast(car(cons));
+		struct sexp_string *s = string_cast(car(cons), env);
 		size += s->size;
 		length += s->length;
 	}
@@ -218,14 +218,14 @@ DEFUN(scm_string_append, args)
 	return sexp;
 }
 
-DEFUN(scm_string_to_list, args)
+DEFUN(scm_string_to_list, args, env)
 {
-	return string_to_list(type_check(car(args), SEXP_STRING));
+	return string_to_list(type_check(car(args), SEXP_STRING, env));
 }
 
-DEFUN(scm_list_to_string, args)
+DEFUN(scm_list_to_string, args, env)
 {
-	return list_to_string(type_check_list(car(args)), ____env);
+	return list_to_string(type_check_list(car(args), env), env);
 }
 
 static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
@@ -237,19 +237,19 @@ static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 	return to;
 }
 
-DEFUN(scm_string_fill, args)
+DEFUN(scm_string_fill, args, env)
 {
 	sexp_t ch;
 	long end, start;
 	struct sexp_string *str;
 	int nr_args = list_length(args);
 
-	str = string_cast(car(args));
-	ch = type_check(cadr(args), SEXP_CHAR);
-	start = (nr_args > 2) ? fixnum_cast(caddr(args)) : 0;
-	end = (nr_args > 3) ? fixnum_cast(cadddr(args)) : (long) str->size;
+	str = string_cast(car(args), env);
+	ch = type_check(cadr(args), SEXP_CHAR, env);
+	start = (nr_args > 2) ? fixnum_cast(caddr(args), env) : 0;
+	end = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : (long) str->size;
 
-	check_copy(str->size, start, end);
+	check_copy(str->size, start, end, env);
 
 	for (size_t i = start; i < (size_t) end; i++)
 		str->data[i] = sexp_char(ch);
@@ -269,39 +269,40 @@ sexp_t string_copy(sexp_t string)
 	return to;
 }
 
-DEFUN(scm_string_copy, args)
+DEFUN(scm_string_copy, args, env)
 {
 	sexp_t from;
 	long start, end;
 	struct sexp_string *str;
 	int nr_args = list_length(args);
 
-	from = type_check(car(args), SEXP_STRING);
+	from = type_check(car(args), SEXP_STRING, env);
 	str = sexp_string(from);
-	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) str->size;
+	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) str->size;
 
-	check_copy(str->size, start, end);
+	check_copy(str->size, start, end, env);
 
 	return copy_to(make_string(end - start, end - start), 0, from, start, end);
 }
 
-DEFUN(scm_string_copy_to, args)
+DEFUN(scm_string_copy_to, args, env)
 {
 	sexp_t to, from;
 	long at, start, end;
 	struct sexp_string *from_str, *to_str;
 	int nr_args = list_length(args);
 
-	to = type_check(car(args), SEXP_STRING);
-	at = fixnum_cast(cadr(args));
-	from = type_check(caddr(args), SEXP_STRING);
+	to = type_check(car(args), SEXP_STRING, env);
+	at = fixnum_cast(cadr(args), env);
+	from = type_check(caddr(args), SEXP_STRING, env);
 	to_str = sexp_string(to);
 	from_str = sexp_string(from);
-	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
-	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long) from_str->size;
+	start = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : 0;
+	end = (nr_args > 4) ? fixnum_cast(caddddr(args), env)
+		: (long) from_str->size;
 
-	check_copy_to(to_str->size, at, from_str->size, start, end);
+	check_copy_to(to_str->size, at, from_str->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
 	return unspecified();

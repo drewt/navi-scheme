@@ -236,18 +236,18 @@ struct sexp_spec default_bindings[] = {
 /*
  * The top-level exception handler: prints a message and returns to the REPL.
  */
-static DEFUN(scm_toplevel_exn, args)
+static DEFUN(scm_toplevel_exn, args, env)
 {
 	sexp_t cont;
 
-	sexp_write(car(args), ____env);
+	sexp_write(car(args), env);
 	putchar('\n');
 
-	cont = env_lookup(____env, sym_repl);
+	cont = env_lookup(env, sym_repl);
 	if (sexp_type(cont) != SEXP_ESCAPE)
 		die("#repl not bound to continuation");
 
-	scope_set(____env, sym_exn, sexp_from_spec(&default_bindings[0]));
+	scope_set(env, sym_exn, sexp_from_spec(&default_bindings[0]));
 	longjmp(sexp_escape(cont)->state, 1);
 }
 

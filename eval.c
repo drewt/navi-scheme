@@ -33,7 +33,8 @@ static bool list_of(sexp_t list, unsigned type, bool allow_dotted_tail)
 	}
 	if (!allow_dotted_tail && sexp_type(cons) != SEXP_NIL)
 		return false;
-	if (allow_dotted_tail && sexp_type(cons) != type)
+	if (allow_dotted_tail && sexp_type(cons) != SEXP_NIL
+			&& sexp_type(cons) != type)
 		return false;
 	return true;
 }
@@ -506,7 +507,7 @@ DEFSPECIAL(eval_delay, args, env)
 	return make_promise(car(args), env);
 }
 
-DEFUN(scm_force, args)
+DEFUN(scm_force, args, env)
 {
 	struct sexp_function *fun = sexp_fun(car(args));
 	sexp_t r = trampoline(make_pair(sym_begin, fun->body), fun->env);
@@ -644,9 +645,9 @@ sexp_t trampoline(sexp_t sexp, env_t env)
 	return result;
 }
 
-DEFUN(scm_eval, args)
+DEFUN(scm_eval, args, env)
 {
-	return trampoline(car(args), ____env);
+	return trampoline(car(args), env);
 }
 
 static inline bool arity_satisfied(struct sexp_function *fun, sexp_t args)

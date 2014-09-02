@@ -18,11 +18,8 @@
 
 #define DEFSPECIAL(fname, aname, ename) \
 	sexp_t fname (sexp_t aname, env_t ename)
-#define DEFUN(fname, aname) \
-	DEFSPECIAL(fname, aname, ____env)
-#define DEFMACRO DEFUN
-
-#define CALL(fname, args) fname(args, ____env)
+#define DEFUN DEFSPECIAL
+#define DEFMACRO DEFSPECIAL
 
 #define sexp_list_for_each(cons, head) \
 	for (cons = (sexp_t) (head); sexp_type(cons) == SEXP_PAIR; \

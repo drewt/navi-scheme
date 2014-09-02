@@ -22,17 +22,17 @@ static inline bool both_chars(sexp_t a, sexp_t b)
 	return sexp_type(a) == SEXP_CHAR && sexp_type(b) == SEXP_CHAR;
 }
 
-DEFUN(scm_charp, args)
+DEFUN(scm_charp, args, env)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_CHAR);
 }
 
 #define BINARY_PREDICATE(cname, op) \
-	DEFUN(cname, args) \
+	DEFUN(cname, args, env) \
 	{ \
 		sexp_t fst = car(args), snd = cadr(args); \
-		type_check(fst, SEXP_CHAR); \
-		type_check(snd, SEXP_CHAR); \
+		type_check(fst, SEXP_CHAR, env); \
+		type_check(snd, SEXP_CHAR, env); \
 		return make_bool(sexp_char(fst) op sexp_char(snd)); \
 	}
 
@@ -43,11 +43,11 @@ BINARY_PREDICATE(scm_char_lte, <=)
 BINARY_PREDICATE(scm_char_gte, >=)
 
 #define BINARY_CI_PREDICATE(cname, op) \
-	DEFUN(cname, args) \
+	DEFUN(cname, args, env) \
 	{ \
 		sexp_t fst = car(args), snd = cadr(args); \
-		type_check(fst, SEXP_CHAR); \
-		type_check(snd, SEXP_CHAR); \
+		type_check(fst, SEXP_CHAR, env); \
+		type_check(snd, SEXP_CHAR, env); \
 		return make_bool(tolower(sexp_char(fst)) op \
 				tolower(sexp_char(snd))); \
 	}
@@ -68,12 +68,12 @@ sexp_t char_downcase(sexp_t ch)
 	return make_char(tolower(sexp_char(ch)));
 }
 
-DEFUN(scm_char_upcase, args)
+DEFUN(scm_char_upcase, args, env)
 {
-	return char_upcase(type_check(car(args), SEXP_CHAR));
+	return char_upcase(type_check(car(args), SEXP_CHAR, env));
 }
 
-DEFUN(scm_char_downcase, args)
+DEFUN(scm_char_downcase, args, env)
 {
-	return char_downcase(type_check(car(args), SEXP_CHAR));
+	return char_downcase(type_check(car(args), SEXP_CHAR, env));
 }

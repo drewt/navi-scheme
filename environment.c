@@ -187,7 +187,7 @@ void free_scope(struct sexp_scope *scope)
 		scope_unref(scope->next);
 }
 
-DEFUN(scm_env_count, args)
+DEFUN(scm_env_count, args, env)
 {
 	unsigned i = 0;
 	struct list_head *it;

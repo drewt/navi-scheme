@@ -152,7 +152,7 @@ static sexp_t new_symbol(const char *str, unsigned long hashcode)
 	return (sexp_t) &symbol->object;
 }
 
-DEFUN(scm_gensym, args)
+DEFUN(scm_gensym, args, env)
 {
 	char buf[64];
 	static unsigned count = 0;
@@ -378,7 +378,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 	die("eqvp: unknown type");
 }
 
-DEFUN(scm_eqvp, args)
+DEFUN(scm_eqvp, args, env)
 {
 	return make_bool(eqvp(car(args), cadr(args)));
 }
@@ -483,13 +483,13 @@ void invoke_gc(void)
 	gc_sweep();
 }
 
-DEFUN(scm_gc_collect, args)
+DEFUN(scm_gc_collect, args, env)
 {
 	invoke_gc();
 	return unspecified();
 }
 
-DEFUN(scm_gc_count, args)
+DEFUN(scm_gc_count, args, env)
 {
 	struct sexp *sexp;
 	list_for_each_entry(sexp, &heap, chain) {
@@ -497,7 +497,7 @@ DEFUN(scm_gc_count, args)
 				sexp_fun((sexp_t)sexp)->builtin)
 			continue;
 		printf("<%p> ", sexp);
-		sexp_write((sexp_t)sexp, ____env);
+		sexp_write((sexp_t)sexp, env);
 		putchar('\n');
 	}
 	return unspecified();

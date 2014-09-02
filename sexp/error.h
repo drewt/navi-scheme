@@ -38,8 +38,7 @@ static inline bool has_type(sexp_t sexp, enum sexp_type type)
 	return sexp_type(sexp) == type;
 }
 
-#define type_check(sexp, type) _type_check(sexp, type, ____env)
-static inline sexp_t _type_check(sexp_t sexp, enum sexp_type type, env_t env)
+static inline sexp_t type_check(sexp_t sexp, enum sexp_type type, env_t env)
 {
 	if (!has_type(sexp, type))
 		error(env, "type error",
@@ -48,10 +47,9 @@ static inline sexp_t _type_check(sexp_t sexp, enum sexp_type type, env_t env)
 	return sexp;
 }
 
-#define type_check_range(n, min, max) _type_check_range(n, min, max, ____env)
-static inline long _type_check_range(sexp_t n, long min, long max, env_t env)
+static inline long type_check_range(sexp_t n, long min, long max, env_t env)
 {
-	_type_check(n, SEXP_NUM, env);
+	type_check(n, SEXP_NUM, env);
 	if (sexp_num(n) < min || sexp_num(n) >= max)
 		error(env, "argument not in allowed range",
 				make_apair("min", make_num(min)),
@@ -60,18 +58,16 @@ static inline long _type_check_range(sexp_t n, long min, long max, env_t env)
 	return sexp_num(n);
 }
 
-#define type_check_list(sexp) _type_check_list(sexp, ____env)
-static inline sexp_t _type_check_list(sexp_t list, env_t env)
+static inline sexp_t type_check_list(sexp_t list, env_t env)
 {
 	if (!is_proper_list(list))
 		error(env, "type error: not a proper list");
 	return list;
 }
 
-#define type_check_fun(sexp, arity) _type_check_fun(sexp, arity, ____env)
-static inline sexp_t _type_check_fun(sexp_t fun, int arity, env_t env)
+static inline sexp_t type_check_fun(sexp_t fun, int arity, env_t env)
 {
-	_type_check(fun, SEXP_FUNCTION, env);
+	type_check(fun, SEXP_FUNCTION, env);
 	int actual = sexp_fun(fun)->arity;
 	if (actual != arity)
 		error(env, "wrong arity",
@@ -80,53 +76,44 @@ static inline sexp_t _type_check_fun(sexp_t fun, int arity, env_t env)
 	return fun;
 }
 
-#define fixnum_cast(sexp) _fixnum_cast(sexp, ____env)
-static inline long _fixnum_cast(sexp_t sexp, env_t env)
+static inline long fixnum_cast(sexp_t sexp, env_t env)
 {
-	return sexp_num(_type_check(sexp, SEXP_NUM, env));
+	return sexp_num(type_check(sexp, SEXP_NUM, env));
 }
 
-#define char_cast(sexp) _char_cast(sexp, ____env)
-static inline unsigned long _char_cast(sexp_t sexp, env_t env)
+static inline unsigned long char_cast(sexp_t sexp, env_t env)
 {
-	return sexp_char(_type_check(sexp, SEXP_CHAR, env));
+	return sexp_char(type_check(sexp, SEXP_CHAR, env));
 }
 
-#define string_cast(sexp) _string_cast(sexp, ____env)
-static inline struct sexp_string *_string_cast(sexp_t sexp, env_t env)
+static inline struct sexp_string *string_cast(sexp_t sexp, env_t env)
 {
-	return sexp_string(_type_check(sexp, SEXP_STRING, env));
+	return sexp_string(type_check(sexp, SEXP_STRING, env));
 }
 
-#define bytevec_cast(sexp, type) _bytevec_cast(sexp, type, ____env)
-static inline struct sexp_bytevec *_bytevec_cast(sexp_t sexp,
+static inline struct sexp_bytevec *bytevec_cast(sexp_t sexp,
 		enum sexp_type type, env_t env)
 {
-	return sexp_bytevec(_type_check(sexp, type, env));
+	return sexp_bytevec(type_check(sexp, type, env));
 }
 
-#define vector_cast(sexp, type) _vector_cast(sexp, type, ____env)
-static inline struct sexp_vector *_vector_cast(sexp_t sexp,
+static inline struct sexp_vector *vector_cast(sexp_t sexp,
 		enum sexp_type type, env_t env)
 {
-	return sexp_vector(_type_check(sexp, type, env));
+	return sexp_vector(type_check(sexp, type, env));
 }
 
-#define port_cast(sexp) _port_cast(sexp, ____env)
-static inline struct sexp_port *_port_cast(sexp_t sexp, env_t env)
+static inline struct sexp_port *port_cast(sexp_t sexp, env_t env)
 {
-	return sexp_port(_type_check(sexp, SEXP_PORT, env));
+	return sexp_port(type_check(sexp, SEXP_PORT, env));
 }
 
-#define type_check_byte(sexp) _type_check_byte(sexp, ____env)
-static inline unsigned char _type_check_byte(sexp_t sexp, env_t env)
+static inline unsigned char type_check_byte(sexp_t sexp, env_t env)
 {
-	return _type_check_range(sexp, 0, 256, env);
+	return type_check_range(sexp, 0, 256, env);
 }
 
-#define check_copy_to(to, at, from, start, end) \
-	_check_copy_to(to, at, from, start, end, ____env)
-static inline void _check_copy_to(size_t to, long at, size_t from, long start,
+static inline void check_copy_to(size_t to, long at, size_t from, long start,
 		long end, env_t env)
 {
 	if (at < 0 || (size_t)at >= to || start < 0 || (size_t)start >= from
@@ -135,8 +122,7 @@ static inline void _check_copy_to(size_t to, long at, size_t from, long start,
 		error(env, "invalid indices for copy");
 }
 
-#define check_copy(size, start, end) _check_copy(size, start, end, ____env)
-#define _check_copy(size, start, end, env) \
-	_check_copy_to(size, 0, size, start, end, env)
+#define check_copy(size, start, end, env) \
+	check_copy_to(size, 0, size, start, end, env)
 
 #endif

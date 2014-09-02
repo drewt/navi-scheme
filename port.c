@@ -84,103 +84,104 @@ void port_write_c_string(const char *str, struct sexp_port *port)
 		port_write_char(make_char(*str++), port);
 }
 
-DEFUN(scm_current_input_port, args)
+DEFUN(scm_current_input_port, args, env)
 {
-	return env_lookup(____env, sym_current_input);
+	return env_lookup(env, sym_current_input);
 }
 
-DEFUN(scm_current_output_port, args)
+DEFUN(scm_current_output_port, args, env)
 {
-	return env_lookup(____env, sym_current_output);
+	return env_lookup(env, sym_current_output);
 }
 
-DEFUN(scm_current_error_port, args)
+DEFUN(scm_current_error_port, args, env)
 {
-	return env_lookup(____env, sym_current_error);
+	return env_lookup(env, sym_current_error);
 }
 
-DEFUN(scm_open_input_string, args)
+DEFUN(scm_open_input_string, args, env)
 {
-	return make_string_input_port(type_check(car(args), SEXP_STRING));
+	return make_string_input_port(type_check(car(args), SEXP_STRING, env));
 }
 
-DEFUN(scm_eof_objectp, args)
+DEFUN(scm_eof_objectp, args, env)
 {
 	return make_bool(is_eof(car(args)));
 }
 
-DEFUN(scm_eof_object, args)
+DEFUN(scm_eof_object, args, env)
 {
 	return make_eof();
 }
 
-#define get_port(fallback, args) _get_port(fallback, args, ____env)
-static struct sexp_port *_get_port(builtin_t fallback, sexp_t args, env_t env)
+static struct sexp_port *get_port(builtin_t fallback, sexp_t args, env_t env)
 {
 	if (is_nil(args))
-		return _port_cast(fallback(make_nil(), env), env);
-	return _port_cast(car(args), env);
+		return port_cast(fallback(make_nil(), env), env);
+	return port_cast(car(args), env);
 }
 
-DEFUN(scm_read_u8, args)
+DEFUN(scm_read_u8, args, env)
 {
-	return port_read_char(get_port(scm_current_input_port, args));
+	return port_read_char(get_port(scm_current_input_port, args, env));
 }
 
-DEFUN(scm_peek_u8, args)
+DEFUN(scm_peek_u8, args, env)
 {
-	return port_peek_char(get_port(scm_current_input_port, args));
+	return port_peek_char(get_port(scm_current_input_port, args, env));
 }
 
-DEFUN(scm_read_char, args)
+DEFUN(scm_read_char, args, env)
 {
-	return CALL(scm_read_u8, args); // TODO: decode UTF-8
+	return scm_read_u8(args, env); // TODO: decode UTF-8
 }
 
-DEFUN(scm_peek_char, args)
+DEFUN(scm_peek_char, args, env)
 {
-	return CALL(scm_peek_u8, args); // TODO: decode UTF-8
+	return scm_peek_u8(args, env); // TODO: decode UTF-8
 }
 
-DEFUN(scm_read, args)
+DEFUN(scm_read, args, env)
 {
-	return sexp_read(get_port(scm_current_input_port, args), ____env);
+	return sexp_read(get_port(scm_current_input_port, args, env), env);
 }
 
-DEFUN(scm_write_u8, args)
+DEFUN(scm_write_u8, args, env)
 {
-	port_write_char(type_check(car(args), SEXP_CHAR),
-			get_port(scm_current_output_port, cdr(args)));
+	port_write_char(type_check(car(args), SEXP_CHAR, env),
+			get_port(scm_current_output_port, cdr(args), env));
 	return unspecified();
 }
 
-DEFUN(scm_write_char, args)
+DEFUN(scm_write_char, args, env)
 {
-	return CALL(scm_write_u8, args); // TODO: encode UTF-8
+	return scm_write_u8(args, env); // TODO: encode UTF-8
 }
 
-DEFUN(scm_write_string, args)
+DEFUN(scm_write_string, args, env)
 {
-	type_check(car(args), SEXP_STRING);
+	type_check(car(args), SEXP_STRING, env);
 	port_write_c_string(sexp_string(car(args))->data,
-			get_port(scm_current_output_port, cdr(args)));
+			get_port(scm_current_output_port, cdr(args), env));
 	return unspecified();
 }
 
-DEFUN(scm_display, args)
+DEFUN(scm_display, args, env)
 {
-	_display(get_port(scm_current_output_port, cdr(args)), car(args), false);
+	_display(get_port(scm_current_output_port, cdr(args), env), car(args),
+			false);
 	return unspecified();
 }
 
-DEFUN(scm_write, args)
+DEFUN(scm_write, args, env)
 {
-	_display(get_port(scm_current_output_port, cdr(args)), car(args), true);
+	_display(get_port(scm_current_output_port, cdr(args), env), car(args),
+			true);
 	return unspecified();
 }
 
-DEFUN(scm_newline, args)
+DEFUN(scm_newline, args, env)
 {
-	CALL(scm_write_u8, make_pair(make_char('\n'), args));
+	scm_write_u8(make_pair(make_char('\n'), args), env);
 	return unspecified();
 }

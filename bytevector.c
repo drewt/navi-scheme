@@ -30,7 +30,7 @@ sexp_t list_to_bytevec(sexp_t list, env_t env)
 	unsigned i = 0;
 	struct sexp_bytevec *vector = sexp_bytevec(vec);
 	sexp_list_for_each(cons, list) {
-		_type_check_byte(car(cons), env);
+		type_check_byte(car(cons), env);
 		vector->data[i++] = sexp_num(car(cons));
 	}
 	return vec;
@@ -88,66 +88,66 @@ char *bytevec_to_c_string(sexp_t sexp)
 	return cstr;
 }
 
-DEFUN(scm_bytevectorp, args)
+DEFUN(scm_bytevectorp, args, env)
 {
 	return make_bool(sexp_type(car(args)) == SEXP_BYTEVEC);
 }
 
-DEFUN(scm_make_bytevector, args)
+DEFUN(scm_make_bytevector, args, env)
 {
 	sexp_t sexp;
 	int nr_args = list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
-		error(____env, "wrong number of arguments");
+		error(env, "wrong number of arguments");
 
-	type_check(car(args), SEXP_NUM);
+	type_check(car(args), SEXP_NUM, env);
 
 	sexp = make_bytevec(sexp_num(car(args)));
 	if (nr_args == 2) {
-		type_check_byte(cadr(args));
+		type_check_byte(cadr(args), env);
 		bytevec_fill(sexp, sexp_num(cadr(args)));
 	}
 	return sexp;
 }
 
-DEFUN(scm_bytevector, args)
+DEFUN(scm_bytevector, args, env)
 {
-	return list_to_bytevec(args, ____env);
+	return list_to_bytevec(args, env);
 }
 
-DEFUN(scm_bytevector_length, args)
+DEFUN(scm_bytevector_length, args, env)
 {
-	type_check(car(args), SEXP_BYTEVEC);
+	type_check(car(args), SEXP_BYTEVEC, env);
 	return make_num(sexp_bytevec(car(args))->size);
 }
 
-DEFUN(scm_bytevector_u8_ref, args)
+DEFUN(scm_bytevector_u8_ref, args, env)
 {
-	type_check(car(args),  SEXP_BYTEVEC);
-	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size);
+	type_check(car(args),  SEXP_BYTEVEC, env);
+	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size, env);
 
 	return bytevec_ref(car(args), sexp_num(cadr(args)));
 }
 
-DEFUN(scm_bytevector_u8_set, args)
+DEFUN(scm_bytevector_u8_set, args, env)
 {
-	type_check(car(args), SEXP_BYTEVEC);
-	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size);
-	type_check_byte(caddr(args));
+	type_check(car(args), SEXP_BYTEVEC, env);
+	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size, env);
+	type_check_byte(caddr(args), env);
 
 	sexp_bytevec(car(args))->data[sexp_num(cadr(args))] = sexp_num(caddr(args));
 	return unspecified();
 }
 
-DEFUN(scm_bytevector_append, args)
+DEFUN(scm_bytevector_append, args, env)
 {
 	sexp_t cons, sexp;
 	struct sexp_bytevec *vec;
 	size_t i = 0, size = 0;
 
 	sexp_list_for_each(cons, args) {
-		size += bytevec_cast(car(cons), SEXP_BYTEVEC)->size;
+		size += bytevec_cast(car(cons), SEXP_BYTEVEC, env)->size;
 	}
 
 	sexp = make_bytevec(size);
@@ -171,57 +171,58 @@ static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 	return to;
 }
 
-DEFUN(scm_bytevector_copy, args)
+DEFUN(scm_bytevector_copy, args, env)
 {
 	sexp_t from;
 	long start, end;
 	struct sexp_bytevec *vec;
 	int nr_args = list_length(args);
 
-	from = type_check(car(args), SEXP_BYTEVEC);
+	from = type_check(car(args), SEXP_BYTEVEC, env);
 	vec = sexp_bytevec(from);
-	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
+	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end);
+	check_copy(vec->size, start, end, env);
 
 	return copy_to(make_bytevec(end - start), 0, from, start, end);
 }
 
-DEFUN(scm_bytevector_copy_to, args)
+DEFUN(scm_bytevector_copy_to, args, env)
 {
 	sexp_t to, from;
 	long at, start, end;
 	struct sexp_bytevec *from_vec, *to_vec;
 	int nr_args = list_length(args);
 
-	to = type_check(car(args), SEXP_BYTEVEC);
-	at = fixnum_cast(cadr(args));
-	from = type_check(caddr(args), SEXP_BYTEVEC);
+	to = type_check(car(args), SEXP_BYTEVEC, env);
+	at = fixnum_cast(cadr(args), env);
+	from = type_check(caddr(args), SEXP_BYTEVEC, env);
 	to_vec = sexp_bytevec(to);
 	from_vec = sexp_bytevec(from);
-	start = (nr_args > 3) ? fixnum_cast(cadddr(args)) : 0;
-	end = (nr_args > 4) ? fixnum_cast(caddddr(args)) : (long)from_vec->size;
+	start = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : 0;
+	end = (nr_args > 4) ? fixnum_cast(caddddr(args), env)
+		: (long)from_vec->size;
 
-	check_copy_to(to_vec->size, at, from_vec->size, start, end);
+	check_copy_to(to_vec->size, at, from_vec->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
 	return unspecified();
 }
 
-DEFUN(scm_utf8_to_string, args)
+DEFUN(scm_utf8_to_string, args, env)
 {
 	sexp_t r;
 	long start, end;
-	struct sexp_bytevec *vec = bytevec_cast(car(args), SEXP_BYTEVEC);
+	struct sexp_bytevec *vec = bytevec_cast(car(args), SEXP_BYTEVEC, env);
 	int nr_args = list_length(args);
 
-	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args)) : (long) vec->size;
+	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end);
+	check_copy(vec->size, start, end, env);
 	if (!u_is_valid((char*)vec->data, start, end))
-		error(____env, "invalid UTF-8");
+		error(env, "invalid UTF-8");
 
 	r = make_string(end - start, end - start);
 	memcpy(sexp_string(r)->data, vec->data + start, end - start);
@@ -230,19 +231,19 @@ DEFUN(scm_utf8_to_string, args)
 	return r;
 }
 
-DEFUN(scm_string_to_utf8, args)
+DEFUN(scm_string_to_utf8, args, env)
 {
 	sexp_t r;
 	long start, end;
-	struct sexp_string *str = string_cast(car(args));
+	struct sexp_string *str = string_cast(car(args), env);
 	int nr_args = list_length(args);
 	size_t size, i = 0;
 
-	start = (nr_args > 1) ? fixnum_cast(cadr(args)) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args))
+	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
+	end = (nr_args > 2) ? fixnum_cast(caddr(args), env)
 		: (long) u_strlen((char*)str->data);
 
-	check_copy(str->length, start, end);
+	check_copy(str->length, start, end, env);
 
 	u_skip_chars(str->data, start, &i);
 	size = u_strsize(str->data + i, 0, end - start);

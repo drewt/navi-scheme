@@ -66,6 +66,11 @@ DECLARE(scm_error_object_message);
 DECLARE(scm_error_object_irritants);
 DECLARE(scm_read_errorp);
 
+DECLARE(scm_input_portp);
+DECLARE(scm_output_portp);
+DECLARE(scm_portp);
+DECLARE(scm_input_port_openp);
+DECLARE(scm_output_port_openp);
 DECLARE(scm_current_input_port);
 DECLARE(scm_current_output_port);
 DECLARE(scm_current_error_port);

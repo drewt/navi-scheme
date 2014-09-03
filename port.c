@@ -128,6 +128,37 @@ static struct sexp_port *get_port(builtin_t fallback, sexp_t args, env_t env)
 	return port_cast(car(args), env);
 }
 
+DEFUN(scm_input_portp, args, env)
+{
+	return make_bool(sexp_type(car(args)) == SEXP_PORT
+			&& sexp_port(car(args))->read_u8);
+}
+
+DEFUN(scm_output_portp, args, env)
+{
+	return make_bool(sexp_type(car(args)) == SEXP_PORT
+			&& sexp_port(car(args))->write_u8);
+}
+
+DEFUN(scm_portp, args, env)
+{
+	return make_bool(sexp_type(car(args)) == SEXP_PORT);
+}
+
+DEFUN(scm_input_port_openp, args, env)
+{
+	struct sexp_port *p = port_cast(car(args), env);
+	check_input_port(p, env);
+	return make_bool(!(p->flags & INPUT_CLOSED));
+}
+
+DEFUN(scm_output_port_openp, args, env)
+{
+	struct sexp_port *p = port_cast(car(args), env);
+	check_output_port(p, env);
+	return make_bool(!(p->flags & OUTPUT_CLOSED));
+}
+
 DEFUN(scm_current_input_port, args, env)
 {
 	return env_lookup(env, sym_current_input);

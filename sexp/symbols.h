@@ -44,6 +44,7 @@ extern sexp_t sym_current_input;
 extern sexp_t sym_current_output;
 extern sexp_t sym_current_error;
 extern sexp_t sym_read_error;
+extern sexp_t sym_file_error;
 extern sexp_t sym_repl;
 
 #endif

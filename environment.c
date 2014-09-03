@@ -153,6 +153,7 @@ struct sexp_scope *extend_environment(struct sexp_scope *env, sexp_t vars,
 
 struct sexp_scope *make_default_environment(void)
 {
+	sexp_t std_in, std_out, std_err;
 	struct sexp_scope *env = make_scope();
 
 	for (unsigned i = 0; i < NR_DEFAULT_BINDINGS; i++) {
@@ -163,9 +164,12 @@ struct sexp_scope *make_default_environment(void)
 		env_set(env, symbol, object);
 	}
 
-	env_set(env, sym_current_input,  make_stdio_port(stdin));
-	env_set(env, sym_current_output, make_stdio_port(stdout));
-	env_set(env, sym_current_error,  make_stdio_port(stderr));
+	std_in = make_input_port(stdio_read, stdio_close, stdin);
+	std_out = make_output_port(stdio_write, stdio_close, stdout);
+	std_err = make_output_port(stdio_write, stdio_close, stderr);
+	env_set(env, sym_current_input, std_in);
+	env_set(env, sym_current_output, std_out);
+	env_set(env, sym_current_error, std_err);
 
 	return env;
 }

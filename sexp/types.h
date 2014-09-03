@@ -113,11 +113,12 @@ struct sexp_pair {
 };
 
 struct sexp_port {
-	sexp_t (*read_u8)(struct sexp_port *port);
-	void (*write_u8)(sexp_t, struct sexp_port *port);
+	sexp_t (*read_u8)(struct sexp_port*, env_t);
+	void (*write_u8)(sexp_t, struct sexp_port*, env_t);
+	void (*close_in)(struct sexp_port*, env_t);
+	void (*close_out)(struct sexp_port*, env_t);
+	unsigned long flags;
 	sexp_t buffer;
-	bool buffer_full;
-	bool eof;
 	sexp_t sexp;
 	size_t pos;
 	void *specific;
@@ -354,10 +355,10 @@ static inline sexp_t last_cons(sexp_t list)
 	return list;
 }
 
-sexp_t port_read_char(struct sexp_port *port);
-sexp_t port_peek_char(struct sexp_port *port);
-void port_write_char(sexp_t ch, struct sexp_port *port);
-void port_write_c_string(const char *str, struct sexp_port *port);
+sexp_t port_read_char(struct sexp_port *port, env_t env);
+sexp_t port_peek_char(struct sexp_port *port, env_t env);
+void port_write_char(sexp_t ch, struct sexp_port *port, env_t env);
+void port_write_c_string(const char *str, struct sexp_port *port, env_t env);
 
 /* conversion */
 sexp_t list_to_vector(sexp_t list);
@@ -373,14 +374,25 @@ void symbol_table_init(void);
 void sexp_free(struct sexp *sexp);
 struct sexp *make_sexp(enum sexp_type type, size_t size);
 
+sexp_t stdio_read(struct sexp_port *port, env_t env);
+void stdio_write(sexp_t ch, struct sexp_port *port, env_t env);
+void stdio_close(struct sexp_port *port, env_t env);
+
 /* constructors */
 sexp_t to_string(const char *str);
 sexp_t to_bytevec(const char *str);
 sexp_t make_symbol(const char *sym);
 sexp_t make_pair(sexp_t car, sexp_t cdr);
 sexp_t make_empty_pair(void);
-sexp_t make_port(sexp_t(*read)(struct sexp_port*),
-		void(*write)(sexp_t,struct sexp_port*), void *specific);
+sexp_t make_port(sexp_t(*read)(struct sexp_port*, env_t),
+		void(*write)(sexp_t,struct sexp_port*, env_t),
+		void(*close_in)(struct sexp_port*, env_t),
+		void(*close_out)(struct sexp_port*, env_t),
+		void *specific);
+#define make_input_port(read, close, specific) \
+	make_port(read, NULL, close, NULL, specific)
+#define make_output_port(write, close, specific) \
+	make_port(NULL, write, NULL, close, specific)
 sexp_t make_stdio_port(FILE *stream);
 sexp_t make_vector(size_t size);
 sexp_t make_bytevec(size_t size);

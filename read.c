@@ -40,9 +40,9 @@ static inline void unexpected_eof(env_t env)
 	read_error(env, "unexpected end of file");
 }
 
-static inline int peek_char(struct sexp_port *port)
+static inline int peek_char(struct sexp_port *port, env_t env)
 {
-	sexp_t ch = port_peek_char(port);
+	sexp_t ch = port_peek_char(port, env);
 	if (is_eof(ch))
 		return EOF;
 	return sexp_char(ch);
@@ -50,15 +50,15 @@ static inline int peek_char(struct sexp_port *port)
 
 static inline int ipeek_char(struct sexp_port *port, env_t env)
 {
-	int c = peek_char(port);
+	int c = peek_char(port, env);
 	if (c == EOF)
 		unexpected_eof(env);
 	return c;
 }
 
-static inline int read_char(struct sexp_port *port)
+static inline int read_char(struct sexp_port *port, env_t env)
 {
-	sexp_t ch = port_read_char(port);
+	sexp_t ch = port_read_char(port, env);
 	if (is_eof(ch))
 		return EOF;
 	return sexp_char(ch);
@@ -66,23 +66,23 @@ static inline int read_char(struct sexp_port *port)
 
 static inline int iread_char(struct sexp_port *port, env_t env)
 {
-	int c = read_char(port);
+	int c = read_char(port, env);
 	if (c == EOF)
 		unexpected_eof(env);
 	return c;
 }
 
-static inline int peek_first_char(struct sexp_port *port)
+static inline int peek_first_char(struct sexp_port *port, env_t env)
 {
 	int c;
-	while (isspace((c = peek_char(port))))
-		read_char(port);
+	while (isspace((c = peek_char(port, env))))
+		read_char(port, env);
 	return c;
 }
 
 static inline int ipeek_first_char(struct sexp_port *port, env_t env)
 {
-	int c = peek_first_char(port);
+	int c = peek_first_char(port, env);
 	if (c == EOF)
 		unexpected_eof(env);
 	return c;
@@ -152,10 +152,10 @@ static unsigned long read_unum(struct sexp_port *port, int radix,
 {
 	char c;
 	unsigned long n = 0;
-	while (ctype((c = peek_char(port)))) {
+	while (ctype((c = peek_char(port, env)))) {
 		n *= radix;
 		n += tonum(c, env);
-		read_char(port);
+		read_char(port, env);
 	}
 	return n;
 }
@@ -166,12 +166,12 @@ static long read_num(struct sexp_port *port, int radix, int (*ctype)(int),
 	char c;
 	long sign = 1;
 
-	if ((c = peek_char(port)) == '-') {
+	if ((c = peek_char(port, env)) == '-') {
 		sign = -1;
-		read_char(port);
+		read_char(port, env);
 	} else if (c == '+') {
 		sign = 1;
-		read_char(port);
+		read_char(port, env);
 	}
 	return sign * read_unum(port, radix, ctype, tonum, env);
 }
@@ -203,8 +203,8 @@ static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t en
 	size_t buf_len = STR_BUF_LEN;
 	char *str = malloc(buf_len);
 
-	while (!ctype((c = peek_char(port)), env)) {
-		read_char(port);
+	while (!ctype((c = peek_char(port, env)), env)) {
+		read_char(port, env);
 		str[pos++] = c;
 		if (pos >= buf_len) {
 			buf_len += STR_BUF_STEP;
@@ -235,7 +235,7 @@ static unsigned long read_string_escape(struct sexp_port *port, env_t env)
 		c = read_unum(port, 16, isxdigit, hex_value, env);
 		if (ipeek_char(port, env) != ';')
 			read_error(env, "missing terminator on string hex escape");
-		read_char(port);
+		read_char(port, env);
 		return c;
 	}
 	read_error(env, "unknown string escape", make_apair("char", make_char(c)));
@@ -356,18 +356,18 @@ static sexp_t read_list(struct sexp_port *port, env_t env)
 		char c = ipeek_first_char(port, env);
 		switch (c) {
 		case ')':
-			read_char(port);
+			read_char(port, env);
 			elmptr->cdr = make_nil();
 			return head.cdr;
 		case '.':
-			read_char(port);
+			read_char(port, env);
 			elmptr->cdr = sexp_read(port, env);
-			if ((c = peek_first_char(port)) != ')')
+			if ((c = peek_first_char(port, env)) != ')')
 				read_error(env, "missing list terminator");
-			read_char(port);
+			read_char(port, env);
 			return head.cdr;
 		case '#':
-			read_char(port);
+			read_char(port, env);
 			if (sexp_type((sexp = read_sharp(port, env))) == SEXP_VOID)
 				continue;
 			break;
@@ -470,53 +470,53 @@ sexp_t sexp_read(struct sexp_port *port, env_t env)
 	int sign;
 	sexp_t sexp;
 
-	switch ((c = peek_first_char(port))) {
+	switch ((c = peek_first_char(port, env))) {
 	case '0': case '1': case '2': case '3': case '4':
 	case '5': case '6': case '7': case '8': case '9':
 		return read_decimal(port, env);
 	case '"':
-		read_char(port);
+		read_char(port, env);
 		return read_string(port, env);
 	case '\'':
-		read_char(port);
+		read_char(port, env);
 		return sym_wrap(sym_quote, sexp_read(port, env));
 	case '`':
-		read_char(port);
+		read_char(port, env);
 		return sym_wrap(sym_quasiquote, sexp_read(port, env));
 	case ',':
-		read_char(port);
+		read_char(port, env);
 		if ((c = ipeek_char(port, env)) == '@') {
-			read_char(port);
+			read_char(port, env);
 			return sym_wrap(sym_splice, sexp_read(port, env));
 		}
 		return sym_wrap(sym_unquote, sexp_read(port, env));
 	case '#':
-		read_char(port);
+		read_char(port, env);
 		if (sexp_type((sexp = read_sharp(port, env))) == SEXP_VOID)
 			return sexp_read(port, env);
 		return sexp;
 	case '(':
-		read_char(port);
+		read_char(port, env);
 		return read_list(port, env);
 	case ')':
-		read_char(port);
+		read_char(port, env);
 		fprintf(stderr, "Unexpected character: %c\n", c);
 		break;
 	case ';':
-		while ((c = read_char(port)) != '\n' && c != EOF);
+		while ((c = read_char(port, env)) != '\n' && c != EOF);
 		return sexp_read(port, env);
 	case EOF:
 		return make_eof();
 	case '|':
-		read_char(port);
+		read_char(port, env);
 		sexp = read_symbol(port, ispipe, env);
-		read_char(port); /* consume closing pipe */
+		read_char(port, env); /* consume closing pipe */
 		return sexp;
 	case '+':
 	case '-':
-		read_char(port);
+		read_char(port, env);
 		sign = c == '+' ? 1 : -1;
-		if (isdigit((d = peek_char(port)))) {
+		if (isdigit((d = peek_char(port, env)))) {
 			sexp = read_decimal(port, env);
 			return make_num(sexp_num(sexp) * sign);
 		}

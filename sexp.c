@@ -66,6 +66,7 @@ sexp_t sym_current_input;
 sexp_t sym_current_output;
 sexp_t sym_current_error;
 sexp_t sym_read_error;
+sexp_t sym_file_error;
 sexp_t sym_repl;
 
 static inline sexp_t symbol_object(struct sexp_symbol *sym)
@@ -116,6 +117,7 @@ void symbol_table_init(void)
 	intern(sym_current_output, "#current-output-port");
 	intern(sym_current_error,  "#current-error-port");
 	intern(sym_read_error,     "#read-error");
+	intern(sym_file_error,     "#file-error");
 	intern(sym_repl,           "#repl");
 	#undef intern
 }
@@ -230,14 +232,18 @@ sexp_t make_empty_pair(void)
 	return (sexp_t) make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
 }
 
-sexp_t make_port(sexp_t(*read)(struct sexp_port*),
-		void(*write)(sexp_t,struct sexp_port*), void *specific)
+sexp_t make_port(sexp_t(*read)(struct sexp_port*, env_t),
+		void(*write)(sexp_t,struct sexp_port*, env_t),
+		void(*close_in)(struct sexp_port*, env_t),
+		void(*close_out)(struct sexp_port*, env_t),
+		void *specific)
 {
 	struct sexp *sexp = make_sexp(SEXP_PORT, sizeof(struct sexp_port));
 	sexp->data->port.read_u8 = read;
 	sexp->data->port.write_u8 = write;
-	sexp->data->port.buffer_full = false;
-	sexp->data->port.eof = false;
+	sexp->data->port.close_in = close_in;
+	sexp->data->port.close_out = close_out;
+	sexp->data->port.flags = 0;
 	sexp->data->port.sexp = make_void();
 	sexp->data->port.pos = 0;
 	sexp->data->port.specific = specific;

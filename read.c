@@ -201,14 +201,14 @@ static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t en
 	char c;
 	size_t pos = 0;
 	size_t buf_len = STR_BUF_LEN;
-	char *str = malloc(buf_len);
+	char *str = xmalloc(buf_len);
 
 	while (!ctype((c = peek_char(port, env)), env)) {
 		read_char(port, env);
 		str[pos++] = c;
 		if (pos >= buf_len) {
 			buf_len += STR_BUF_STEP;
-			str = realloc(str, buf_len);
+			str = xrealloc(str, buf_len);
 		}
 	}
 
@@ -247,14 +247,14 @@ static sexp_t read_string(struct sexp_port *port, env_t env)
 	unsigned long c;
 	size_t pos = 0;
 	size_t buf_len = STR_BUF_LEN;
-	char *str = malloc(buf_len);
+	char *str = xmalloc(buf_len);
 
 	while ((c = iread_char(port, env)) != '"') {
 		if (c == '\\')
 			c = read_string_escape(port, env);
 		if (pos + u_char_size(c) >= buf_len) {
 			buf_len += STR_BUF_STEP;
-			str = realloc(str, buf_len);
+			str = xrealloc(str, buf_len);
 		}
 		if (c > 0xFF)
 			u_set_char_raw(str, &pos, c);
@@ -283,7 +283,7 @@ static sexp_t read_symbol_with_prefix(struct sexp_port *port,
 {
 	char *unfixed = read_until(port, stop, env);
 	size_t length = strlen(unfixed);
-	char *prefixed = malloc(length + 2);
+	char *prefixed = xmalloc(length + 2);
 
 	prefixed[0] = first;
 	for (size_t i = 0; i < length+1; i++)

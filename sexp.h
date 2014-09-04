@@ -106,4 +106,20 @@ static inline unsigned count_pairs(sexp_t list)
 	return i;
 }
 
+static inline void *xmalloc(size_t size)
+{
+	void *r;
+	if (!(r = malloc(size)))
+		die("not enough memory");
+	return r;
+}
+
+static inline void *xrealloc(void *p, size_t size)
+{
+	void *r;
+	if (!(r = realloc(p, size)))
+		die("not enough memory");
+	return r;
+}
+
 #endif

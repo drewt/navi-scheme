@@ -125,6 +125,8 @@ struct sexp_spec default_bindings[] = {
 	FUNCTION("open-output-file",        scm_open_output_file,    1, 0),
 	FUNCTION("open-binary-output-file", scm_open_output_file,    1, 0),
 	FUNCTION("open-input-string",       scm_open_input_string,   1, 0),
+	FUNCTION("open-output-string",      scm_open_output_string,  0, 0),
+	FUNCTION("get-output-string",       scm_get_output_string,   1, 0),
 	FUNCTION("close-port",              scm_close_port,          1, 0),
 	FUNCTION("close-input-port",        scm_close_input_port,    1, 0),
 	FUNCTION("close-output-port",       scm_close_output_port,   1, 0),

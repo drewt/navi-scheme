@@ -15,6 +15,9 @@
 
 #include "sexp.h"
 
+#define STRING_INIT_SIZE 64
+#define STRING_STEP_SIZE 64
+
 #define file_error(env, msg, ...) \
 	error(env, msg, sym_file_error, ##__VA_ARGS__, make_void())
 
@@ -23,6 +26,7 @@ enum {
 	BUFFER_FULL   = 2,
 	INPUT_CLOSED  = 4,
 	OUTPUT_CLOSED = 8,
+	STRING_OUTPUT = 16,
 };
 
 static inline void check_input_port(struct sexp_port *p, env_t env)
@@ -69,10 +73,34 @@ static sexp_t string_read(struct sexp_port *port, env_t env)
 	return c == '\0' ? make_eof() : make_char(c);
 }
 
+static void string_write(sexp_t ch, struct sexp_port *port, env_t env)
+{
+	uchar u = sexp_char(ch);
+	struct sexp_string *str = sexp_string(port->sexp);
+	size_t size = str->size + u_char_size(u);
+
+	if (size >= str->storage) {
+		str->data = xrealloc(str->data, str->storage + STRING_STEP_SIZE);
+		str->storage += STRING_STEP_SIZE;
+	}
+
+	u_set_char_raw(str->data, &str->size, u);
+	str->data[str->size] = '\0';
+	str->length++;
+}
+
 sexp_t make_string_input_port(sexp_t string)
 {
 	sexp_t port = make_port(string_read, NULL, NULL, NULL, NULL);
 	port.p->data->port.sexp = string;
+	return port;
+}
+
+sexp_t make_string_output_port(void)
+{
+	sexp_t port = make_port(NULL, string_write, NULL, NULL, NULL);
+	port.p->data->port.sexp = make_string(STRING_INIT_SIZE, 0, 0);
+	port.p->data->port.flags |= STRING_OUTPUT;
 	return port;
 }
 
@@ -203,6 +231,26 @@ DEFUN(scm_open_output_file, args, env)
 DEFUN(scm_open_input_string, args, env)
 {
 	return make_string_input_port(type_check(car(args), SEXP_STRING, env));
+}
+
+DEFUN(scm_open_output_string, args, env)
+{
+	return make_string_output_port();
+}
+
+DEFUN(scm_get_output_string, args, env)
+{
+	sexp_t sexp;
+	struct sexp_string *str;
+	struct sexp_port *p = port_cast(car(args), env);
+
+	if (!(p->flags & STRING_OUTPUT))
+		error(env, "not a string output port");
+
+	str = sexp_string(p->sexp);
+	sexp = make_string(str->size, str->size, str->length);
+	memcpy(sexp_string(sexp)->data, str->data, str->size);
+	return sexp;
 }
 
 static void close_input_port(struct sexp_port *p, env_t env)

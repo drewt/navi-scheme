@@ -36,7 +36,7 @@ static struct hlist_head *get_bucket(struct sexp_scope *scope,
 
 static struct sexp_binding *make_binding(sexp_t symbol, sexp_t object)
 {
-	struct sexp_binding *binding = malloc(sizeof(struct sexp_binding));
+	struct sexp_binding *binding = xmalloc(sizeof(struct sexp_binding));
 	binding->symbol = symbol;
 	binding->object = object;
 	return binding;
@@ -71,7 +71,7 @@ struct sexp_binding *env_binding(struct sexp_scope *env, sexp_t symbol)
 
 static inline struct sexp_scope *make_scope(void)
 {
-	struct sexp_scope *scope = malloc(sizeof(struct sexp_scope));
+	struct sexp_scope *scope = xmalloc(sizeof(struct sexp_scope));
 	for (unsigned i = 0; i < ENV_HT_SIZE; i++)
 		INIT_HLIST_HEAD(&scope->bindings[i]);
 	list_add(&scope->chain, &active_environments);

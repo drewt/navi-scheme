@@ -30,7 +30,7 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 	}
 
 	size_t i = 0;
-	sexp_t sexp = make_string(size, length);
+	sexp_t sexp = make_string(size, size, length);
 	struct sexp_string *str = sexp_string(sexp);
 
 	sexp_list_for_each(cons, list) {
@@ -57,7 +57,7 @@ static sexp_t string_to_list(sexp_t sexp)
 char *scm_to_c_string(sexp_t sexp)
 {
 	struct sexp_string *string = sexp_string(sexp);
-	char *cstr = malloc(string->size + 1);
+	char *cstr = xmalloc(string->size + 1);
 
 	for (size_t i = 0; i < string->size; i++)
 		cstr[i] = string->data[i];
@@ -83,7 +83,8 @@ DEFUN(scm_make_string, args, env)
 		ch = char_cast(cadr(args), env);
 
 	/* FIXME: invalid codepoint? */
-	sexp_t sexp = make_string(length * u_char_size(ch), length);
+	size_t size = length * u_char_size(ch);
+	sexp_t sexp = make_string(size, size, length);
 
 	size_t j = 0;
 	struct sexp_string *string = sexp_string(sexp);
@@ -206,7 +207,7 @@ DEFUN(scm_string_append, args, env)
 	}
 
 	/* allocate */
-	sexp = make_string(size, length);
+	sexp = make_string(size, size, length);
 	str = sexp_string(sexp);
 
 	/* copy */
@@ -260,7 +261,7 @@ DEFUN(scm_string_fill, args, env)
 sexp_t string_copy(sexp_t string)
 {
 	struct sexp_string *from_str = sexp_string(string);
-	sexp_t to = make_string(from_str->size, from_str->size);
+	sexp_t to = make_string(from_str->size, from_str->size, from_str->size);
 	struct sexp_string *to_str = sexp_string(to);
 
 	for (size_t i = 0; i < from_str->size; i++)
@@ -283,7 +284,8 @@ DEFUN(scm_string_copy, args, env)
 
 	check_copy(str->size, start, end, env);
 
-	return copy_to(make_string(end - start, end - start), 0, from, start, end);
+	return copy_to(make_string(end - start, end - start, end - start), 0,
+			from, start, end);
 }
 
 DEFUN(scm_string_copy_to, args, env)

@@ -77,6 +77,8 @@ DECLARE(scm_current_error_port);
 DECLARE(scm_open_input_file);
 DECLARE(scm_open_output_file);
 DECLARE(scm_open_input_string);
+DECLARE(scm_open_output_string);
+DECLARE(scm_get_output_string);
 DECLARE(scm_close_port);
 DECLARE(scm_close_input_port);
 DECLARE(scm_close_output_port);

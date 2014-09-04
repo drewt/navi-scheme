@@ -68,7 +68,7 @@ sexp_t string_to_bytevec(sexp_t string)
 sexp_t bytevec_to_string(sexp_t bytevec)
 {
 	struct sexp_bytevec *bvec = sexp_bytevec(bytevec);
-	sexp_t sexp = make_string(bvec->size, bvec->size);
+	sexp_t sexp = make_string(bvec->size, bvec->size, bvec->size);
 	struct sexp_vector *svec = sexp_vector(sexp);
 
 	for (size_t i = 0; i < bvec->size; i++)
@@ -80,7 +80,7 @@ sexp_t bytevec_to_string(sexp_t bytevec)
 char *bytevec_to_c_string(sexp_t sexp)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
-	char *cstr = malloc(vec->size + 1);
+	char *cstr = xmalloc(vec->size + 1);
 
 	for (size_t i = 0; i < vec->size; i++)
 		cstr[i] = vec->data[i];
@@ -224,7 +224,7 @@ DEFUN(scm_utf8_to_string, args, env)
 	if (!u_is_valid((char*)vec->data, start, end))
 		error(env, "invalid UTF-8");
 
-	r = make_string(end - start, end - start);
+	r = make_string(end - start, end - start, end - start);
 	memcpy(sexp_string(r)->data, vec->data + start, end - start);
 	sexp_string(r)->length = u_strlen(sexp_string(r)->data);
 

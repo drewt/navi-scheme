@@ -140,7 +140,7 @@ static sexp_t new_symbol(const char *str, unsigned long hashcode)
 	size_t len = strlen(str);
 	struct sexp_symbol *symbol;
 	
-	symbol = malloc(sizeof(struct sexp_symbol) +
+	symbol = xmalloc(sizeof(struct sexp_symbol) +
 			sizeof(struct sexp_bytevec) + len + 1);
 
 	for (size_t i = 0; i < len; i++)
@@ -166,7 +166,7 @@ DEFUN(scm_gensym, args, env)
 
 struct sexp *make_sexp(enum sexp_type type, size_t size)
 {
-	struct sexp *sexp = malloc(sizeof(struct sexp) + size);
+	struct sexp *sexp = xmalloc(sizeof(struct sexp) + size);
 	list_add(&sexp->chain, &heap);
 	sexp->type = type;
 	return sexp;
@@ -186,7 +186,7 @@ sexp_t make_symbol(const char *str)
 sexp_t to_string(const char *str)
 {
 	size_t len = strlen(str);
-	sexp_t sexp = make_string(len, len);
+	sexp_t sexp = make_string(len, len, len);
 	struct sexp_string *vec = sexp_string(sexp);
 
 	for (size_t i = 0; i < len; i++) {
@@ -209,11 +209,13 @@ sexp_t to_bytevec(const char *str)
 	return sexp;
 }
 
-sexp_t make_string(size_t size, size_t length)
+sexp_t make_string(size_t storage, size_t size, size_t length)
 {
 	struct sexp *sexp = make_sexp(SEXP_STRING, sizeof(struct sexp_string));
-	sexp->data->str.data = malloc(size + 1);
+	sexp->data->str.data = xmalloc(storage + 1);
+	sexp->data->str.data[storage] = '\0';
 	sexp->data->str.data[size] = '\0';
+	sexp->data->str.storage = storage;
 	sexp->data->str.size = size;
 	sexp->data->str.length = length;
 	return (sexp_t) sexp;

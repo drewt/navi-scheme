@@ -114,12 +114,12 @@ struct sexp_pair {
 };
 
 struct sexp_port {
-	sexp_t (*read_u8)(struct sexp_port*, env_t);
-	void (*write_u8)(sexp_t, struct sexp_port*, env_t);
+	int (*read_u8)(struct sexp_port*, env_t);
+	void (*write_u8)(unsigned char, struct sexp_port*, env_t);
 	void (*close_in)(struct sexp_port*, env_t);
 	void (*close_out)(struct sexp_port*, env_t);
 	unsigned long flags;
-	sexp_t buffer;
+	uchar buffer;
 	sexp_t sexp;
 	size_t pos;
 	void *specific;
@@ -356,9 +356,12 @@ static inline sexp_t last_cons(sexp_t list)
 	return list;
 }
 
+sexp_t port_read_byte(struct sexp_port *port, env_t env);
+sexp_t port_peek_byte(struct sexp_port *port, env_t env);
 sexp_t port_read_char(struct sexp_port *port, env_t env);
 sexp_t port_peek_char(struct sexp_port *port, env_t env);
-void port_write_char(sexp_t ch, struct sexp_port *port, env_t env);
+void port_write_byte(unsigned char ch, struct sexp_port *port, env_t env);
+void port_write_char(uchar ch, struct sexp_port *port, env_t env);
 void port_write_c_string(const char *str, struct sexp_port *port, env_t env);
 
 /* conversion */
@@ -375,8 +378,8 @@ void symbol_table_init(void);
 void sexp_free(struct sexp *sexp);
 struct sexp *make_sexp(enum sexp_type type, size_t size);
 
-sexp_t stdio_read(struct sexp_port *port, env_t env);
-void stdio_write(sexp_t ch, struct sexp_port *port, env_t env);
+int stdio_read(struct sexp_port *port, env_t env);
+void stdio_write(unsigned char ch, struct sexp_port *port, env_t env);
 void stdio_close(struct sexp_port *port, env_t env);
 
 /* constructors */
@@ -385,8 +388,8 @@ sexp_t to_bytevec(const char *str);
 sexp_t make_symbol(const char *sym);
 sexp_t make_pair(sexp_t car, sexp_t cdr);
 sexp_t make_empty_pair(void);
-sexp_t make_port(sexp_t(*read)(struct sexp_port*, env_t),
-		void(*write)(sexp_t,struct sexp_port*, env_t),
+sexp_t make_port(int(*read)(struct sexp_port*, env_t),
+		void(*write)(unsigned char,struct sexp_port*, env_t),
 		void(*close_in)(struct sexp_port*, env_t),
 		void(*close_out)(struct sexp_port*, env_t),
 		void *specific);
@@ -507,7 +510,7 @@ static inline bool bytevec_equal(sexp_t sexp, const char *cstr)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vec->size; i++)
-		if (vec->data[i] != cstr[i])
+		if (vec->data[i] != (unsigned char) cstr[i])
 			return false;
 	return true;
 }

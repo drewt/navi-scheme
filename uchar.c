@@ -39,7 +39,7 @@ const char hex_tab[16] = "0123456789abcdef";
 /* Length of UTF-8 byte sequence.
  * Table index is the first byte of UTF-8 sequence.
  */
-static const signed char len_tab[256] = {
+const signed char len_tab[256] = {
 	/*   0-127  0xxxxxxx */
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,

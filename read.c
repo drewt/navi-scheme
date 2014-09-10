@@ -198,18 +198,22 @@ static sexp_t read_binary(struct sexp_port *port, env_t env)
 
 static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t env)
 {
-	char c;
+	uchar c;
 	size_t pos = 0;
 	size_t buf_len = STR_BUF_LEN;
 	char *str = xmalloc(buf_len);
 
 	while (!ctype((c = peek_char(port, env)), env)) {
 		read_char(port, env);
-		str[pos++] = c;
-		if (pos >= buf_len) {
+
+		if (pos + u_char_size(c) >= buf_len) {
 			buf_len += STR_BUF_STEP;
 			str = xrealloc(str, buf_len);
 		}
+		if (c > 0xFF)
+			u_set_char_raw(str, &pos, c);
+		else
+			str[pos++] = c;
 	}
 
 	str[pos] = '\0';

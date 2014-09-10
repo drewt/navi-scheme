@@ -22,9 +22,12 @@
 
 #include <stddef.h> /* size_t */
 
+#define UCHAR_EOF 0xDE0F
+
 typedef unsigned long uchar;
 
 extern const char hex_tab[16];
+extern const signed char len_tab[256];
 
 /*
  * Invalid bytes are or'ed with this
@@ -58,6 +61,11 @@ static inline int u_char_size(uchar uch)
 	} else {
 		return 1;
 	}
+}
+
+static inline int utf8_char_size(unsigned char ch)
+{
+	return len_tab[ch];
 }
 
 /*

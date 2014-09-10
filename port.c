@@ -50,15 +50,14 @@ static inline void check_can_read(struct sexp_port *p, env_t env)
 
 void void_close(struct sexp_port *port, env_t env) {}
 
-sexp_t stdio_read(struct sexp_port *port, env_t env)
+int stdio_read(struct sexp_port *port, env_t env)
 {
-	int c = getc(port->specific);
-	return c == EOF ? make_eof() : make_char(c);
+	return getc(port->specific);
 }
 
-void stdio_write(sexp_t ch, struct sexp_port *port, env_t env)
+void stdio_write(unsigned char ch, struct sexp_port *port, env_t env)
 {
-	putc(sexp_char(ch), port->specific);
+	putc(ch, port->specific);
 }
 
 void stdio_close(struct sexp_port *port, env_t env)
@@ -67,24 +66,22 @@ void stdio_close(struct sexp_port *port, env_t env)
 		error(env, "failed to close port");
 }
 
-static sexp_t string_read(struct sexp_port *port, env_t env)
+static int string_read(struct sexp_port *port, env_t env)
 {
-	char c = sexp_string(port->sexp)->data[port->pos++];
-	return c == '\0' ? make_eof() : make_char(c);
+	unsigned char c = sexp_string(port->sexp)->data[port->pos++];
+	return c == '\0' ? EOF : c;
 }
 
-static void string_write(sexp_t ch, struct sexp_port *port, env_t env)
+static void string_write(unsigned char ch, struct sexp_port *port, env_t env)
 {
-	uchar u = sexp_char(ch);
 	struct sexp_string *str = sexp_string(port->sexp);
-	size_t size = str->size + u_char_size(u);
 
-	if (size >= str->storage) {
+	if (str->size + 1 >= str->storage) {
 		str->data = xrealloc(str->data, str->storage + STRING_STEP_SIZE);
 		str->storage += STRING_STEP_SIZE;
 	}
 
-	u_set_char_raw(str->data, &str->size, u);
+	str->data[str->size++] = ch;
 	str->data[str->size] = '\0';
 	str->length++;
 }
@@ -104,23 +101,73 @@ sexp_t make_string_output_port(void)
 	return port;
 }
 
-sexp_t port_peek_char(struct sexp_port *port, env_t env)
+static void port_buffer_byte(struct sexp_port *port, env_t env)
+{
+	int byte = port->read_u8(port, env);
+	port->buffer = (byte == EOF) ? UCHAR_EOF : byte;
+}
+
+static uchar port_peek_c_byte(struct sexp_port *port, env_t env)
 {
 	check_can_read(port, env);
 	if (port->flags & GOT_EOF)
-		return make_eof();
+		return UCHAR_EOF;
 	if (!(port->flags & BUFFER_FULL)) {
-		port->buffer = port->read_u8(port, env);
+		port_buffer_byte(port, env);
 		port->flags |= BUFFER_FULL;
 	}
 	return port->buffer;
 }
 
-static sexp_t check_return(struct sexp_port *port, sexp_t sexp)
+sexp_t port_peek_byte(struct sexp_port *port, env_t env)
 {
-	if (is_eof(sexp))
+	uchar b = port_peek_c_byte(port, env);
+	return b == UCHAR_EOF ? make_eof() : make_num(b);
+}
+
+static uchar port_read_c_byte(struct sexp_port *port, env_t env)
+{
+	check_can_read(port, env);
+	if (port->flags & GOT_EOF)
+		return UCHAR_EOF;
+	if (port->flags & BUFFER_FULL)
+		port->flags &= ~BUFFER_FULL;
+	else
+		port_buffer_byte(port, env);
+	return port->buffer;
+}
+
+sexp_t port_read_byte(struct sexp_port *port, env_t env)
+{
+	uchar b = port_read_c_byte(port, env);
+	if (b == UCHAR_EOF) {
 		port->flags |= GOT_EOF;
-	return sexp;
+		return make_eof();
+	}
+	return make_num(b);
+}
+
+static void port_buffer_char(struct sexp_port *port, env_t env)
+{
+	int size;
+	int byte;
+	char buffer[4];
+
+	if ((byte = port->read_u8(port, env)) == EOF) {
+		port->buffer = UCHAR_EOF;
+		port->flags |= GOT_EOF;
+		return;
+	}
+	buffer[0] = byte;
+
+	size = utf8_char_size(buffer[0]);
+	for (int i = 1; i < size; i++) {
+		if ((byte = port->read_u8(port, env)) == EOF)
+			error(env, "unexpected end of file");
+		buffer[i] = byte;
+	}
+
+	port->buffer = u_get_char(buffer, NULL);
 }
 
 sexp_t port_read_char(struct sexp_port *port, env_t env)
@@ -130,12 +177,25 @@ sexp_t port_read_char(struct sexp_port *port, env_t env)
 		return make_eof();
 	if (port->flags & BUFFER_FULL) {
 		port->flags &= ~BUFFER_FULL;
-		return check_return(port, port->buffer);
+		return make_char(port->buffer);
 	}
-	return check_return(port, port->read_u8(port, env));
+	port_buffer_char(port, env);
+	return make_char(port->buffer);
 }
 
-void port_write_char(sexp_t ch, struct sexp_port *port, env_t env)
+sexp_t port_peek_char(struct sexp_port *port, env_t env)
+{
+	check_can_read(port, env);
+	if (port->flags & GOT_EOF)
+		return make_eof();
+	if (!(port->flags & BUFFER_FULL)) {
+		port_buffer_char(port, env);
+		port->flags |= BUFFER_FULL;
+	}
+	return make_char(port->buffer);
+}
+
+void port_write_byte(unsigned char ch, struct sexp_port *port, env_t env)
 {
 	check_output_port(port, env);
 	if (port->flags & OUTPUT_CLOSED)
@@ -143,10 +203,26 @@ void port_write_char(sexp_t ch, struct sexp_port *port, env_t env)
 	port->write_u8(ch, port, env);
 }
 
+void port_write_char(uchar ch, struct sexp_port *port, env_t env)
+{
+	char buf[5];
+	int size;
+	size_t zero = 0;
+
+	check_output_port(port, env);
+	if (port->flags & OUTPUT_CLOSED)
+		error(env, "attempted to write to closed port");
+
+	u_set_char_raw(buf, &zero, ch);
+	size = utf8_char_size(buf[0]);
+	for (int i = 0; i < size; i++)
+		port->write_u8(buf[i], port, env);
+}
+
 void port_write_c_string(const char *str, struct sexp_port *port, env_t env)
 {
 	while (*str != '\0')
-		port_write_char(make_char(*str++), port, env);
+		port_write_byte(*str++, port, env);
 }
 
 static struct sexp_port *get_port(builtin_t fallback, sexp_t args, env_t env)
@@ -154,6 +230,20 @@ static struct sexp_port *get_port(builtin_t fallback, sexp_t args, env_t env)
 	if (is_nil(args))
 		return port_cast(fallback(make_nil(), env), env);
 	return port_cast(car(args), env);
+}
+
+static inline struct sexp_port *get_input_port(sexp_t args, env_t env)
+{
+	struct sexp_port *p = get_port(scm_current_input_port, args, env);
+	check_input_port(p, env);
+	return p;
+}
+
+static inline struct sexp_port *get_output_port(sexp_t args, env_t env)
+{
+	struct sexp_port *p = get_port(scm_current_output_port, args, env);
+	check_output_port(p, env);
+	return p;
 }
 
 DEFUN(scm_input_portp, args, env)
@@ -307,50 +397,51 @@ DEFUN(scm_eof_object, args, env)
 
 DEFUN(scm_read_u8, args, env)
 {
-	return port_read_char(get_port(scm_current_input_port, args, env), env);
+	struct sexp_port *p = get_input_port(args, env);
+	return port_read_byte(p, env);
 }
 
 DEFUN(scm_peek_u8, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_input_port, args, env);
-	check_input_port(p, env);
-	return port_peek_char(p, env);
+	struct sexp_port *p = get_input_port(args, env);
+	return port_peek_byte(p, env);
 }
 
 DEFUN(scm_read_char, args, env)
 {
-	return scm_read_u8(args, env); // TODO: decode UTF-8
+	struct sexp_port *p = get_input_port(args, env);
+	return port_read_char(p, env);
 }
 
 DEFUN(scm_peek_char, args, env)
 {
-	return scm_peek_u8(args, env); // TODO: decode UTF-8
+	struct sexp_port *p = get_input_port(args, env);
+	return port_peek_char(p, env);
 }
 
 DEFUN(scm_read, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_input_port, args, env);
-	check_input_port(p, env);
+	struct sexp_port *p = get_input_port(args, env);
 	return sexp_read(p, env);
 }
 
 DEFUN(scm_write_u8, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_output_port, cdr(args), env);
-	check_output_port(p, env);
-	port_write_char(type_check(car(args), SEXP_CHAR, env), p, env);
+	struct sexp_port *p = get_output_port(cdr(args), env);
+	port_write_char(type_check_byte(car(args), env), p, env);
 	return unspecified();
 }
 
 DEFUN(scm_write_char, args, env)
 {
-	return scm_write_u8(args, env); // TODO: encode UTF-8
+	struct sexp_port *p = get_output_port(cdr(args), env);
+	port_write_char(char_cast(car(args), env), p, env);
+	return unspecified();
 }
 
 DEFUN(scm_write_string, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_output_port, cdr(args), env);
-	check_output_port(p, env);
+	struct sexp_port *p = get_output_port(cdr(args), env);
 	type_check(car(args), SEXP_STRING, env);
 	port_write_c_string(sexp_string(car(args))->data, p, env);
 	return unspecified();
@@ -358,16 +449,14 @@ DEFUN(scm_write_string, args, env)
 
 DEFUN(scm_display, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_output_port, cdr(args), env);
-	check_output_port(p, env);
+	struct sexp_port *p = get_output_port(cdr(args), env);
 	_display(p, car(args), false, env);
 	return unspecified();
 }
 
 DEFUN(scm_write, args, env)
 {
-	struct sexp_port *p = get_port(scm_current_output_port, cdr(args), env);
-	check_output_port(p, env);
+	struct sexp_port *p = get_output_port(cdr(args), env);
 	_display(p, car(args), true, env);
 	return unspecified();
 }

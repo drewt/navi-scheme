@@ -234,8 +234,8 @@ sexp_t make_empty_pair(void)
 	return (sexp_t) make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
 }
 
-sexp_t make_port(sexp_t(*read)(struct sexp_port*, env_t),
-		void(*write)(sexp_t,struct sexp_port*, env_t),
+sexp_t make_port(int(*read)(struct sexp_port*, env_t),
+		void(*write)(unsigned char,struct sexp_port*, env_t),
 		void(*close_in)(struct sexp_port*, env_t),
 		void(*close_out)(struct sexp_port*, env_t),
 		void *specific)

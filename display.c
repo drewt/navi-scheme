@@ -82,7 +82,7 @@ static void display_symbol(struct sexp_port *port, sexp_t sexp, env_t env)
 {
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vec->size; i++)
-		port_write_char(make_char(vec->data[i]), port, env);
+		port_write_byte(vec->data[i], port, env);
 }
 
 void _display(struct sexp_port *port, sexp_t sexp, bool write, env_t env)
@@ -113,7 +113,7 @@ void _display(struct sexp_port *port, sexp_t sexp, bool write, env_t env)
 			port_write_c_string(buf, port, env);
 		} else {
 			port_write_c_string("#\\", port, env);
-			port_write_char(sexp, port, env);
+			port_write_char(sexp_char(sexp), port, env);
 		}
 		break;
 	case SEXP_VALUES:

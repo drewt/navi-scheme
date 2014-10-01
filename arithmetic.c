@@ -185,9 +185,9 @@ DEFUN(scm_string_to_number, args, env)
 	long n, radix;
 
 	bytes = type_check(car(args), SEXP_STRING, env);
-	string = (char*) sexp_bytevec(bytes)->data;
+	string = (char*) sexp_string(bytes)->data;
 
-	radix = is_nil(cdr(args)) ? fixnum_cast(cadr(args), env) : 10;
+	radix = is_nil(cdr(args)) ? 10 : fixnum_cast(cadr(args), env);
 
 	if ((n = explicit_radix(string)) != 0) {
 		string += 2;

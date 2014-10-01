@@ -34,10 +34,49 @@
 		return ____MAD_ACC; \
 	}
 
-ARITHMETIC_DEFUN(scm_add, fixnum_plus)
-ARITHMETIC_DEFUN(scm_sub, fixnum_minus)
-ARITHMETIC_DEFUN(scm_mul, fixnum_times)
-ARITHMETIC_DEFUN(scm_div, fixnum_divide)
+DEFUN(scm_add, args, env)
+{
+	sexp_t acc = make_num(0);
+	if (is_nil(args))
+		return make_num(0);
+	if (is_nil(cdr(args)))
+		return car(args);
+	ARITHMETIC_FOLD(fixnum_plus, args, acc, env);
+	return acc;
+}
+
+DEFUN(scm_sub, args, env)
+{
+	sexp_t acc;
+	if (is_nil(cdr(args))) {
+		acc.n = fixnum_minus(make_num(0).n, car(args).n);
+		return acc;
+	}
+	ARITHMETIC_FOLD(fixnum_minus, args, acc, env);
+	return acc;
+}
+
+DEFUN(scm_mul, args, env)
+{
+	sexp_t acc;
+	if (is_nil(args))
+		return make_num(1);
+	if (is_nil(cdr(args)))
+		return car(args);
+	ARITHMETIC_FOLD(fixnum_times, args, acc, env);
+	return acc;
+}
+
+DEFUN(scm_div, args, env)
+{
+	sexp_t acc;
+	if (is_nil(cdr(args))) {
+		acc.n = fixnum_divide(make_num(1).n, car(args).n);
+		return acc;
+	}
+	ARITHMETIC_FOLD(fixnum_divide, args, acc, env);
+	return acc;
+}
 
 DEFUN(scm_quotient, args, env)
 {

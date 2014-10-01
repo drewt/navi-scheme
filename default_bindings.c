@@ -146,9 +146,9 @@ struct sexp_spec default_bindings[] = {
 
 	FUNCTION("eqv?", scm_eqvp, 2, 0),
 
-	FUNCTION("+", scm_add, 1, 1),
+	FUNCTION("+", scm_add, 0, 1),
 	FUNCTION("-", scm_sub, 1, 1),
-	FUNCTION("*", scm_mul, 1, 1),
+	FUNCTION("*", scm_mul, 0, 1),
 	FUNCTION("/", scm_div, 1, 1),
 	FUNCTION("quotient",  scm_quotient,  2, 0),
 	FUNCTION("remainder", scm_remainder, 2, 0),

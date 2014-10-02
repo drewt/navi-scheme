@@ -15,7 +15,7 @@
 
 #include <string.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 void sexp_free(struct sexp *sexp)
 {

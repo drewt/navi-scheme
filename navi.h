@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_H
-#define _SEXP_H
+#ifndef _NAVI_H
+#define _NAVI_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,13 +22,13 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#include "sexp/misc.h"
-#include "sexp/types.h"
-#include "sexp/clist.h"
-#include "sexp/symbols.h"
-#include "sexp/lib.h"
-#include "sexp/macros.h"
-#include "sexp/error.h"
+#include "navi/misc.h"
+#include "navi/types.h"
+#include "navi/clist.h"
+#include "navi/symbols.h"
+#include "navi/lib.h"
+#include "navi/macros.h"
+#include "navi/error.h"
 
 extern struct list_head active_environments;
 

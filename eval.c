@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-#include "sexp.h"
+#include "navi.h"
 
 static _Noreturn void unbound_identifier(sexp_t ident, env_t env)
 {

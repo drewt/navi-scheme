@@ -18,7 +18,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 /*
  * WARNING: What follows is a hand-rolled parser, and not a very good one.

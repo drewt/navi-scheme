@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_MACROS_H
-#define _SEXP_MACROS_H
+#ifndef _NAVI_MACROS_H
+#define _NAVI_MACROS_H
 
 #define DEFSPECIAL(fname, aname, ename) \
 	sexp_t fname (sexp_t aname, env_t ename)

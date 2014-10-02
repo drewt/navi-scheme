@@ -18,7 +18,7 @@
  */
 
 #include "compiler.h"
-#include "sexp/uchar.h"
+#include "navi/uchar.h"
 
 #include <stdio.h> // XXX: remove
 #include <stdint.h>

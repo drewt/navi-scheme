@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <check.h>
-#include "../sexp.h"
+#include "../navi.h"
 
 #define $$(fn) fn(make_nil(), env)
 #define $(fn, ...) fn(list(__VA_ARGS__, make_void()), env)

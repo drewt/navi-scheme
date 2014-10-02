@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_MISC_H
-#define _SEXP_MISC_H
+#ifndef _NAVI_MISC_H
+#define _NAVI_MISC_H
 
 static inline _Noreturn int die(const char *msg, ...)
 {

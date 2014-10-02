@@ -11,7 +11,7 @@ libobjects = arithmetic.o bytevector.o char.o control_features.o display.o \
 	     vector.o uchar.o
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o tests/main.o
 objects = $(libobjects) $(testobjects) repl.o
-target  = navi
+target  = navii
 clean   = $(objects) $(target) libnavi.a
 
 all: $(target)

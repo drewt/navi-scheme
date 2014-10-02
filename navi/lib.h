@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_LIB_H
-#define _SEXP_LIB_H
+#ifndef _NAVI_LIB_H
+#define _NAVI_LIB_H
 
 #include "types.h"
 

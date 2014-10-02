@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_TYPES_H
-#define _SEXP_TYPES_H
+#ifndef _NAVI_TYPES_H
+#define _NAVI_TYPES_H
 
 #include <stdbool.h>
 #include <setjmp.h>

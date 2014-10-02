@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 _Noreturn void _error(env_t env, const char *msg, ...)
 {

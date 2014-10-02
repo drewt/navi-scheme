@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_SYMBOLS_H
-#define _SEXP_SYMBOLS_H
+#ifndef _NAVI_SYMBOLS_H
+#define _NAVI_SYMBOLS_H
 
 /* automatically interned symbols */
 extern sexp_t sym_lambda;

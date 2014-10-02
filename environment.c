@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 #include "default_bindings.c"
 

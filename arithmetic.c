@@ -13,7 +13,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "sexp.h"
+#include "navi.h"
 
 #define ARITHMETIC_FOLD(operator, args, acc, env) \
 	do { \

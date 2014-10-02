@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 static void display_cdr(struct sexp_port *port, sexp_t cdr, bool head,
 		bool write, env_t env)

@@ -16,7 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 static sexp_t list_to_string(sexp_t list, env_t env)
 {

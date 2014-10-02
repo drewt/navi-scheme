@@ -18,7 +18,7 @@
 #include <string.h>
 #include <setjmp.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 static sexp_t call_read(env_t env)
 {

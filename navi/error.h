@@ -13,8 +13,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _SEXP_ERROR_H
-#define _SEXP_ERROR_H
+#ifndef _NAVI_ERROR_H
+#define _NAVI_ERROR_H
 
 #include "types.h"
 #include "symbols.h"

@@ -13,7 +13,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "sexp.h"
+#include "navi.h"
 
 void bytevec_fill(sexp_t vector, unsigned char fill)
 {

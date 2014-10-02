@@ -15,7 +15,7 @@
 
 #include <stdarg.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 sexp_t vlist(sexp_t first, va_list ap)
 {

@@ -15,7 +15,7 @@
 
 #include <ctype.h>
 
-#include "sexp.h"
+#include "navi.h"
 
 static inline bool both_chars(sexp_t a, sexp_t b)
 {

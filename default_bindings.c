@@ -13,7 +13,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "sexp.h"
+#include "navi.h"
 
 /* FUNCTION(symbol cname, procedure _fn, int ary, bool var)
  * @cname:	the (C) name of the created function object

@@ -17,8 +17,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef _UCHAR_H
-#define _UCHAR_H
+#ifndef _NAVI_UCHAR_H
+#define _NAVI_UCHAR_H
 
 #include <stddef.h> /* size_t */
 

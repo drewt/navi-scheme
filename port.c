@@ -13,7 +13,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "sexp.h"
+#include "navi.h"
 
 #define STRING_INIT_SIZE 64
 #define STRING_STEP_SIZE 64

@@ -20,11 +20,13 @@
 #include <check.h>
 #include "../sexp.h"
 
-#define CALL0(fn) fn(make_nil(), env)
-#define CALL(fn, ...) fn(list(__VA_ARGS__, make_void()), env)
+#define $$(fn) fn(make_nil(), env)
+#define $(fn, ...) fn(list(__VA_ARGS__, make_void()), env)
 
 env_t env;
 
-Suite *arithmetic_suite(void);
+TCase *arithmetic_tests(void);
+TCase *char_tests(void);
+TCase *bytevector_tests(void);
 
 #endif

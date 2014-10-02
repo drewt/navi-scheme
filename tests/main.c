@@ -27,8 +27,11 @@ int main(void)
 	symbol_table_init();
 	env = make_default_environment();
 
-	/* initialize test suites */
-	s = arithmetic_suite();
+	/* initialize test suite */
+	s = suite_create("NAVI Core");
+	suite_add_tcase(s, arithmetic_tests());
+	suite_add_tcase(s, bytevector_tests());
+	suite_add_tcase(s, char_tests());
 	sr = srunner_create(s);
 
 	/* run tests */

@@ -20,7 +20,6 @@
 #include <setjmp.h>
 
 #include "clist.h"
-#include "macros.h"
 #include "uchar.h"
 
 #define ENV_HT_SIZE 64
@@ -47,6 +46,7 @@ struct sexp_scope {
 typedef struct sexp_scope *env_t;
 
 typedef sexp_t (*builtin_t)(sexp_t,env_t);
+typedef sexp_t(*sexp_leaf_t)(sexp_t, void*);
 
 enum sexp_type {
 	SEXP_VOID,
@@ -316,11 +316,6 @@ static inline env_t bounce_env(sexp_t bounce)
 	return cdr(bounce).p->data->env;
 }
 
-static inline sexp_t object_to_sexp(void *object)
-{
-	return (sexp_t) ((struct sexp*) ((size_t)object - offsetof(struct sexp, data)));
-}
-
 static inline enum sexp_type sexp_immediate_type(sexp_t val)
 {
 	unsigned long tag = val.n & IMMEDIATE_TAG_MASK;
@@ -330,7 +325,7 @@ static inline enum sexp_type sexp_immediate_type(sexp_t val)
 	case NIL_TAG:  return SEXP_NIL;
 	case EOF_TAG:  return SEXP_EOF;
 	}
-	die("invalid tag: %x\n", tag);
+	return -1;
 }
 
 static inline enum sexp_type sexp_type(sexp_t val)
@@ -403,9 +398,6 @@ sexp_t make_bytevec(size_t size);
 sexp_t make_string(size_t storage, size_t size, size_t length);
 sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env);
 sexp_t make_escape(void);
-sexp_t capture_env(env_t env);
-sexp_t sexp_from_spec(struct sexp_spec *spec);
-bool eqvp(sexp_t fst, sexp_t snd);
 
 static inline sexp_t make_void(void)
 {
@@ -457,13 +449,6 @@ static inline sexp_t make_promise(sexp_t e, env_t env)
 	sexp_t promise = make_function(make_nil(), body, "", env);
 	promise.p->type = SEXP_PROMISE;
 	return promise;
-}
-
-static inline sexp_t make_values(sexp_t values)
-{
-	values = list_to_vector(values);
-	values.p->type = SEXP_VALUES;
-	return values;
 }
 
 static inline sexp_t make_caselambda(size_t size)
@@ -597,12 +582,5 @@ TYPE_PREDICATE(is_bounce, SEXP_BOUNCE)
 #undef TYPE_PREDICATE
 
 bool is_proper_list(sexp_t list);
-
-static inline bool list_is_proper(sexp_t list)
-{
-	sexp_t cons;
-	sexp_list_for_each(cons, list);
-	return is_nil(cons);
-}
 
 #endif

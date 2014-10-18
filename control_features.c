@@ -82,7 +82,9 @@ DEFUN(scm_call_ec, args, env)
 
 DEFUN(scm_values, args, env)
 {
-	return make_values(args);
+	sexp_t values = list_to_vector(values);
+	values.p->type = SEXP_VALUES;
+	return values;
 }
 
 DEFUN(scm_call_with_values, args, env)

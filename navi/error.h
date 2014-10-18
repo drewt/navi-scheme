@@ -25,14 +25,6 @@ _Noreturn void _error(env_t env, const char *msg, ...);
 #define read_error(env, msg, ...) error(env, msg, sym_read_error, \
 		##__VA_ARGS__, make_void())
 
-/*
- * Type Checking
- *
- * Functions prefixed with an underscore take an explicit env_t argument, and
- * are meant for use outside of DEFUNs.  Without the underscore, the magic
- * variable ____env (which is only available in a DEFUN) is used.
- */
-
 static inline bool has_type(sexp_t sexp, enum sexp_type type)
 {
 	return sexp_type(sexp) == type;

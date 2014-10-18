@@ -279,7 +279,7 @@ sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env)
 	fun->body = body;
 	fun->builtin = false;
 	fun->arity = count_pairs((sexp_t)args);
-	fun->variadic = !list_is_proper((sexp_t)args);
+	fun->variadic = !is_proper_list((sexp_t)args);
 	fun->env = env;
 	scope_ref(env);
 	return (sexp_t) sexp;

@@ -56,7 +56,7 @@ bool is_proper_list(sexp_t list)
 	if (type != SEXP_PAIR)
 		return false;
 	sexp_list_for_each(cons, list);
-	return sexp_type(cons) == SEXP_NIL;
+	return is_nil(cons);
 }
 
 sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)

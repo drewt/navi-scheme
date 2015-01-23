@@ -18,6 +18,7 @@
 
 #include <stdbool.h>
 #include <setjmp.h>
+#include <stdio.h>
 
 #include "clist.h"
 #include "uchar.h"
@@ -31,6 +32,8 @@
 #define CHAR_TAG 0x6L
 #define NIL_TAG  0xAL
 #define EOF_TAG  0xEL
+
+/* C types {{{ */
 
 typedef union {
 	long n;
@@ -162,12 +165,14 @@ struct sexp_binding {
 	sexp_t object;
 };
 
-void free_scope(env_t scope);
+/* C types }}} */
+
+void scope_free(env_t scope);
 
 static inline void scope_unref(env_t env)
 {
 	if (--env->refs == 0)
-		free_scope(env);
+		scope_free(env);
 }
 
 static inline void scope_ref(env_t env)
@@ -175,9 +180,7 @@ static inline void scope_ref(env_t env)
 	env->refs++;
 }
 
-/*
- * Accessors (not type safe!!!)
- */
+/* Accessors {{{ */
 
 static inline long sexp_num(sexp_t sexp)
 {
@@ -299,22 +302,7 @@ static inline sexp_t caddddr(sexp_t sexp)
 	return sexp_pair(cddddr(sexp))->car;
 }
 
-static inline void set_car(sexp_t cons, sexp_t val)
-{
-	sexp_pair(cons)->car = val;
-}
-
-static inline void set_cdr(sexp_t cons, sexp_t val)
-{
-	sexp_pair(cons)->cdr = val;
-}
-
-#define bounce_object car
-
-static inline env_t bounce_env(sexp_t bounce)
-{
-	return cdr(bounce).p->data->env;
-}
+/* Accessors }}} */
 
 static inline enum sexp_type sexp_immediate_type(sexp_t val)
 {
@@ -339,12 +327,12 @@ static inline enum sexp_type sexp_type(sexp_t val)
 	return val.p->type;
 }
 
-static inline bool ptr_type(sexp_t val)
+static inline bool sexp_ptr_type(sexp_t val)
 {
 	return val.n != 0 && (val.n & 3) == 0;
 }
 
-static inline sexp_t last_cons(sexp_t list)
+static inline sexp_t sexp_last_cons(sexp_t list)
 {
 	while (sexp_type(cdr(list)) == SEXP_PAIR)
 		list = cdr(list);
@@ -369,111 +357,111 @@ char *bytevec_to_c_string(sexp_t sexp);
 sexp_t string_to_bytevec(sexp_t string);
 sexp_t bytevec_to_string(sexp_t bytevec);
 
-void symbol_table_init(void);
+void navi_init(void);
 void sexp_free(struct sexp *sexp);
 struct sexp *make_sexp(enum sexp_type type, size_t size);
 
-int stdio_read(struct sexp_port *port, env_t env);
-void stdio_write(unsigned char ch, struct sexp_port *port, env_t env);
-void stdio_close(struct sexp_port *port, env_t env);
+/* Constructors {{{ */
 
-/* constructors */
-sexp_t to_string(const char *str);
-sexp_t to_bytevec(const char *str);
-sexp_t make_symbol(const char *sym);
-sexp_t make_pair(sexp_t car, sexp_t cdr);
-sexp_t make_empty_pair(void);
-sexp_t make_port(int(*read)(struct sexp_port*, env_t),
+sexp_t sexp_from_c_string(const char *str);
+sexp_t sexp_from_c_bytevec(const char *str);
+sexp_t sexp_make_symbol(const char *sym);
+sexp_t sexp_make_pair(sexp_t car, sexp_t cdr);
+sexp_t sexp_make_empty_pair(void);
+sexp_t sexp_make_port(int(*read)(struct sexp_port*, env_t),
 		void(*write)(unsigned char,struct sexp_port*, env_t),
 		void(*close_in)(struct sexp_port*, env_t),
 		void(*close_out)(struct sexp_port*, env_t),
 		void *specific);
-#define make_input_port(read, close, specific) \
-	make_port(read, NULL, close, NULL, specific)
-#define make_output_port(write, close, specific) \
-	make_port(NULL, write, NULL, close, specific)
-sexp_t make_stdio_port(FILE *stream);
-sexp_t make_vector(size_t size);
-sexp_t make_bytevec(size_t size);
-sexp_t make_string(size_t storage, size_t size, size_t length);
-sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env);
-sexp_t make_escape(void);
+#define sexp_make_input_port(read, close, specific) \
+	sexp_make_port(read, NULL, close, NULL, specific)
+#define sexp_make_output_port(write, close, specific) \
+	sexp_make_port(NULL, write, NULL, close, specific)
+sexp_t sexp_make_file_input_port(FILE *file);
+sexp_t sexp_make_file_output_port(FILE *file);
+sexp_t sexp_make_vector(size_t size);
+sexp_t sexp_make_bytevec(size_t size);
+sexp_t sexp_make_string(size_t storage, size_t size, size_t length);
+sexp_t sexp_make_function(sexp_t args, sexp_t body, char *name, env_t env);
+sexp_t sexp_make_escape(void);
 
-static inline sexp_t make_void(void)
+static inline sexp_t sexp_make_void(void)
 {
 	return (sexp_t) VOID_TAG;
 }
 
-static inline sexp_t make_nil(void)
+static inline sexp_t sexp_make_nil(void)
 {
 	return (sexp_t) NIL_TAG;
 }
 
-static inline sexp_t make_eof(void)
+static inline sexp_t sexp_make_eof(void)
 {
 	return (sexp_t) EOF_TAG;
 }
 
-static inline sexp_t make_num(long num)
+static inline sexp_t sexp_make_num(long num)
 {
 	return (sexp_t) { .n = (num << 1) | 1 };
 }
 
-static inline sexp_t make_bool(bool b)
+static inline sexp_t sexp_make_bool(bool b)
 {
 	return (sexp_t) { .n = (b << IMMEDIATE_TAG_SIZE) | BOOL_TAG };
 }
 
-static inline sexp_t make_char(unsigned long c)
+static inline sexp_t sexp_make_char(unsigned long c)
 {
 	return (sexp_t) { .n = (c << IMMEDIATE_TAG_SIZE) | CHAR_TAG };
 }
 
-static inline sexp_t make_uninterned(const char *str)
+static inline sexp_t sexp_make_uninterned(const char *str)
 {
-	sexp_t sym = to_bytevec(str);
+	sexp_t sym = sexp_from_c_bytevec(str);
 	sym.p->type = SEXP_SYMBOL;
 	return sym;
 }
 
-static inline sexp_t make_macro(sexp_t args, sexp_t body, char *name, env_t env)
+static inline sexp_t sexp_make_macro(sexp_t args, sexp_t body, char *name, env_t env)
 {
-	sexp_t macro = make_function(args, body, name, env);
+	sexp_t macro = sexp_make_function(args, body, name, env);
 	macro.p->type = SEXP_MACRO;
 	return macro;
 }
 
-static inline sexp_t make_promise(sexp_t e, env_t env)
+static inline sexp_t sexp_make_promise(sexp_t e, env_t env)
 {
-	sexp_t body = make_pair(e, make_nil());
-	sexp_t promise = make_function(make_nil(), body, "", env);
+	sexp_t body = sexp_make_pair(e, sexp_make_nil());
+	sexp_t promise = sexp_make_function(sexp_make_nil(), body, "", env);
 	promise.p->type = SEXP_PROMISE;
 	return promise;
 }
 
-static inline sexp_t make_caselambda(size_t size)
+static inline sexp_t sexp_make_caselambda(size_t size)
 {
-	sexp_t lambda = make_vector(size);
+	sexp_t lambda = sexp_make_vector(size);
 	lambda.p->type = SEXP_CASELAMBDA;
 	return lambda;
 }
 
-static inline sexp_t make_apair(const char *sym, sexp_t val)
+static inline sexp_t sexp_make_apair(const char *sym, sexp_t val)
 {
-	return make_pair(make_symbol(sym), val);
+	return sexp_make_pair(sexp_make_symbol(sym), val);
 }
 
-static inline sexp_t make_bounce(sexp_t object, sexp_t env)
+static inline sexp_t sexp_make_bounce(sexp_t object, sexp_t env)
 {
-	sexp_t ret = make_pair(object, env);
+	sexp_t ret = sexp_make_pair(object, env);
 	ret.p->type = SEXP_BOUNCE;
 	scope_ref(sexp_env(env));
 	return ret;
 }
 
-static inline sexp_t unspecified(void)
+/* Constructors }}} */
+
+static inline sexp_t sexp_unspecified(void)
 {
-	return make_void();
+	return sexp_make_void();
 }
 
 static inline sexp_t vector_ref(sexp_t sexp, size_t i)
@@ -488,7 +476,7 @@ static inline size_t vector_length(sexp_t sexp)
 
 static inline sexp_t bytevec_ref(sexp_t sexp, size_t i)
 {
-	return make_num(sexp_bytevec(sexp)->data[i]);
+	return sexp_make_num(sexp_bytevec(sexp)->data[i]);
 }
 
 static inline bool bytevec_equal(sexp_t sexp, const char *cstr)
@@ -520,7 +508,7 @@ static inline bool sexp_string_equal(sexp_t a, sexp_t b)
 	return true;
 }
 
-static inline const char *strtype(enum sexp_type type)
+static inline const char *sexp_strtype(enum sexp_type type)
 {
 	switch (type) {
 	case SEXP_VOID:        return "void";
@@ -548,9 +536,9 @@ static inline const char *strtype(enum sexp_type type)
 	return "unknown";
 }
 
-static inline sexp_t typesym(enum sexp_type type)
+static inline sexp_t sexp_typesym(enum sexp_type type)
 {
-	return make_symbol(strtype(type));
+	return sexp_make_symbol(sexp_strtype(type));
 }
 
 /* type predicates */
@@ -561,26 +549,26 @@ static inline sexp_t typesym(enum sexp_type type)
 		return sexp_type(sexp) == type; \
 	}
 
-TYPE_PREDICATE(is_void, SEXP_VOID)
-TYPE_PREDICATE(is_nil,  SEXP_NIL)
-TYPE_PREDICATE(is_eof,  SEXP_EOF)
-TYPE_PREDICATE(is_num,  SEXP_NUM)
-TYPE_PREDICATE(is_bool, SEXP_BOOL)
-TYPE_PREDICATE(is_char, SEXP_CHAR)
-TYPE_PREDICATE(is_values, SEXP_VALUES)
-TYPE_PREDICATE(is_pair, SEXP_PAIR)
-TYPE_PREDICATE(is_string, SEXP_STRING)
-TYPE_PREDICATE(is_symbol, SEXP_SYMBOL)
-TYPE_PREDICATE(is_vector, SEXP_VECTOR)
-TYPE_PREDICATE(is_bytevec, SEXP_BYTEVEC)
-TYPE_PREDICATE(is_macro, SEXP_MACRO)
-TYPE_PREDICATE(is_function, SEXP_FUNCTION)
-TYPE_PREDICATE(is_caselambda, SEXP_CASELAMBDA)
-TYPE_PREDICATE(is_escape, SEXP_ESCAPE)
-TYPE_PREDICATE(is_environment, SEXP_ENVIRONMENT)
-TYPE_PREDICATE(is_bounce, SEXP_BOUNCE)
+TYPE_PREDICATE(sexp_is_void, SEXP_VOID)
+TYPE_PREDICATE(sexp_is_nil,  SEXP_NIL)
+TYPE_PREDICATE(sexp_is_eof,  SEXP_EOF)
+TYPE_PREDICATE(sexp_is_num,  SEXP_NUM)
+TYPE_PREDICATE(sexp_is_bool, SEXP_BOOL)
+TYPE_PREDICATE(sexp_is_char, SEXP_CHAR)
+TYPE_PREDICATE(sexp_is_values, SEXP_VALUES)
+TYPE_PREDICATE(sexp_is_pair, SEXP_PAIR)
+TYPE_PREDICATE(sexp_is_string, SEXP_STRING)
+TYPE_PREDICATE(sexp_is_symbol, SEXP_SYMBOL)
+TYPE_PREDICATE(sexp_is_vector, SEXP_VECTOR)
+TYPE_PREDICATE(sexp_is_bytevec, SEXP_BYTEVEC)
+TYPE_PREDICATE(sexp_is_macro, SEXP_MACRO)
+TYPE_PREDICATE(sexp_is_function, SEXP_FUNCTION)
+TYPE_PREDICATE(sexp_is_caselambda, SEXP_CASELAMBDA)
+TYPE_PREDICATE(sexp_is_escape, SEXP_ESCAPE)
+TYPE_PREDICATE(sexp_is_environment, SEXP_ENVIRONMENT)
+TYPE_PREDICATE(sexp_is_bounce, SEXP_BOUNCE)
 #undef TYPE_PREDICATE
 
-bool is_proper_list(sexp_t list);
+bool sexp_is_proper_list(sexp_t list);
 
 #endif

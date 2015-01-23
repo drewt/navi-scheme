@@ -145,7 +145,7 @@ struct sexp_scope *extend_environment(struct sexp_scope *env, sexp_t vars,
 		scope_set(new, car(vcons), car(acons));
 	}
 	/* dotted tail */
-	if (!is_nil(vcons)) {
+	if (!sexp_is_nil(vcons)) {
 		scope_set(new, vcons, acons);
 	}
 	return new;
@@ -157,16 +157,16 @@ struct sexp_scope *make_default_environment(void)
 	struct sexp_scope *env = make_scope();
 
 	for (unsigned i = 0; i < NR_DEFAULT_BINDINGS; i++) {
-		sexp_t symbol = make_symbol(default_bindings[i].ident);
+		sexp_t symbol = sexp_make_symbol(default_bindings[i].ident);
 		sexp_t object = sexp_from_spec(&default_bindings[i]);
 		if (sexp_type(object) == SEXP_FUNCTION)
 			sexp_fun(object)->env = env;
 		env_set(env, symbol, object);
 	}
 
-	std_in = make_input_port(stdio_read, stdio_close, stdin);
-	std_out = make_output_port(stdio_write, stdio_close, stdout);
-	std_err = make_output_port(stdio_write, stdio_close, stderr);
+	std_in = sexp_make_file_input_port(stdin);
+	std_out = sexp_make_file_output_port(stdout);
+	std_err = sexp_make_file_output_port(stderr);
 	env_set(env, sym_current_input, std_in);
 	env_set(env, sym_current_output, std_out);
 	env_set(env, sym_current_error, std_err);
@@ -174,7 +174,7 @@ struct sexp_scope *make_default_environment(void)
 	return env;
 }
 
-void free_scope(struct sexp_scope *scope)
+void scope_free(struct sexp_scope *scope)
 {
 	list_del(&scope->chain);
 
@@ -199,5 +199,5 @@ DEFUN(scm_env_count, args, env)
 		i++;
 	}
 	printf("nr active environments = %u\n", i);
-	return unspecified();
+	return sexp_unspecified();
 }

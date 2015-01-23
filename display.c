@@ -68,11 +68,11 @@ static void display_bytevec(struct sexp_port *port, sexp_t sexp, env_t env)
 	}
 
 	port_write_c_string("#u8(", port, env);
-	_display(port, make_num(vec->data[0]), false, env);
+	_display(port, sexp_make_num(vec->data[0]), false, env);
 
 	for (size_t i = 1; i < vec->size; i++) {
 		port_write_c_string(" ", port, env);
-		_display(port, make_num(vec->data[i]), false, env);
+		_display(port, sexp_make_num(vec->data[i]), false, env);
 	}
 
 	port_write_c_string(")", port, env);

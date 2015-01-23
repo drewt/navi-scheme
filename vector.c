@@ -25,7 +25,7 @@ void vector_fill(sexp_t vector, sexp_t fill)
 
 sexp_t list_to_vector(sexp_t list)
 {
-	sexp_t cons, vec = make_vector(list_length(list));
+	sexp_t cons, vec = sexp_make_vector(list_length(list));
 
 	unsigned i = 0;
 	struct sexp_vector *vector = sexp_vector(vec);
@@ -42,17 +42,17 @@ sexp_t vector_to_list(sexp_t sexp)
 
 	vector = sexp_vector(sexp);
 	for (size_t i = 0; i < vector->size; i++) {
-		ptr->cdr = make_empty_pair();
+		ptr->cdr = sexp_make_empty_pair();
 		ptr = &ptr->cdr.p->data->pair;
 		ptr->car = vector->data[i];
 	}
-	ptr->cdr = make_nil();
+	ptr->cdr = sexp_make_nil();
 	return head.cdr;
 }
 
 DEFUN(scm_vectorp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_VECTOR);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_VECTOR);
 }
 
 DEFUN(scm_make_vector, args, env)
@@ -64,8 +64,8 @@ DEFUN(scm_make_vector, args, env)
 		error(env, "wrong number of arguments");
 
 	type_check(car(args), SEXP_NUM, env);
-	sexp = make_vector(sexp_num(car(args)));
-	vector_fill(sexp, (nr_args < 2) ? make_bool(false) : cadr(args));
+	sexp = sexp_make_vector(sexp_num(car(args)));
+	vector_fill(sexp, (nr_args < 2) ? sexp_make_bool(false) : cadr(args));
 	return sexp;
 }
 
@@ -77,7 +77,7 @@ DEFUN(scm_vector, args, env)
 DEFUN(scm_vector_length, args, env)
 {
 	type_check(car(args), SEXP_VECTOR, env);
-	return make_num(sexp_vector(car(args))->size);
+	return sexp_make_num(sexp_vector(car(args))->size);
 }
 
 DEFUN(scm_vector_ref, args, env)
@@ -100,7 +100,7 @@ DEFUN(scm_vector_set, args, env)
 		error(env, "vector index out of bounds");
 
 	sexp_vector(car(args))->data[sexp_num(cadr(args))] = caddr(args);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_vector_to_list, args, env)
@@ -128,7 +128,7 @@ DEFUN(_scm_vector_fill, args, env)
 {
 	type_check(car(args), SEXP_VECTOR, env);
 	vector_fill(car(args), cadr(args));
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_vector_fill, args, env)
@@ -148,7 +148,7 @@ DEFUN(scm_vector_fill, args, env)
 	for (size_t i = start; i < (size_t) end; i++)
 		vec->data[i] = fill;
 
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_vector_copy, args, env)
@@ -165,7 +165,7 @@ DEFUN(scm_vector_copy, args, env)
 
 	check_copy(vec->size, start, end, env);
 
-	return copy_to(make_vector(end-start), 0, from, start, end);
+	return copy_to(sexp_make_vector(end-start), 0, from, start, end);
 }
 
 DEFUN(scm_vector_copy_to, args, env)
@@ -187,5 +187,5 @@ DEFUN(scm_vector_copy_to, args, env)
 	check_copy_to(tov->size, at, fromv->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
-	return unspecified();
+	return sexp_unspecified();
 }

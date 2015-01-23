@@ -19,7 +19,7 @@
 #define STRING_STEP_SIZE 64
 
 #define file_error(env, msg, ...) \
-	error(env, msg, sym_file_error, ##__VA_ARGS__, make_void())
+	error(env, msg, sym_file_error, ##__VA_ARGS__, sexp_make_void())
 
 enum {
 	GOT_EOF       = 1,
@@ -48,22 +48,32 @@ static inline void check_can_read(struct sexp_port *p, env_t env)
 		error(env, "attempted to read from close port");
 }
 
-void void_close(struct sexp_port *port, env_t env) {}
+static void void_close(struct sexp_port *port, env_t env) {}
 
-int stdio_read(struct sexp_port *port, env_t env)
+static int stdio_read(struct sexp_port *port, env_t env)
 {
 	return getc(port->specific);
 }
 
-void stdio_write(unsigned char ch, struct sexp_port *port, env_t env)
+static void stdio_write(unsigned char ch, struct sexp_port *port, env_t env)
 {
 	putc(ch, port->specific);
 }
 
-void stdio_close(struct sexp_port *port, env_t env)
+static void stdio_close(struct sexp_port *port, env_t env)
 {
 	if (fclose(port->specific))
 		error(env, "failed to close port");
+}
+
+sexp_t sexp_make_file_input_port(FILE *file)
+{
+	return sexp_make_input_port(stdio_read, stdio_close, file);
+}
+
+sexp_t sexp_make_file_output_port(FILE *file)
+{
+	return sexp_make_output_port(stdio_write, stdio_close, file);
 }
 
 static int string_read(struct sexp_port *port, env_t env)
@@ -88,15 +98,15 @@ static void string_write(unsigned char ch, struct sexp_port *port, env_t env)
 
 sexp_t make_string_input_port(sexp_t string)
 {
-	sexp_t port = make_port(string_read, NULL, NULL, NULL, NULL);
+	sexp_t port = sexp_make_port(string_read, NULL, NULL, NULL, NULL);
 	port.p->data->port.sexp = string;
 	return port;
 }
 
 sexp_t make_string_output_port(void)
 {
-	sexp_t port = make_port(NULL, string_write, NULL, NULL, NULL);
-	port.p->data->port.sexp = make_string(STRING_INIT_SIZE, 0, 0);
+	sexp_t port = sexp_make_port(NULL, string_write, NULL, NULL, NULL);
+	port.p->data->port.sexp = sexp_make_string(STRING_INIT_SIZE, 0, 0);
 	port.p->data->port.flags |= STRING_OUTPUT;
 	return port;
 }
@@ -122,7 +132,7 @@ static uchar port_peek_c_byte(struct sexp_port *port, env_t env)
 sexp_t port_peek_byte(struct sexp_port *port, env_t env)
 {
 	uchar b = port_peek_c_byte(port, env);
-	return b == UCHAR_EOF ? make_eof() : make_num(b);
+	return b == UCHAR_EOF ? sexp_make_eof() : sexp_make_num(b);
 }
 
 static uchar port_read_c_byte(struct sexp_port *port, env_t env)
@@ -142,9 +152,9 @@ sexp_t port_read_byte(struct sexp_port *port, env_t env)
 	uchar b = port_read_c_byte(port, env);
 	if (b == UCHAR_EOF) {
 		port->flags |= GOT_EOF;
-		return make_eof();
+		return sexp_make_eof();
 	}
-	return make_num(b);
+	return sexp_make_num(b);
 }
 
 static void port_buffer_char(struct sexp_port *port, env_t env)
@@ -174,25 +184,25 @@ sexp_t port_read_char(struct sexp_port *port, env_t env)
 {
 	check_can_read(port, env);
 	if (port->flags & GOT_EOF)
-		return make_eof();
+		return sexp_make_eof();
 	if (port->flags & BUFFER_FULL) {
 		port->flags &= ~BUFFER_FULL;
-		return make_char(port->buffer);
+		return sexp_make_char(port->buffer);
 	}
 	port_buffer_char(port, env);
-	return make_char(port->buffer);
+	return sexp_make_char(port->buffer);
 }
 
 sexp_t port_peek_char(struct sexp_port *port, env_t env)
 {
 	check_can_read(port, env);
 	if (port->flags & GOT_EOF)
-		return make_eof();
+		return sexp_make_eof();
 	if (!(port->flags & BUFFER_FULL)) {
 		port_buffer_char(port, env);
 		port->flags |= BUFFER_FULL;
 	}
-	return make_char(port->buffer);
+	return sexp_make_char(port->buffer);
 }
 
 void port_write_byte(unsigned char ch, struct sexp_port *port, env_t env)
@@ -227,8 +237,8 @@ void port_write_c_string(const char *str, struct sexp_port *port, env_t env)
 
 static struct sexp_port *get_port(builtin_t fallback, sexp_t args, env_t env)
 {
-	if (is_nil(args))
-		return port_cast(fallback(make_nil(), env), env);
+	if (sexp_is_nil(args))
+		return port_cast(fallback(sexp_make_nil(), env), env);
 	return port_cast(car(args), env);
 }
 
@@ -248,33 +258,33 @@ static inline struct sexp_port *get_output_port(sexp_t args, env_t env)
 
 DEFUN(scm_input_portp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_PORT
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_PORT
 			&& sexp_port(car(args))->read_u8);
 }
 
 DEFUN(scm_output_portp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_PORT
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_PORT
 			&& sexp_port(car(args))->write_u8);
 }
 
 DEFUN(scm_portp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_PORT);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_PORT);
 }
 
 DEFUN(scm_input_port_openp, args, env)
 {
 	struct sexp_port *p = port_cast(car(args), env);
 	check_input_port(p, env);
-	return make_bool(!(p->flags & INPUT_CLOSED));
+	return sexp_make_bool(!(p->flags & INPUT_CLOSED));
 }
 
 DEFUN(scm_output_port_openp, args, env)
 {
 	struct sexp_port *p = port_cast(car(args), env);
 	check_output_port(p, env);
-	return make_bool(!(p->flags & OUTPUT_CLOSED));
+	return sexp_make_bool(!(p->flags & OUTPUT_CLOSED));
 }
 
 DEFUN(scm_current_input_port, args, env)
@@ -302,7 +312,7 @@ DEFUN(scm_open_input_file, args, env)
 		file_error(env, "unable to open file");
 	}
 
-	return make_input_port(stdio_read, stdio_close, f);
+	return sexp_make_input_port(stdio_read, stdio_close, f);
 }
 
 DEFUN(scm_open_output_file, args, env)
@@ -315,7 +325,7 @@ DEFUN(scm_open_output_file, args, env)
 		file_error(env, "unable to open file");
 	}
 
-	return make_output_port(stdio_write, stdio_close, f);
+	return sexp_make_output_port(stdio_write, stdio_close, f);
 }
 
 DEFUN(scm_open_input_string, args, env)
@@ -338,7 +348,7 @@ DEFUN(scm_get_output_string, args, env)
 		error(env, "not a string output port");
 
 	str = sexp_string(p->sexp);
-	sexp = make_string(str->size, str->size, str->length);
+	sexp = sexp_make_string(str->size, str->size, str->length);
 	memcpy(sexp_string(sexp)->data, str->data, str->size);
 	return sexp;
 }
@@ -366,7 +376,7 @@ DEFUN(scm_close_port, args, env)
 	if (p->write_u8)
 		close_output_port(p, env);
 
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_close_input_port, args, env)
@@ -374,7 +384,7 @@ DEFUN(scm_close_input_port, args, env)
 	struct sexp_port *p = port_cast(car(args), env);
 	check_input_port(p, env);
 	close_input_port(p, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_close_output_port, args, env)
@@ -382,17 +392,17 @@ DEFUN(scm_close_output_port, args, env)
 	struct sexp_port *p = port_cast(car(args), env);
 	check_output_port(p, env);
 	close_output_port(p, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_eof_objectp, args, env)
 {
-	return make_bool(is_eof(car(args)));
+	return sexp_make_bool(sexp_is_eof(car(args)));
 }
 
 DEFUN(scm_eof_object, args, env)
 {
-	return make_eof();
+	return sexp_make_eof();
 }
 
 DEFUN(scm_read_u8, args, env)
@@ -429,14 +439,14 @@ DEFUN(scm_write_u8, args, env)
 {
 	struct sexp_port *p = get_output_port(cdr(args), env);
 	port_write_char(type_check_byte(car(args), env), p, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_write_char, args, env)
 {
 	struct sexp_port *p = get_output_port(cdr(args), env);
 	port_write_char(char_cast(car(args), env), p, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_write_string, args, env)
@@ -444,25 +454,25 @@ DEFUN(scm_write_string, args, env)
 	struct sexp_port *p = get_output_port(cdr(args), env);
 	type_check(car(args), SEXP_STRING, env);
 	port_write_c_string(sexp_string(car(args))->data, p, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_display, args, env)
 {
 	struct sexp_port *p = get_output_port(cdr(args), env);
 	_display(p, car(args), false, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_write, args, env)
 {
 	struct sexp_port *p = get_output_port(cdr(args), env);
 	_display(p, car(args), true, env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_newline, args, env)
 {
-	scm_write_u8(make_pair(make_char('\n'), args), env);
-	return unspecified();
+	scm_write_u8(sexp_make_pair(sexp_make_char('\n'), args), env);
+	return sexp_unspecified();
 }

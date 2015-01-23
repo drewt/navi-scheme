@@ -20,18 +20,18 @@
 START_TEST(test_add)
 {
 	ck_assert_int_eq(sexp_num($$(scm_add)), 0);
-	ck_assert_int_eq(sexp_num($(scm_add, make_num(1))), 1);
-	ck_assert_int_eq(sexp_num($(scm_add, make_num(1), make_num(2))), 3);
-	ck_assert_int_eq(sexp_num($(scm_add, make_num(1), make_num(-2))), -1);
+	ck_assert_int_eq(sexp_num($(scm_add, sexp_make_num(1))), 1);
+	ck_assert_int_eq(sexp_num($(scm_add, sexp_make_num(1), sexp_make_num(2))), 3);
+	ck_assert_int_eq(sexp_num($(scm_add, sexp_make_num(1), sexp_make_num(-2))), -1);
 }
 END_TEST
 
 /* - */
 START_TEST(test_sub)
 {
-	ck_assert_int_eq(sexp_num($(scm_sub, make_num(1))), -1);
-	ck_assert_int_eq(sexp_num($(scm_sub, make_num(2), make_num(1))), 1);
-	ck_assert_int_eq(sexp_num($(scm_sub, make_num(1), make_num(-1))), 2);
+	ck_assert_int_eq(sexp_num($(scm_sub, sexp_make_num(1))), -1);
+	ck_assert_int_eq(sexp_num($(scm_sub, sexp_make_num(2), sexp_make_num(1))), 1);
+	ck_assert_int_eq(sexp_num($(scm_sub, sexp_make_num(1), sexp_make_num(-1))), 2);
 }
 END_TEST
 
@@ -39,32 +39,32 @@ END_TEST
 START_TEST(test_mul)
 {
 	ck_assert_int_eq(sexp_num($$(scm_mul)), 1);
-	ck_assert_int_eq(sexp_num($(scm_mul, make_num(1))), 1);
-	ck_assert_int_eq(sexp_num($(scm_mul, make_num(2), make_num(3))), 6);
-	ck_assert_int_eq(sexp_num($(scm_mul, make_num(2), make_num(-3))), -6);
+	ck_assert_int_eq(sexp_num($(scm_mul, sexp_make_num(1))), 1);
+	ck_assert_int_eq(sexp_num($(scm_mul, sexp_make_num(2), sexp_make_num(3))), 6);
+	ck_assert_int_eq(sexp_num($(scm_mul, sexp_make_num(2), sexp_make_num(-3))), -6);
 }
 END_TEST
 
 /* / */
 START_TEST(test_div)
 {
-	ck_assert_int_eq(sexp_num($(scm_div, make_num(4))), 0);
-	ck_assert_int_eq(sexp_num($(scm_div, make_num(6), make_num(3))), 2);
-	ck_assert_int_eq(sexp_num($(scm_div, make_num(6), make_num(-3))), -2);
+	ck_assert_int_eq(sexp_num($(scm_div, sexp_make_num(4))), 0);
+	ck_assert_int_eq(sexp_num($(scm_div, sexp_make_num(6), sexp_make_num(3))), 2);
+	ck_assert_int_eq(sexp_num($(scm_div, sexp_make_num(6), sexp_make_num(-3))), -2);
 }
 END_TEST
 
 /* quotient */
 START_TEST(test_quotient)
 {
-	ck_assert_int_eq(sexp_num($(scm_quotient, make_num(5), make_num(2))), 2);
+	ck_assert_int_eq(sexp_num($(scm_quotient, sexp_make_num(5), sexp_make_num(2))), 2);
 }
 END_TEST
 
 /* remainder */
 START_TEST(test_remainder)
 {
-	ck_assert_int_eq(sexp_num($(scm_remainder, make_num(5), make_num(2))), 1);
+	ck_assert_int_eq(sexp_num($(scm_remainder, sexp_make_num(5), sexp_make_num(2))), 1);
 }
 END_TEST
 
@@ -72,13 +72,13 @@ END_TEST
 START_TEST(test_lt)
 {
 	ck_assert(sexp_bool($$(scm_lt)));
-	ck_assert(sexp_bool($(scm_lt, make_num(1))));
-	ck_assert(sexp_bool($(scm_lt, make_num(1), make_num(2))));
-	ck_assert(!sexp_bool($(scm_lt, make_num(1), make_num(1))));
-	ck_assert(!sexp_bool($(scm_lt, make_num(2), make_num(1))));
-	ck_assert(sexp_bool($(scm_lt, make_num(1), make_num(2), make_num(3))));
-	ck_assert(!sexp_bool($(scm_lt, make_num(1), make_num(2), make_num(2))));
-	ck_assert(!sexp_bool($(scm_lt, make_num(1), make_num(2), make_num(1))));
+	ck_assert(sexp_bool($(scm_lt, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_lt, sexp_make_num(1), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_lt, sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_lt, sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_lt, sexp_make_num(1), sexp_make_num(2), sexp_make_num(3))));
+	ck_assert(!sexp_bool($(scm_lt, sexp_make_num(1), sexp_make_num(2), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_lt, sexp_make_num(1), sexp_make_num(2), sexp_make_num(1))));
 }
 END_TEST
 
@@ -86,13 +86,13 @@ END_TEST
 START_TEST(test_gt)
 {
 	ck_assert(sexp_bool($$(scm_gt)));
-	ck_assert(sexp_bool($(scm_gt, make_num(1))));
-	ck_assert(sexp_bool($(scm_gt, make_num(2), make_num(1))));
-	ck_assert(!sexp_bool($(scm_gt, make_num(1), make_num(1))));
-	ck_assert(!sexp_bool($(scm_gt, make_num(1), make_num(2))));
-	ck_assert(sexp_bool($(scm_gt, make_num(3), make_num(2), make_num(1))));
-	ck_assert(!sexp_bool($(scm_gt, make_num(3), make_num(2), make_num(2))));
-	ck_assert(!sexp_bool($(scm_gt, make_num(3), make_num(2), make_num(3))));
+	ck_assert(sexp_bool($(scm_gt, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_gt, sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_gt, sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_gt, sexp_make_num(1), sexp_make_num(2))));
+	ck_assert(sexp_bool($(scm_gt, sexp_make_num(3), sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_gt, sexp_make_num(3), sexp_make_num(2), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_gt, sexp_make_num(3), sexp_make_num(2), sexp_make_num(3))));
 }
 END_TEST
 
@@ -100,13 +100,13 @@ END_TEST
 START_TEST(test_lte)
 {
 	ck_assert(sexp_bool($$(scm_lte)));
-	ck_assert(sexp_bool($(scm_lte, make_num(1))));
-	ck_assert(sexp_bool($(scm_lte, make_num(1), make_num(1))));
-	ck_assert(sexp_bool($(scm_lte, make_num(1), make_num(2))));
-	ck_assert(!sexp_bool($(scm_lte, make_num(2), make_num(1))));
-	ck_assert(sexp_bool($(scm_lte, make_num(1), make_num(2), make_num(3))));
-	ck_assert(sexp_bool($(scm_lte, make_num(1), make_num(2), make_num(2))));
-	ck_assert(!sexp_bool($(scm_lte, make_num(1), make_num(2), make_num(1))));
+	ck_assert(sexp_bool($(scm_lte, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_lte, sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_lte, sexp_make_num(1), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_lte, sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_lte, sexp_make_num(1), sexp_make_num(2), sexp_make_num(3))));
+	ck_assert(sexp_bool($(scm_lte, sexp_make_num(1), sexp_make_num(2), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_lte, sexp_make_num(1), sexp_make_num(2), sexp_make_num(1))));
 }
 END_TEST
 
@@ -114,13 +114,13 @@ END_TEST
 START_TEST(test_gte)
 {
 	ck_assert(sexp_bool($$(scm_gte)));
-	ck_assert(sexp_bool($(scm_gte, make_num(1))));
-	ck_assert(sexp_bool($(scm_gte, make_num(1), make_num(1))));
-	ck_assert(sexp_bool($(scm_gte, make_num(2), make_num(1))));
-	ck_assert(!sexp_bool($(scm_gte, make_num(1), make_num(2))));
-	ck_assert(sexp_bool($(scm_gte, make_num(3), make_num(2), make_num(1))));
-	ck_assert(sexp_bool($(scm_gte, make_num(3), make_num(2), make_num(2))));
-	ck_assert(!sexp_bool($(scm_gte, make_num(3), make_num(2), make_num(3))));
+	ck_assert(sexp_bool($(scm_gte, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_gte, sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_gte, sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_gte, sexp_make_num(1), sexp_make_num(2))));
+	ck_assert(sexp_bool($(scm_gte, sexp_make_num(3), sexp_make_num(2), sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_gte, sexp_make_num(3), sexp_make_num(2), sexp_make_num(2))));
+	ck_assert(!sexp_bool($(scm_gte, sexp_make_num(3), sexp_make_num(2), sexp_make_num(3))));
 }
 END_TEST
 
@@ -128,57 +128,57 @@ END_TEST
 START_TEST(test_numeq)
 {
 	ck_assert(sexp_bool($$(scm_numeq)));
-	ck_assert(sexp_bool($(scm_numeq, make_num(1))));
-	ck_assert(sexp_bool($(scm_numeq, make_num(1), make_num(1))));
-	ck_assert(!sexp_bool($(scm_numeq, make_num(1), make_num(2))));
-	ck_assert(sexp_bool($(scm_numeq, make_num(1), make_num(1), make_num(1))));
-	ck_assert(!sexp_bool($(scm_numeq, make_num(1), make_num(2), make_num(1))));
+	ck_assert(sexp_bool($(scm_numeq, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_numeq, sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_numeq, sexp_make_num(1), sexp_make_num(2))));
+	ck_assert(sexp_bool($(scm_numeq, sexp_make_num(1), sexp_make_num(1), sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_numeq, sexp_make_num(1), sexp_make_num(2), sexp_make_num(1))));
 }
 END_TEST
 
 /* zero? */
 START_TEST(test_zerop)
 {
-	ck_assert(sexp_bool($(scm_zerop, make_num(0))));
-	ck_assert(!sexp_bool($(scm_zerop, make_num(1))));
+	ck_assert(sexp_bool($(scm_zerop, sexp_make_num(0))));
+	ck_assert(!sexp_bool($(scm_zerop, sexp_make_num(1))));
 }
 END_TEST
 
 /* positive? */
 START_TEST(test_positivep)
 {
-	ck_assert(sexp_bool($(scm_positivep, make_num(1))));
-	ck_assert(!sexp_bool($(scm_positivep, make_num(0))));
-	ck_assert(!sexp_bool($(scm_positivep, make_num(-1))));
+	ck_assert(sexp_bool($(scm_positivep, sexp_make_num(1))));
+	ck_assert(!sexp_bool($(scm_positivep, sexp_make_num(0))));
+	ck_assert(!sexp_bool($(scm_positivep, sexp_make_num(-1))));
 }
 END_TEST
 
 /* negative? */
 START_TEST(test_negativep)
 {
-	ck_assert(sexp_bool($(scm_negativep, make_num(-1))));
-	ck_assert(!sexp_bool($(scm_negativep, make_num(0))));
-	ck_assert(!sexp_bool($(scm_negativep, make_num(1))));
+	ck_assert(sexp_bool($(scm_negativep, sexp_make_num(-1))));
+	ck_assert(!sexp_bool($(scm_negativep, sexp_make_num(0))));
+	ck_assert(!sexp_bool($(scm_negativep, sexp_make_num(1))));
 }
 END_TEST
 
 /* odd? */
 START_TEST(test_oddp)
 {
-	ck_assert(sexp_bool($(scm_oddp, make_num(1))));
-	ck_assert(sexp_bool($(scm_oddp, make_num(-1))));
-	ck_assert(!sexp_bool($(scm_oddp, make_num(0))));
-	ck_assert(!sexp_bool($(scm_oddp, make_num(2))));
+	ck_assert(sexp_bool($(scm_oddp, sexp_make_num(1))));
+	ck_assert(sexp_bool($(scm_oddp, sexp_make_num(-1))));
+	ck_assert(!sexp_bool($(scm_oddp, sexp_make_num(0))));
+	ck_assert(!sexp_bool($(scm_oddp, sexp_make_num(2))));
 }
 END_TEST
 
 /* even? */
 START_TEST(test_evenp)
 {
-	ck_assert(sexp_bool($(scm_evenp, make_num(0))));
-	ck_assert(sexp_bool($(scm_evenp, make_num(2))));
-	ck_assert(sexp_bool($(scm_evenp, make_num(-2))));
-	ck_assert(!sexp_bool($(scm_evenp, make_num(1))));
+	ck_assert(sexp_bool($(scm_evenp, sexp_make_num(0))));
+	ck_assert(sexp_bool($(scm_evenp, sexp_make_num(2))));
+	ck_assert(sexp_bool($(scm_evenp, sexp_make_num(-2))));
+	ck_assert(!sexp_bool($(scm_evenp, sexp_make_num(1))));
 }
 END_TEST
 
@@ -191,11 +191,11 @@ START_TEST(test_number_to_string)
 	r = $(scm_number_to_string, __VA_ARGS__); \
 	ck_assert(!strcmp(sexp_string(r)->data, str));
 
-	nts_assert("1", make_num(1));
-	nts_assert("-1", make_num(-1));
-	nts_assert("10", make_num(8), make_num(8));
-	nts_assert("10", make_num(10), make_num(10));
-	nts_assert("10", make_num(16), make_num(16));
+	nts_assert("1", sexp_make_num(1));
+	nts_assert("-1", sexp_make_num(-1));
+	nts_assert("10", sexp_make_num(8), sexp_make_num(8));
+	nts_assert("10", sexp_make_num(10), sexp_make_num(10));
+	nts_assert("10", sexp_make_num(16), sexp_make_num(16));
 #undef nts_assert
 }
 END_TEST
@@ -206,7 +206,7 @@ START_TEST(test_string_to_number)
 	sexp_t r;
 
 #define stn_assert(nr, str, ...) \
-	r = $(scm_string_to_number, to_string(str), ## __VA_ARGS__); \
+	r = $(scm_string_to_number, sexp_from_c_string(str), ## __VA_ARGS__); \
 	ck_assert_int_eq(sexp_num(r), nr);
 
 	stn_assert(1,  "1");
@@ -215,10 +215,10 @@ START_TEST(test_string_to_number)
 	stn_assert(8,  "#o10");
 	stn_assert(10, "#d10");
 	stn_assert(16, "#x10");
-	stn_assert(2,  "10", make_num(2));
-	stn_assert(8,  "10", make_num(8));
-	stn_assert(10, "10", make_num(10));
-	stn_assert(16, "10", make_num(16));
+	stn_assert(2,  "10", sexp_make_num(2));
+	stn_assert(8,  "10", sexp_make_num(8));
+	stn_assert(10, "10", sexp_make_num(10));
+	stn_assert(16, "10", sexp_make_num(16));
 #undef stn_assert
 }
 END_TEST
@@ -226,27 +226,27 @@ END_TEST
 /* not */
 START_TEST(test_not)
 {
-	ck_assert(sexp_bool($(scm_not, make_bool(false))));
-	ck_assert(!sexp_bool($(scm_not, make_bool(true))));
+	ck_assert(sexp_bool($(scm_not, sexp_make_bool(false))));
+	ck_assert(!sexp_bool($(scm_not, sexp_make_bool(true))));
 }
 END_TEST
 
 /* boolean? */
 START_TEST(test_booleanp)
 {
-	ck_assert(sexp_bool($(scm_booleanp, make_bool(true))));
-	ck_assert(sexp_bool($(scm_booleanp, make_bool(false))));
-	ck_assert(!sexp_bool($(scm_booleanp, make_num(1))));
+	ck_assert(sexp_bool($(scm_booleanp, sexp_make_bool(true))));
+	ck_assert(sexp_bool($(scm_booleanp, sexp_make_bool(false))));
+	ck_assert(!sexp_bool($(scm_booleanp, sexp_make_num(1))));
 }
 END_TEST
 
 /* boolean=? */
 START_TEST(test_boolean_eq)
 {
-	ck_assert(sexp_bool($(scm_boolean_eq, make_bool(true))));
-	ck_assert(sexp_bool($(scm_boolean_eq, make_bool(false))));
-	ck_assert(sexp_bool($(scm_boolean_eq, make_bool(true), make_bool(true))));
-	ck_assert(!sexp_bool($(scm_boolean_eq, make_bool(true), make_bool(false))));
+	ck_assert(sexp_bool($(scm_boolean_eq, sexp_make_bool(true))));
+	ck_assert(sexp_bool($(scm_boolean_eq, sexp_make_bool(false))));
+	ck_assert(sexp_bool($(scm_boolean_eq, sexp_make_bool(true), sexp_make_bool(true))));
+	ck_assert(!sexp_bool($(scm_boolean_eq, sexp_make_bool(true), sexp_make_bool(false))));
 }
 END_TEST
 

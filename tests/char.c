@@ -18,109 +18,109 @@
 /* char? */
 START_TEST(test_charp)
 {
-	ck_assert(sexp_bool($(scm_charp, make_char('a'))));
-	ck_assert(!sexp_bool($(scm_charp, make_num(1))));
+	ck_assert(sexp_bool($(scm_charp, sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_charp, sexp_make_num(1))));
 }
 END_TEST
 
 /* char<? */
 START_TEST(test_char_lt)
 {
-	ck_assert(sexp_bool($(scm_char_lt, make_char('a'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_lt, make_char('a'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_lt, make_char('b'), make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_lt, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_lt, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_lt, sexp_make_char('b'), sexp_make_char('a'))));
 }
 END_TEST
 
 /* char>? */
 START_TEST(test_char_gt)
 {
-	ck_assert(sexp_bool($(scm_char_gt, make_char('b'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_gt, make_char('b'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_gt, make_char('a'), make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_gt, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_gt, sexp_make_char('b'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_gt, sexp_make_char('a'), sexp_make_char('b'))));
 }
 END_TEST
 
 /* char=? */
 START_TEST(test_char_eq)
 {
-	ck_assert(sexp_bool($(scm_char_eq, make_char('a'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_eq, make_char('a'), make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_eq, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_eq, sexp_make_char('a'), sexp_make_char('b'))));
 }
 END_TEST
 
 /* char<=? */
 START_TEST(test_char_lte)
 {
-	ck_assert(sexp_bool($(scm_char_lte, make_char('a'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_lte, make_char('a'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_lte, make_char('b'), make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_lte, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_lte, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_lte, sexp_make_char('b'), sexp_make_char('a'))));
 }
 END_TEST
 
 /* char>=? */
 START_TEST(test_char_gte)
 {
-	ck_assert(sexp_bool($(scm_char_gte, make_char('a'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_gte, make_char('b'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_gte, make_char('a'), make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_gte, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_gte, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_gte, sexp_make_char('a'), sexp_make_char('b'))));
 }
 END_TEST
 
 /* char-ci<? */
 START_TEST(test_char_ci_lt)
 {
-	ck_assert(sexp_bool($(scm_char_ci_lt, make_char('a'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lt, make_char('a'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lt, make_char('b'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_lt, make_char('a'), make_char('B'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lt, make_char('A'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lt, make_char('b'), make_char('A'))));
+	ck_assert(sexp_bool($(scm_char_ci_lt, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lt, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lt, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_lt, sexp_make_char('a'), sexp_make_char('B'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lt, sexp_make_char('A'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lt, sexp_make_char('b'), sexp_make_char('A'))));
 }
 END_TEST
 
 /* char-ci>? */
 START_TEST(test_char_ci_gt)
 {
-	ck_assert(sexp_bool($(scm_char_ci_gt, make_char('b'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gt, make_char('b'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gt, make_char('a'), make_char('b'))));
-	ck_assert(sexp_bool($(scm_char_ci_gt, make_char('B'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gt, make_char('b'), make_char('B'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gt, make_char('A'), make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_ci_gt, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gt, sexp_make_char('b'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gt, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_ci_gt, sexp_make_char('B'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gt, sexp_make_char('b'), sexp_make_char('B'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gt, sexp_make_char('A'), sexp_make_char('b'))));
 }
 END_TEST
 
 /* char-ci=? */
 START_TEST(test_char_ci_eq)
 {
-	ck_assert(sexp_bool($(scm_char_ci_eq, make_char('a'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_eq, make_char('A'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_eq, make_char('a'), make_char('B'))));
+	ck_assert(sexp_bool($(scm_char_ci_eq, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_eq, sexp_make_char('A'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_eq, sexp_make_char('a'), sexp_make_char('B'))));
 }
 END_TEST
 
 /* char-ci<=? */
 START_TEST(test_char_ci_lte)
 {
-	ck_assert(sexp_bool($(scm_char_ci_lte, make_char('a'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_lte, make_char('a'), make_char('b'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lte, make_char('b'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_lte, make_char('A'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_lte, make_char('a'), make_char('B'))));
-	ck_assert(!sexp_bool($(scm_char_ci_lte, make_char('B'), make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_lte, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_lte, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lte, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_lte, sexp_make_char('A'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_lte, sexp_make_char('a'), sexp_make_char('B'))));
+	ck_assert(!sexp_bool($(scm_char_ci_lte, sexp_make_char('B'), sexp_make_char('a'))));
 }
 END_TEST
 
 /* char-ci>=? */
 START_TEST(test_char_ci_gte)
 {
-	ck_assert(sexp_bool($(scm_char_ci_gte, make_char('a'), make_char('a'))));
-	ck_assert(sexp_bool($(scm_char_ci_gte, make_char('b'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gte, make_char('a'), make_char('b'))));
-	ck_assert(sexp_bool($(scm_char_ci_gte, make_char('a'), make_char('A'))));
-	ck_assert(sexp_bool($(scm_char_ci_gte, make_char('B'), make_char('a'))));
-	ck_assert(!sexp_bool($(scm_char_ci_gte, make_char('a'), make_char('B'))));
+	ck_assert(sexp_bool($(scm_char_ci_gte, sexp_make_char('a'), sexp_make_char('a'))));
+	ck_assert(sexp_bool($(scm_char_ci_gte, sexp_make_char('b'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gte, sexp_make_char('a'), sexp_make_char('b'))));
+	ck_assert(sexp_bool($(scm_char_ci_gte, sexp_make_char('a'), sexp_make_char('A'))));
+	ck_assert(sexp_bool($(scm_char_ci_gte, sexp_make_char('B'), sexp_make_char('a'))));
+	ck_assert(!sexp_bool($(scm_char_ci_gte, sexp_make_char('a'), sexp_make_char('B'))));
 
 }
 END_TEST
@@ -128,16 +128,16 @@ END_TEST
 /* char-upcase */
 START_TEST(test_char_upcase)
 {
-	ck_assert_int_eq(sexp_char($(scm_char_upcase, make_char('a'))), 'A');
-	ck_assert_int_eq(sexp_char($(scm_char_upcase, make_char('A'))), 'A');
+	ck_assert_int_eq(sexp_char($(scm_char_upcase, sexp_make_char('a'))), 'A');
+	ck_assert_int_eq(sexp_char($(scm_char_upcase, sexp_make_char('A'))), 'A');
 }
 END_TEST
 
 /* char-downcase */
 START_TEST(test_char_downcase)
 {
-	ck_assert_int_eq(sexp_char($(scm_char_downcase, make_char('A'))), 'a');
-	ck_assert_int_eq(sexp_char($(scm_char_downcase, make_char('a'))), 'a');
+	ck_assert_int_eq(sexp_char($(scm_char_downcase, sexp_make_char('A'))), 'a');
+	ck_assert_int_eq(sexp_char($(scm_char_downcase, sexp_make_char('a'))), 'a');
 }
 END_TEST
 

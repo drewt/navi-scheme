@@ -36,10 +36,10 @@
 
 DEFUN(scm_add, args, env)
 {
-	sexp_t acc = make_num(0);
-	if (is_nil(args))
-		return make_num(0);
-	if (is_nil(cdr(args)))
+	sexp_t acc = sexp_make_num(0);
+	if (sexp_is_nil(args))
+		return sexp_make_num(0);
+	if (sexp_is_nil(cdr(args)))
 		return car(args);
 	ARITHMETIC_FOLD(fixnum_plus, args, acc, env);
 	return acc;
@@ -48,8 +48,8 @@ DEFUN(scm_add, args, env)
 DEFUN(scm_sub, args, env)
 {
 	sexp_t acc;
-	if (is_nil(cdr(args))) {
-		acc.n = fixnum_minus(make_num(0).n, car(args).n);
+	if (sexp_is_nil(cdr(args))) {
+		acc.n = fixnum_minus(sexp_make_num(0).n, car(args).n);
 		return acc;
 	}
 	ARITHMETIC_FOLD(fixnum_minus, args, acc, env);
@@ -59,9 +59,9 @@ DEFUN(scm_sub, args, env)
 DEFUN(scm_mul, args, env)
 {
 	sexp_t acc;
-	if (is_nil(args))
-		return make_num(1);
-	if (is_nil(cdr(args)))
+	if (sexp_is_nil(args))
+		return sexp_make_num(1);
+	if (sexp_is_nil(cdr(args)))
 		return car(args);
 	ARITHMETIC_FOLD(fixnum_times, args, acc, env);
 	return acc;
@@ -70,8 +70,8 @@ DEFUN(scm_mul, args, env)
 DEFUN(scm_div, args, env)
 {
 	sexp_t acc;
-	if (is_nil(cdr(args))) {
-		acc.n = fixnum_divide(make_num(1).n, car(args).n);
+	if (sexp_is_nil(cdr(args))) {
+		acc.n = fixnum_divide(sexp_make_num(1).n, car(args).n);
 		return acc;
 	}
 	ARITHMETIC_FOLD(fixnum_divide, args, acc, env);
@@ -82,14 +82,14 @@ DEFUN(scm_quotient, args, env)
 {
 	type_check(car(args),  SEXP_NUM, env);
 	type_check(cadr(args), SEXP_NUM, env);
-	return make_num(sexp_num(car(args)) / sexp_num(cadr(args)));
+	return sexp_make_num(sexp_num(car(args)) / sexp_num(cadr(args)));
 }
 
 DEFUN(scm_remainder, args, env)
 {
 	type_check(car(args),  SEXP_NUM, env);
 	type_check(cadr(args), SEXP_NUM, env);
-	return make_num(sexp_num(car(args)) % sexp_num(cadr(args)));
+	return sexp_make_num(sexp_num(car(args)) % sexp_num(cadr(args)));
 }
 
 static bool fold_pairs(sexp_t list, bool (*compare)(sexp_t,sexp_t,env_t),
@@ -116,7 +116,7 @@ static bool fold_pairs(sexp_t list, bool (*compare)(sexp_t,sexp_t,env_t),
 	} \
 	DEFUN(cname, args, env) \
 	{ \
-		return make_bool(fold_pairs(args, ____ ## cname, env)); \
+		return sexp_make_bool(fold_pairs(args, ____ ## cname, env)); \
 	}
 
 VARIADIC_PREDICATE(scm_lt,    <)
@@ -129,7 +129,7 @@ VARIADIC_PREDICATE(scm_numeq, ==)
 	DEFUN(cname, args, env) \
 	{ \
 		type_check(car(args), SEXP_NUM, env); \
-		return make_bool(sexp_num(car(args)) test); \
+		return sexp_make_bool(sexp_num(car(args)) test); \
 	}
 
 UNARY_PREDICATE(scm_zerop,     == 0)
@@ -162,7 +162,7 @@ DEFUN(scm_number_to_string, args, env)
 	default:
 		error(env, "unsupported radix");
 	}
-	return to_string(buf);
+	return sexp_from_c_string(buf);
 }
 
 static int explicit_radix(const char *str)
@@ -187,7 +187,7 @@ DEFUN(scm_string_to_number, args, env)
 	bytes = type_check(car(args), SEXP_STRING, env);
 	string = (char*) sexp_string(bytes)->data;
 
-	radix = is_nil(cdr(args)) ? 10 : fixnum_cast(cadr(args), env);
+	radix = sexp_is_nil(cdr(args)) ? 10 : fixnum_cast(cadr(args), env);
 
 	if ((n = explicit_radix(string)) != 0) {
 		string += 2;
@@ -196,18 +196,18 @@ DEFUN(scm_string_to_number, args, env)
 
 	n = strtol(string, &endptr, radix);
 	if (*endptr != '\0')
-		return make_bool(false);
-	return make_num(n);
+		return sexp_make_bool(false);
+	return sexp_make_num(n);
 }
 
 DEFUN(scm_not, args, env)
 {
-	return make_bool(!sexp_is_true(car(args)));
+	return sexp_make_bool(!sexp_is_true(car(args)));
 }
 
 DEFUN(scm_booleanp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_BOOL);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_BOOL);
 }
 
 DEFUN(scm_boolean_eq, args, env)
@@ -221,7 +221,7 @@ DEFUN(scm_boolean_eq, args, env)
 	sexp_list_for_each(cons, cdr(args)) {
 		type_check(car(cons), SEXP_BOOL, env);
 		if (car(cons).n != bval.n)
-			return make_bool(false);
+			return sexp_make_bool(false);
 	}
-	return make_bool(true);
+	return sexp_make_bool(true);
 }

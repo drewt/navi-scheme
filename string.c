@@ -30,7 +30,7 @@ static sexp_t list_to_string(sexp_t list, env_t env)
 	}
 
 	size_t i = 0;
-	sexp_t sexp = make_string(size, size, length);
+	sexp_t sexp = sexp_make_string(size, size, length);
 	struct sexp_string *str = sexp_string(sexp);
 
 	sexp_list_for_each(cons, list) {
@@ -46,11 +46,11 @@ static sexp_t string_to_list(sexp_t sexp)
 
 	ptr = &head;
 	for (size_t i = 0; i < string->size;) {
-		ptr->cdr = make_empty_pair();
+		ptr->cdr = sexp_make_empty_pair();
 		ptr = sexp_pair(ptr->cdr);
-		ptr->car = make_char(u_get_char(string->data, &i));
+		ptr->car = sexp_make_char(u_get_char(string->data, &i));
 	}
-	ptr->cdr = make_nil();
+	ptr->cdr = sexp_make_nil();
 	return head.cdr;
 }
 
@@ -67,7 +67,7 @@ char *scm_to_c_string(sexp_t sexp)
 
 DEFUN(scm_stringp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_STRING);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_STRING);
 }
 
 DEFUN(scm_make_string, args, env)
@@ -84,7 +84,7 @@ DEFUN(scm_make_string, args, env)
 
 	/* FIXME: invalid codepoint? */
 	size_t size = length * u_char_size(ch);
-	sexp_t sexp = make_string(size, size, length);
+	sexp_t sexp = sexp_make_string(size, size, length);
 
 	size_t j = 0;
 	struct sexp_string *string = sexp_string(sexp);
@@ -101,7 +101,7 @@ DEFUN(scm_string, args, env)
 
 DEFUN(scm_string_length, args, env)
 {
-	return make_num(string_cast(car(args), env)->length);
+	return sexp_make_num(string_cast(car(args), env)->length);
 }
 
 DEFUN(scm_string_ref, args, env)
@@ -111,7 +111,7 @@ DEFUN(scm_string_ref, args, env)
 	long k = type_check_range(cadr(args), 0, str->length, env);
 
 	u_skip_chars(str->data, k, &i);
-	return make_char(u_get_char(str->data, &i));
+	return sexp_make_char(u_get_char(str->data, &i));
 }
 
 DEFUN(scm_string_set, args, env)
@@ -131,7 +131,7 @@ DEFUN(scm_string_set, args, env)
 
 	// FIXME: UTF-8
 	str->data[k] = sexp_char(caddr(args));
-	return unspecified();
+	return sexp_unspecified();
 }
 
 #define BINARY_PREDICATE(cname, op) \
@@ -146,13 +146,13 @@ DEFUN(scm_string_set, args, env)
 		snd = sexp_string(cadr(args)); \
 		\
 		if (fst->size != snd->size) \
-			return make_bool(false); \
+			return sexp_make_bool(false); \
 		\
 		for (size_t i = 0; i < fst->size; i++) { \
 			if (!(fst->data[i] op snd->data[i])) \
-				return make_bool(false); \
+				return sexp_make_bool(false); \
 		} \
-		return make_bool(true); \
+		return sexp_make_bool(true); \
 	}
 
 #define BINARY_CI_PREDICATE(cname, op) \
@@ -167,13 +167,13 @@ DEFUN(scm_string_set, args, env)
 		snd = sexp_string(cadr(args)); \
 		\
 		if (fst->size != snd->size) \
-			return make_bool(false); \
+			return sexp_make_bool(false); \
 		\
 		for (size_t i = 0; i < fst->size; i++) { \
 			if (!(tolower(fst->data[i]) op tolower(snd->data[i]))) \
-				return make_bool(false); \
+				return sexp_make_bool(false); \
 		} \
-		return make_bool(true); \
+		return sexp_make_bool(true); \
 	}
 
 BINARY_PREDICATE(scm_string_lt,  <)
@@ -207,7 +207,7 @@ DEFUN(scm_string_append, args, env)
 	}
 
 	/* allocate */
-	sexp = make_string(size, size, length);
+	sexp = sexp_make_string(size, size, length);
 	str = sexp_string(sexp);
 
 	/* copy */
@@ -255,13 +255,13 @@ DEFUN(scm_string_fill, args, env)
 	for (size_t i = start; i < (size_t) end; i++)
 		str->data[i] = sexp_char(ch);
 
-	return unspecified();
+	return sexp_unspecified();
 }
 
 sexp_t string_copy(sexp_t string)
 {
 	struct sexp_string *from_str = sexp_string(string);
-	sexp_t to = make_string(from_str->size, from_str->size, from_str->size);
+	sexp_t to = sexp_make_string(from_str->size, from_str->size, from_str->size);
 	struct sexp_string *to_str = sexp_string(to);
 
 	for (size_t i = 0; i < from_str->size; i++)
@@ -284,7 +284,7 @@ DEFUN(scm_string_copy, args, env)
 
 	check_copy(str->size, start, end, env);
 
-	return copy_to(make_string(end - start, end - start, end - start), 0,
+	return copy_to(sexp_make_string(end - start, end - start, end - start), 0,
 			from, start, end);
 }
 
@@ -307,5 +307,5 @@ DEFUN(scm_string_copy_to, args, env)
 	check_copy_to(to_str->size, at, from_str->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
-	return unspecified();
+	return sexp_unspecified();
 }

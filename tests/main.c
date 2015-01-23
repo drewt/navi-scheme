@@ -24,7 +24,7 @@ int main(void)
 	SRunner *sr;
 
 	/* initialize navi */
-	symbol_table_init();
+	navi_init();
 	env = make_default_environment();
 
 	/* initialize test suite */

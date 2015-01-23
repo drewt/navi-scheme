@@ -24,15 +24,15 @@ _Noreturn void _error(env_t env, const char *msg, ...)
 	sexp_t list;
 
 	va_start(ap, msg);
-	list = vlist(to_string(msg), ap);
+	list = vlist(sexp_from_c_string(msg), ap);
 	va_end(ap);
 
-	scm_raise(make_pair(list, make_nil()), env);
+	scm_raise(sexp_make_pair(list, sexp_make_nil()), env);
 }
 
 DEFUN(scm_procedurep, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_FUNCTION);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_FUNCTION);
 }
 
 DEFUN(scm_apply, args, env)
@@ -70,13 +70,13 @@ DEFUN(scm_call_ec, args, env)
 
 	type_check_fun(fun, 1, env);
 
-	cont = make_escape();
+	cont = sexp_make_escape();
 	escape = sexp_escape(cont);
 
 	if (setjmp(escape->state))
 		return escape->arg;
 
-	call = make_pair(fun, make_pair(cont, make_nil()));
+	call = sexp_make_pair(fun, sexp_make_pair(cont, sexp_make_nil()));
 	return trampoline(call, env);
 }
 
@@ -93,13 +93,13 @@ DEFUN(scm_call_with_values, args, env)
 	type_check_fun(car(args), 0, env);
 	type_check(cadr(args), SEXP_FUNCTION, env);
 
-	values = trampoline(make_pair(car(args), make_nil()), env);
+	values = trampoline(sexp_make_pair(car(args), sexp_make_nil()), env);
 	if (sexp_type(values) != SEXP_VALUES)
-		call_args = make_pair(values, make_nil());
+		call_args = sexp_make_pair(values, sexp_make_nil());
 	else
 		call_args = vector_to_list(values);
 
-	return eval(make_pair(cadr(args), call_args), env);
+	return eval(sexp_make_pair(cadr(args), call_args), env);
 }
 
 DEFUN(scm_with_exception_handler, args, env)
@@ -112,7 +112,7 @@ DEFUN(scm_with_exception_handler, args, env)
 	scope_set(exn_env, sym_exn, car(args));
 
 	if (thunk->builtin)
-		return thunk->fn(make_nil(), exn_env);
+		return thunk->fn(sexp_make_nil(), exn_env);
 	return eval_begin(thunk->body, exn_env);
 }
 
@@ -133,7 +133,7 @@ DEFUN(scm_raise, args, env)
 			fun->fn(args, env);
 		} else {
 			scope_set(env, car(fun->args), car(args));
-			trampoline(make_pair(sym_begin, fun->body), env);
+			trampoline(sexp_make_pair(sym_begin, fun->body), env);
 		}
 		/* handler returned: raise again */
 	}
@@ -154,7 +154,7 @@ DEFUN(scm_raise_continuable, args, env)
 		result = fun->fn(args, env);
 	} else {
 		scope_set(env, car(fun->args), car(args));
-		result = trampoline(make_pair(sym_begin, fun->body), env);
+		result = trampoline(sexp_make_pair(sym_begin, fun->body), env);
 	}
 	scope_set(env, sym_exn, handler);
 	return result;
@@ -163,12 +163,12 @@ DEFUN(scm_raise_continuable, args, env)
 DEFUN(scm_error, args, env)
 {
 	type_check(car(args), SEXP_STRING, env);
-	scm_raise(make_pair(args, make_nil()), env);
+	scm_raise(sexp_make_pair(args, sexp_make_nil()), env);
 }
 
 static bool is_error_object(sexp_t object)
 {
-	return sexp_type(object) == SEXP_PAIR && is_proper_list(object) &&
+	return sexp_type(object) == SEXP_PAIR && sexp_is_proper_list(object) &&
 		sexp_type(car(object)) == SEXP_STRING;
 }
 
@@ -181,7 +181,7 @@ static sexp_t type_check_error(sexp_t object, env_t env)
 
 DEFUN(scm_error_objectp, args, env)
 {
-	return make_bool(is_error_object(car(args)));
+	return sexp_make_bool(is_error_object(car(args)));
 }
 
 DEFUN(scm_error_object_message, args, env)
@@ -199,10 +199,10 @@ DEFUN(scm_error_object_irritants, args, env)
 DEFUN(scm_read_errorp, args, env)
 {
 	if (!sexp_bool(scm_error_objectp(args, env)))
-		return make_bool(false);
+		return sexp_make_bool(false);
 	if (list_length(car(args)) < 2)
-		return make_bool(false);
-	return make_bool(symbol_eq(cadr(car(args)), sym_read_error));
+		return sexp_make_bool(false);
+	return sexp_make_bool(symbol_eq(cadr(car(args)), sym_read_error));
 }
 
 struct map_apply_arg {
@@ -213,7 +213,7 @@ struct map_apply_arg {
 static sexp_t map_apply(sexp_t elm, void *data)
 {
 	struct map_apply_arg *arg = data;
-	return  trampoline(make_pair(arg->fun, make_pair(elm, make_nil())),
+	return  trampoline(sexp_make_pair(arg->fun, sexp_make_pair(elm, sexp_make_nil())),
 			arg->env);
 }
 
@@ -244,7 +244,7 @@ static sexp_t string_map_ip(sexp_t fun, sexp_t sexp, env_t env)
 	struct sexp_string *vec = string_cast(sexp, env);
 
 	for (size_t i = 0; i < vec->size; i++) {
-		sexp_t call = list(fun, make_char(vec->data[i]), make_void());
+		sexp_t call = list(fun, sexp_make_char(vec->data[i]), sexp_make_void());
 		vec->data[i] = char_cast(trampoline(call, env), env);
 	}
 	return sexp;
@@ -272,7 +272,7 @@ static sexp_t vector_map(sexp_t fun, sexp_t to, sexp_t from, env_t env)
 	struct sexp_vector *fromv = vector_cast(from, SEXP_VECTOR, env);
 
 	for (size_t i = 0; i < tov->size; i++) {
-		sexp_t call = list(fun, fromv->data[i], make_void());
+		sexp_t call = list(fun, fromv->data[i], sexp_make_void());
 		tov->data[i] = trampoline(call, env);
 	}
 	return to;
@@ -289,16 +289,16 @@ DEFUN(scm_vector_map, args, env)
 {
 	type_check_fun(car(args), 1, env);
 	type_check(cadr(args), SEXP_VECTOR, env);
-	return vector_map(car(args), make_vector(vector_length(cadr(args))),
+	return vector_map(car(args), sexp_make_vector(vector_length(cadr(args))),
 			cadr(args), env);
 }
 
 DEFUN(scm_promisep, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_PROMISE);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_PROMISE);
 }
 
 DEFUN(scm_make_promise, args, env)
 {
-	return make_promise(car(args), env);
+	return sexp_make_promise(car(args), env);
 }

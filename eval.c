@@ -18,9 +18,16 @@
 #include <string.h>
 #include "navi.h"
 
+#define bounce_object car
+
+static inline env_t bounce_env(sexp_t bounce)
+{
+	return cdr(bounce).p->data->env;
+}
+
 static _Noreturn void unbound_identifier(sexp_t ident, env_t env)
 {
-	error(env, "unbound identifier", make_apair("identifier", ident));
+	error(env, "unbound identifier", sexp_make_apair("identifier", ident));
 }
 
 static bool list_of(sexp_t list, unsigned type, bool allow_dotted_tail)
@@ -50,7 +57,7 @@ static sexp_t eval_tail(sexp_t tail, env_t env)
 	if (!can_bounce(tail))
 		return tail;
 
-	return make_bounce(tail, capture_env(env));
+	return sexp_make_bounce(tail, capture_env(env));
 }
 
 static bool lambda_valid(sexp_t lambda)
@@ -71,7 +78,7 @@ DEFSPECIAL(eval_lambda, lambda, env)
 	if (!lambda_valid(lambda))
 		error(env, "invalid lambda list");
 
-	return make_function(car(lambda), cdr(lambda), "?", env);
+	return sexp_make_function(car(lambda), cdr(lambda), "?", env);
 }
 
 DEFSPECIAL(eval_caselambda, caselambda, env)
@@ -80,13 +87,13 @@ DEFSPECIAL(eval_caselambda, caselambda, env)
 	struct sexp_vector *vec;
 	unsigned i = 0;
 
-	sexp = make_caselambda(list_length(caselambda));
+	sexp = sexp_make_caselambda(list_length(caselambda));
 	vec = sexp_vector(sexp);
 
 	sexp_list_for_each(cons, caselambda) {
 		if (!lambda_valid(car(cons)))
 			error(env, "invalid case-lambda list");
-		vec->data[i++] = make_function(caar(cons), cdar(cons), "?", env);
+		vec->data[i++] = sexp_make_function(caar(cons), cdar(cons), "?", env);
 	}
 
 	return sexp;
@@ -98,7 +105,7 @@ static sexp_t eval_defvar(sexp_t sym, sexp_t rest, env_t env)
 		error(env, "too many arguments to define");
 
 	scope_set(env, sym, trampoline(car(rest), env));
-	return unspecified();
+	return sexp_unspecified();
 }
 
 static sexp_t eval_defun(sexp_t fundecl, sexp_t rest, env_t env)
@@ -109,9 +116,9 @@ static sexp_t eval_defun(sexp_t fundecl, sexp_t rest, env_t env)
 		error(env, "invalid defun list");
 
 	name = car(fundecl);
-	fun = make_function(cdr(fundecl), rest, bytevec_to_c_string(name), env);
+	fun = sexp_make_function(cdr(fundecl), rest, bytevec_to_c_string(name), env);
 	scope_set(env, name, fun);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_define, define, env)
@@ -155,7 +162,7 @@ DEFSPECIAL(eval_define_values, defvals, env)
 		error(env, "invalid define-values list");
 
 	extend_with_values(car(defvals), trampoline(cadr(defvals), env), env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_defmacro, defmacro, env)
@@ -166,10 +173,10 @@ DEFSPECIAL(eval_defmacro, defmacro, env)
 		error(env, "invalid define-macro list");
 
 	name = caar(defmacro);
-	macro = make_macro(cdar(defmacro), cdr(defmacro),
+	macro = sexp_make_macro(cdar(defmacro), cdr(defmacro),
 			bytevec_to_c_string(name), env);
 	scope_set(env, name, macro);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_begin, begin, env)
@@ -304,7 +311,7 @@ DEFSPECIAL(eval_set, set, env)
 	value = trampoline(cadr(set), env);
 	binding->object = value;
 
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_quote, quote, env)
@@ -335,22 +342,22 @@ static sexp_t eval_qq(sexp_t sexp, env_t env)
 		last = &head;
 		sexp_list_for_each(cons, sexp) {
 			sexp_t elm = car(cons);
-			if (is_pair(elm) && symbol_eq(car(elm), sym_splice)) {
+			if (sexp_is_pair(elm) && symbol_eq(car(elm), sym_splice)) {
 				sexp_t list = eval_unquote(cdar(cons), env);
-				if (is_proper_list(list)) {
+				if (sexp_is_proper_list(list)) {
 					last->cdr = list;
-					last = sexp_pair(last_cons(list));
+					last = sexp_pair(sexp_last_cons(list));
 				} // TODO: otherwise... ???
 			} else if (symbol_eq(elm, sym_unquote)) {
 				/* unquote in dotted tail */
 				break;
 			} else {
-				last->cdr = make_empty_pair();
+				last->cdr = sexp_make_empty_pair();
 				last = sexp_pair(last->cdr);
 				last->car = eval_qq(car(cons), env);
 			}
 		}
-		last->cdr = is_nil(cons) ? make_nil() : eval_qq(cons, env);
+		last->cdr = sexp_is_nil(cons) ? sexp_make_nil() : eval_qq(cons, env);
 		return head.cdr;
 	case SEXP_VECTOR:
 		return list_to_vector(eval_qq(vector_to_list(sexp), env));
@@ -361,7 +368,7 @@ static sexp_t eval_qq(sexp_t sexp, env_t env)
 
 DEFSPECIAL(eval_quasiquote, quote, env)
 {
-	if (!is_nil(cdr(quote)))
+	if (!sexp_is_nil(cdr(quote)))
 		error(env, "too many arguments to quasiquote");
 	return eval_qq(car(quote), env);	
 }
@@ -377,7 +384,7 @@ static bool case_valid(sexp_t scase)
 		sexp_t fst = car(cons);
 		if (list_length(fst) < 2)
 			return false;
-		if (!symbol_eq(fst, sym_else) && !is_proper_list(fst))
+		if (!symbol_eq(fst, sym_else) && !sexp_is_proper_list(fst))
 			return false;
 	}
 	return true;
@@ -387,7 +394,7 @@ static sexp_t eval_clause(sexp_t arg, sexp_t begin, env_t env)
 {
 	if (symbol_eq(car(begin), sym_eq_lt)) {
 		sexp_t fun  = trampoline(cadr(begin), env);
-		sexp_t call = make_pair(fun, make_pair(arg, make_nil()));
+		sexp_t call = sexp_make_pair(fun, sexp_make_pair(arg, sexp_make_nil()));
 		return eval(call, env);
 	}
 	return eval_begin(begin, env);
@@ -410,7 +417,7 @@ DEFSPECIAL(eval_case, scase, env)
 				return eval_clause(test, cdr(fst), env);
 		}
 	}
-	return unspecified();
+	return sexp_unspecified();
 }
 
 static bool cond_valid(sexp_t cond)
@@ -420,7 +427,7 @@ static bool cond_valid(sexp_t cond)
 	sexp_list_for_each(cons, cond) {
 		int length;
 		sexp_t fst = car(cons);
-		if (!is_proper_list(fst))
+		if (!sexp_is_proper_list(fst))
 			return false;
 		if ((length = list_length(fst)) < 2)
 			return false;
@@ -434,7 +441,7 @@ static sexp_t eval_cond_clause(sexp_t test, sexp_t clause, env_t env)
 {
 	if (symbol_eq(car(clause), sym_eq_lt)) {
 		sexp_t fun = trampoline(cadr(clause), env);
-		sexp_t call = make_pair(fun, make_pair(test, make_nil()));
+		sexp_t call = sexp_make_pair(fun, sexp_make_pair(test, sexp_make_nil()));
 		return eval(call, env);
 	}
 	return eval_begin(clause, env);
@@ -451,13 +458,13 @@ DEFSPECIAL(eval_cond, cond, env)
 		sexp_t test, fst = car(cond);
 
 		if (symbol_eq(car(fst), sym_else))
-			return eval_clause(make_bool(true), cdr(fst), env);
+			return eval_clause(sexp_make_bool(true), cdr(fst), env);
 
 		test = trampoline(car(fst), env);
 		if (sexp_is_true(test))
 			return eval_cond_clause(test, cdr(fst), env);
 	}
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_if, sif, env)
@@ -473,7 +480,7 @@ DEFSPECIAL(eval_if, sif, env)
 		return eval_tail(cadr(sif), env);
 	if (nr_args == 3)
 		return eval_tail(caddr(sif), env);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFSPECIAL(eval_and, and, env)
@@ -484,9 +491,9 @@ DEFSPECIAL(eval_and, and, env)
 		if (last_pair(cons))
 			return eval_tail(car(cons), env);
 		if (!sexp_is_true(trampoline(car(cons), env)))
-			return make_bool(false);
+			return sexp_make_bool(false);
 	}
-	return make_bool(true);
+	return sexp_make_bool(true);
 }
 
 DEFSPECIAL(eval_or, or, env)
@@ -497,21 +504,21 @@ DEFSPECIAL(eval_or, or, env)
 		if (last_pair(cons))
 			return eval_tail(car(cons), env);
 		if (sexp_is_true(trampoline(car(cons), env)))
-			return make_bool(true);
+			return sexp_make_bool(true);
 	}
-	return make_bool(false);
+	return sexp_make_bool(false);
 }
 
 DEFSPECIAL(eval_delay, args, env)
 {
-	return make_promise(car(args), env);
+	return sexp_make_promise(car(args), env);
 }
 
 DEFUN(scm_force, args, env)
 {
 	struct sexp_function *fun = sexp_fun(car(args));
-	sexp_t r = trampoline(make_pair(sym_begin, fun->body), fun->env);
-	fun->body = make_pair(sym_quote, make_pair(r, make_nil()));
+	sexp_t r = trampoline(sexp_make_pair(sym_begin, fun->body), fun->env);
+	fun->body = sexp_make_pair(sym_quote, sexp_make_pair(r, sexp_make_nil()));
 	return r;
 }
 
@@ -523,20 +530,20 @@ static sexp_t map_eval(sexp_t sexp, void *data)
 static inline sexp_t make_args(sexp_t args, env_t env)
 {
 	if (sexp_type(args) == SEXP_NIL)
-		return make_nil();
+		return sexp_make_nil();
 	return map(args, map_eval, env);
 }
 
 static sexp_t map_quote(sexp_t sexp, void *data)
 {
-	return make_pair(sym_quote, make_pair(sexp, make_nil()));
+	return sexp_make_pair(sym_quote, sexp_make_pair(sexp, sexp_make_nil()));
 }
 
 static inline sexp_t macro_call(sexp_t macro, sexp_t args, env_t env)
 {
 	sexp_t result;
 	macro.p->type = SEXP_FUNCTION;
-	result = trampoline(make_pair(macro, map(args, map_quote, NULL)), env);
+	result = trampoline(sexp_make_pair(macro, map(args, map_quote, NULL)), env);
 	macro.p->type = SEXP_MACRO;
 	return result;
 }
@@ -576,14 +583,14 @@ static sexp_t eval_call(sexp_t call, env_t env)
 	/* escape: magic */
 	case SEXP_ESCAPE:
 		length = list_length(call);
-		sexp = length < 2 ? make_nil() : cadr(call);
+		sexp = length < 2 ? sexp_make_nil() : cadr(call);
 		return call_escape(fun, sexp);
 	/* caselambda: magic */
 	case SEXP_CASELAMBDA:
 		return caselambda_call(fun, cdr(call), env);
 	default: break;
 	}
-	error(env, "call of non-procedure", make_apair("value", fun));
+	error(env, "call of non-procedure", sexp_make_apair("value", fun));
 }
 
 sexp_t eval(sexp_t sexp, env_t env)
@@ -619,13 +626,13 @@ sexp_t eval(sexp_t sexp, env_t env)
 		}
 		return val;
 	case SEXP_PAIR:
-		if (!is_proper_list(sexp))
+		if (!sexp_is_proper_list(sexp))
 			error(env, "malformed expression",
-					make_apair("expression", sexp));
+					sexp_make_apair("expression", sexp));
 
 		return eval_call(sexp, env);
 	}
-	return unspecified();
+	return sexp_unspecified();
 }
 
 sexp_t trampoline(sexp_t sexp, env_t env)

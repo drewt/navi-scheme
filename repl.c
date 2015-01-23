@@ -22,13 +22,13 @@
 
 static sexp_t call_read(env_t env)
 {
-	return scm_read(make_nil(), env);
+	return scm_read(sexp_make_nil(), env);
 }
 
 static _Noreturn void repl(void)
 {
 	env_t env = make_default_environment();
-	sexp_t cont = make_escape();
+	sexp_t cont = sexp_make_escape();
 	struct sexp_escape *escape = sexp_escape(cont);
 
 	scope_set(env, sym_repl, cont);
@@ -42,7 +42,7 @@ static _Noreturn void repl(void)
 		if ((sexp = call_read(env)).n == 0)
 			continue;
 		printf("read: "); sexp_write(sexp, env); putchar('\n');
-		if (is_eof(sexp))
+		if (sexp_is_eof(sexp))
 			break;
 		if ((sexp = trampoline(sexp, env)).n == 0)
 			continue;
@@ -58,7 +58,7 @@ static _Noreturn void script(void)
 
 	for (;;) {
 		sexp_t sexp = call_read(env);
-		if (is_eof(sexp))
+		if (sexp_is_eof(sexp))
 			break;
 		sexp_write(trampoline(sexp, env), env);
 	}
@@ -68,7 +68,7 @@ static _Noreturn void script(void)
 
 int main(int argc, char *argv[])
 {
-	symbol_table_init();
+	navi_init();
 	if (argc == 1)
 		repl();
 	else

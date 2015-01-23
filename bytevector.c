@@ -25,7 +25,7 @@ void bytevec_fill(sexp_t vector, unsigned char fill)
 
 sexp_t list_to_bytevec(sexp_t list, env_t env)
 {
-	sexp_t cons, vec = make_bytevec(list_length(list));
+	sexp_t cons, vec = sexp_make_bytevec(list_length(list));
 
 	unsigned i = 0;
 	struct sexp_bytevec *vector = sexp_bytevec(vec);
@@ -43,11 +43,11 @@ sexp_t bytevec_to_list(sexp_t sexp)
 
 	vector = sexp_bytevec(sexp);
 	for (size_t i = 0; i < vector->size; i++) {
-		ptr->cdr = make_empty_pair();
+		ptr->cdr = sexp_make_empty_pair();
 		ptr = &ptr->cdr.p->data->pair;
-		ptr->car = make_char(vector->data[i]);
+		ptr->car = sexp_make_char(vector->data[i]);
 	}
-	ptr->cdr = make_nil();
+	ptr->cdr = sexp_make_nil();
 	return head.cdr;
 }
 
@@ -55,7 +55,7 @@ sexp_t bytevec_to_list(sexp_t sexp)
 sexp_t string_to_bytevec(sexp_t string)
 {
 	struct sexp_vector *svec = sexp_vector(string);
-	sexp_t sexp = make_bytevec(svec->size);
+	sexp_t sexp = sexp_make_bytevec(svec->size);
 	struct sexp_bytevec *bvec = sexp_bytevec(sexp);
 
 	for (size_t i = 0; i < svec->size; i++)
@@ -68,11 +68,11 @@ sexp_t string_to_bytevec(sexp_t string)
 sexp_t bytevec_to_string(sexp_t bytevec)
 {
 	struct sexp_bytevec *bvec = sexp_bytevec(bytevec);
-	sexp_t sexp = make_string(bvec->size, bvec->size, bvec->size);
+	sexp_t sexp = sexp_make_string(bvec->size, bvec->size, bvec->size);
 	struct sexp_vector *svec = sexp_vector(sexp);
 
 	for (size_t i = 0; i < bvec->size; i++)
-		svec->data[i] = make_char(bvec->data[i]);
+		svec->data[i] = sexp_make_char(bvec->data[i]);
 
 	return sexp;
 }
@@ -90,7 +90,7 @@ char *bytevec_to_c_string(sexp_t sexp)
 
 DEFUN(scm_bytevectorp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_BYTEVEC);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_BYTEVEC);
 }
 
 DEFUN(scm_make_bytevector, args, env)
@@ -103,7 +103,7 @@ DEFUN(scm_make_bytevector, args, env)
 
 	type_check(car(args), SEXP_NUM, env);
 
-	sexp = make_bytevec(sexp_num(car(args)));
+	sexp = sexp_make_bytevec(sexp_num(car(args)));
 	if (nr_args == 2) {
 		type_check_byte(cadr(args), env);
 		bytevec_fill(sexp, sexp_num(cadr(args)));
@@ -119,7 +119,7 @@ DEFUN(scm_bytevector, args, env)
 DEFUN(scm_bytevector_length, args, env)
 {
 	type_check(car(args), SEXP_BYTEVEC, env);
-	return make_num(sexp_bytevec(car(args))->size);
+	return sexp_make_num(sexp_bytevec(car(args))->size);
 }
 
 DEFUN(scm_bytevector_u8_ref, args, env)
@@ -137,7 +137,7 @@ DEFUN(scm_bytevector_u8_set, args, env)
 	type_check_byte(caddr(args), env);
 
 	sexp_bytevec(car(args))->data[sexp_num(cadr(args))] = sexp_num(caddr(args));
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_bytevector_append, args, env)
@@ -150,7 +150,7 @@ DEFUN(scm_bytevector_append, args, env)
 		size += bytevec_cast(car(cons), SEXP_BYTEVEC, env)->size;
 	}
 
-	sexp = make_bytevec(size);
+	sexp = sexp_make_bytevec(size);
 	vec = sexp_bytevec(sexp);
 
 	sexp_list_for_each(cons, args) {
@@ -185,7 +185,7 @@ DEFUN(scm_bytevector_copy, args, env)
 
 	check_copy(vec->size, start, end, env);
 
-	return copy_to(make_bytevec(end - start), 0, from, start, end);
+	return copy_to(sexp_make_bytevec(end - start), 0, from, start, end);
 }
 
 DEFUN(scm_bytevector_copy_to, args, env)
@@ -207,7 +207,7 @@ DEFUN(scm_bytevector_copy_to, args, env)
 	check_copy_to(to_vec->size, at, from_vec->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_utf8_to_string, args, env)
@@ -224,7 +224,7 @@ DEFUN(scm_utf8_to_string, args, env)
 	if (!u_is_valid((char*)vec->data, start, end))
 		error(env, "invalid UTF-8");
 
-	r = make_string(end - start, end - start, end - start);
+	r = sexp_make_string(end - start, end - start, end - start);
 	memcpy(sexp_string(r)->data, vec->data + start, end - start);
 	sexp_string(r)->length = u_strlen(sexp_string(r)->data);
 
@@ -247,7 +247,7 @@ DEFUN(scm_string_to_utf8, args, env)
 
 	u_skip_chars(str->data, start, &i);
 	size = u_strsize(str->data + i, 0, end - start);
-	r = make_bytevec(size);
+	r = sexp_make_bytevec(size);
 	memcpy(sexp_bytevec(r)->data, str->data + i, size);
 
 	return r;

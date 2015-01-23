@@ -19,11 +19,11 @@
 #include "types.h"
 #include "symbols.h"
 
-#define error(env, msg, ...) _error(env, msg, ##__VA_ARGS__, make_void())
+#define error(env, msg, ...) _error(env, msg, ##__VA_ARGS__, sexp_make_void())
 _Noreturn void _error(env_t env, const char *msg, ...);
 
 #define read_error(env, msg, ...) error(env, msg, sym_read_error, \
-		##__VA_ARGS__, make_void())
+		##__VA_ARGS__, sexp_make_void())
 
 static inline bool has_type(sexp_t sexp, enum sexp_type type)
 {
@@ -34,8 +34,8 @@ static inline sexp_t type_check(sexp_t sexp, enum sexp_type type, env_t env)
 {
 	if (!has_type(sexp, type))
 		error(env, "type error",
-				make_apair("expected", typesym(type)),
-				make_apair("actual", typesym(sexp_type(sexp))));
+				sexp_make_apair("expected", sexp_typesym(type)),
+				sexp_make_apair("actual", sexp_typesym(sexp_type(sexp))));
 	return sexp;
 }
 
@@ -44,15 +44,15 @@ static inline long type_check_range(sexp_t n, long min, long max, env_t env)
 	type_check(n, SEXP_NUM, env);
 	if (sexp_num(n) < min || sexp_num(n) >= max)
 		error(env, "argument not in allowed range",
-				make_apair("min", make_num(min)),
-				make_apair("max", make_num(max)),
-				make_apair("actual", n));
+				sexp_make_apair("min", sexp_make_num(min)),
+				sexp_make_apair("max", sexp_make_num(max)),
+				sexp_make_apair("actual", n));
 	return sexp_num(n);
 }
 
 static inline sexp_t type_check_list(sexp_t list, env_t env)
 {
-	if (!is_proper_list(list))
+	if (!sexp_is_proper_list(list))
 		error(env, "type error: not a proper list");
 	return list;
 }
@@ -63,8 +63,8 @@ static inline sexp_t type_check_fun(sexp_t fun, int arity, env_t env)
 	int actual = sexp_fun(fun)->arity;
 	if (actual != arity)
 		error(env, "wrong arity",
-				make_apair("expected", make_num(arity)),
-				make_apair("actual", make_num(actual)));
+				sexp_make_apair("expected", sexp_make_num(arity)),
+				sexp_make_apair("actual", sexp_make_num(actual)));
 	return fun;
 }
 

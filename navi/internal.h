@@ -51,8 +51,8 @@ extern struct list_head active_environments;
 
 sexp_t sexp_read(struct sexp_port *port, env_t env);
 
-#define sexp_write(sexp, env) scm_write(make_pair(sexp, make_nil()), env)
-#define display(sexp, env) scm_display(make_pair(sexp, make_nil()), env)
+#define sexp_write(sexp, env) scm_write(sexp_make_pair(sexp, sexp_make_nil()), env)
+#define display(sexp, env) scm_display(sexp_make_pair(sexp, sexp_make_nil()), env)
 void _display(struct sexp_port *port, sexp_t sexp, bool write, env_t env);
 
 /* environment.c */
@@ -67,7 +67,7 @@ env_t make_default_environment(void);
 static inline sexp_t env_lookup(env_t env, sexp_t symbol)
 {
 	struct sexp_binding *binding = env_binding(env, symbol);
-	return binding == NULL ? make_void() : binding->object;
+	return binding == NULL ? sexp_make_void() : binding->object;
 }
 
 sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data);
@@ -99,7 +99,7 @@ static inline bool sexp_is_true(sexp_t sexp)
 
 static inline bool symbol_eq(sexp_t sexp, sexp_t symbol)
 {
-	return is_symbol(sexp) && sexp.p == symbol.p;
+	return sexp_is_symbol(sexp) && sexp.p == symbol.p;
 }
 
 static inline int list_length(sexp_t list)

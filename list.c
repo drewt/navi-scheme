@@ -21,14 +21,14 @@ sexp_t vlist(sexp_t first, va_list ap)
 {
 	sexp_t list, listptr;
 
-	list = listptr = make_empty_pair();
+	list = listptr = sexp_make_empty_pair();
 	sexp_pair(list)->car = first;
 	sexp_for_each_arg(arg, ap) {
-		sexp_pair(listptr)->cdr = make_empty_pair();
+		sexp_pair(listptr)->cdr = sexp_make_empty_pair();
 		listptr = cdr(listptr);
 		sexp_pair(listptr)->car = arg;
 	}
-	sexp_pair(listptr)->cdr = make_nil();
+	sexp_pair(listptr)->cdr = sexp_make_nil();
 	return list;
 }
 
@@ -38,7 +38,7 @@ sexp_t list(sexp_t first, ...)
 	sexp_t list;
 
 	if (sexp_type(first) == SEXP_VOID)
-		return make_nil();
+		return sexp_make_nil();
 
 	va_start(ap, first);
 	list = vlist(first, ap);
@@ -47,7 +47,7 @@ sexp_t list(sexp_t first, ...)
 	return list;
 }
 
-bool is_proper_list(sexp_t list)
+bool sexp_is_proper_list(sexp_t list)
 {
 	sexp_t cons;
 	enum sexp_type type = sexp_type(list);
@@ -56,7 +56,7 @@ bool is_proper_list(sexp_t list)
 	if (type != SEXP_PAIR)
 		return false;
 	sexp_list_for_each(cons, list);
-	return is_nil(cons);
+	return sexp_is_nil(cons);
 }
 
 sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)
@@ -66,17 +66,17 @@ sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)
 
 	ptr = &head;
 	sexp_list_for_each(cons, sexp) {
-		ptr->cdr = make_empty_pair();
+		ptr->cdr = sexp_make_empty_pair();
 		ptr = sexp_pair(ptr->cdr);
 		ptr->car = fn(car(cons), data);
 	}
-	ptr->cdr = make_nil();
+	ptr->cdr = sexp_make_nil();
 	return head.cdr;
 }
 
 DEFUN(scm_cons, args, env)
 {
-	return make_pair(car((sexp_t)args), cadr((sexp_t)args));
+	return sexp_make_pair(car((sexp_t)args), cadr((sexp_t)args));
 }
 
 DEFUN(scm_car, args, env)
@@ -93,7 +93,7 @@ DEFUN(scm_cdr, args, env)
 
 DEFUN(scm_pairp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_PAIR);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_PAIR);
 }
 
 DEFUN(scm_listp, args, env)
@@ -101,19 +101,19 @@ DEFUN(scm_listp, args, env)
 	sexp_t cons, list = car(args);
 	enum sexp_type type = sexp_type(list);
 	if (type != SEXP_PAIR && type != SEXP_NIL)
-		return make_bool(false);
+		return sexp_make_bool(false);
 	sexp_list_for_each(cons, list);
-	return make_bool(sexp_type(cons) == SEXP_NIL);
+	return sexp_make_bool(sexp_type(cons) == SEXP_NIL);
 }
 
 DEFUN(scm_nullp, args, env)
 {
-	return make_bool(sexp_type(car(args)) == SEXP_NIL);
+	return sexp_make_bool(sexp_type(car(args)) == SEXP_NIL);
 }
 
 DEFUN(scm_length, args, env)
 {
-	return make_num(list_length(car(args)));
+	return sexp_make_num(list_length(car(args)));
 }
 
 DEFUN(scm_list, args, env)

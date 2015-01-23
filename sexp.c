@@ -83,12 +83,12 @@ unsigned long symbol_hash(const char *symbol)
 	return hash;
 }
 
-void symbol_table_init(void)
+static void symbol_table_init(void)
 {
 	for (unsigned i = 0; i < SYMTAB_SIZE; i++)
 		INIT_HLIST_HEAD(&symbol_table[i]);
 
-	#define intern(cname, name) cname = make_symbol(name)
+	#define intern(cname, name) cname = sexp_make_symbol(name)
 	intern(sym_lambda,         "lambda");
 	intern(sym_caselambda,     "case-lambda");
 	intern(sym_define,         "define");
@@ -120,6 +120,11 @@ void symbol_table_init(void)
 	intern(sym_file_error,     "#file-error");
 	intern(sym_repl,           "#repl");
 	#undef intern
+}
+
+void navi_init(void)
+{
+	symbol_table_init();
 }
 
 static sexp_t symbol_lookup(const char *str, unsigned long hashcode)
@@ -161,7 +166,7 @@ DEFUN(scm_gensym, args, env)
 
 	snprintf(buf, 64, "g%u", count++);
 	buf[63] = '\0';
-	return make_uninterned(buf);
+	return sexp_make_uninterned(buf);
 }
 
 struct sexp *make_sexp(enum sexp_type type, size_t size)
@@ -172,7 +177,7 @@ struct sexp *make_sexp(enum sexp_type type, size_t size)
 	return sexp;
 }
 
-sexp_t make_symbol(const char *str)
+sexp_t sexp_make_symbol(const char *str)
 {
 	unsigned long hashcode = symbol_hash(str);
 	sexp_t symbol = symbol_lookup(str, hashcode);
@@ -183,10 +188,10 @@ sexp_t make_symbol(const char *str)
 }
 
 /* FIXME: unicode? */
-sexp_t to_string(const char *str)
+sexp_t sexp_from_c_string(const char *str)
 {
 	size_t len = strlen(str);
-	sexp_t sexp = make_string(len, len, len);
+	sexp_t sexp = sexp_make_string(len, len, len);
 	struct sexp_string *vec = sexp_string(sexp);
 
 	for (size_t i = 0; i < len; i++) {
@@ -197,10 +202,10 @@ sexp_t to_string(const char *str)
 	return sexp;
 }
 
-sexp_t to_bytevec(const char *str)
+sexp_t sexp_from_c_bytevec(const char *str)
 {
 	size_t len = strlen(str);
-	sexp_t sexp = make_bytevec(len);
+	sexp_t sexp = sexp_make_bytevec(len);
 	struct sexp_bytevec *vec = sexp_bytevec(sexp);
 
 	for (size_t i = 0; i < len; i++)
@@ -209,7 +214,7 @@ sexp_t to_bytevec(const char *str)
 	return sexp;
 }
 
-sexp_t make_string(size_t storage, size_t size, size_t length)
+sexp_t sexp_make_string(size_t storage, size_t size, size_t length)
 {
 	struct sexp *sexp = make_sexp(SEXP_STRING, sizeof(struct sexp_string));
 	sexp->data->str.data = xmalloc(storage + 1);
@@ -221,7 +226,7 @@ sexp_t make_string(size_t storage, size_t size, size_t length)
 	return (sexp_t) sexp;
 }
 
-sexp_t make_pair(sexp_t car, sexp_t cdr)
+sexp_t sexp_make_pair(sexp_t car, sexp_t cdr)
 {
 	struct sexp *sexp = make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
 	sexp->data->pair.car = car;
@@ -229,12 +234,12 @@ sexp_t make_pair(sexp_t car, sexp_t cdr)
 	return (sexp_t) sexp;
 }
 
-sexp_t make_empty_pair(void)
+sexp_t sexp_make_empty_pair(void)
 {
 	return (sexp_t) make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
 }
 
-sexp_t make_port(int(*read)(struct sexp_port*, env_t),
+sexp_t sexp_make_port(int(*read)(struct sexp_port*, env_t),
 		void(*write)(unsigned char,struct sexp_port*, env_t),
 		void(*close_in)(struct sexp_port*, env_t),
 		void(*close_out)(struct sexp_port*, env_t),
@@ -246,13 +251,13 @@ sexp_t make_port(int(*read)(struct sexp_port*, env_t),
 	sexp->data->port.close_in = close_in;
 	sexp->data->port.close_out = close_out;
 	sexp->data->port.flags = 0;
-	sexp->data->port.sexp = make_void();
+	sexp->data->port.sexp = sexp_make_void();
 	sexp->data->port.pos = 0;
 	sexp->data->port.specific = specific;
 	return (sexp_t) sexp;
 }
 
-sexp_t make_vector(size_t size)
+sexp_t sexp_make_vector(size_t size)
 {
 	struct sexp *sexp = make_sexp(SEXP_VECTOR,
 			sizeof(struct sexp_vector) + sizeof(sexp_t)*size);
@@ -260,7 +265,7 @@ sexp_t make_vector(size_t size)
 	return (sexp_t) sexp;
 }
 
-sexp_t make_bytevec(size_t size)
+sexp_t sexp_make_bytevec(size_t size)
 {
 	struct sexp *sexp = make_sexp(SEXP_BYTEVEC,
 			sizeof(struct sexp_bytevec) + size + 1);
@@ -269,7 +274,7 @@ sexp_t make_bytevec(size_t size)
 	return (sexp_t) sexp;
 }
 
-sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env)
+sexp_t sexp_make_function(sexp_t args, sexp_t body, char *name, env_t env)
 {
 	struct sexp *sexp = make_sexp(SEXP_FUNCTION,
 			sizeof(struct sexp_function));
@@ -279,7 +284,7 @@ sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env)
 	fun->body = body;
 	fun->builtin = false;
 	fun->arity = count_pairs((sexp_t)args);
-	fun->variadic = !is_proper_list((sexp_t)args);
+	fun->variadic = !sexp_is_proper_list((sexp_t)args);
 	fun->env = env;
 	scope_ref(env);
 	return (sexp_t) sexp;
@@ -287,10 +292,10 @@ sexp_t make_function(sexp_t args, sexp_t body, char *name, env_t env)
 
 sexp_t make_thunk(sexp_t body, env_t env)
 {
-	return make_function(make_nil(), body, "#thunk", env);
+	return sexp_make_function(sexp_make_nil(), body, "#thunk", env);
 }
 
-sexp_t make_escape(void)
+sexp_t sexp_make_escape(void)
 {
 	return (sexp_t) make_sexp(SEXP_ESCAPE, sizeof(struct sexp_escape));
 }
@@ -310,25 +315,25 @@ sexp_t sexp_from_spec(struct sexp_spec *spec)
 
 	switch (spec->type) {
 	case SEXP_EOF:
-		return make_eof();
+		return sexp_make_eof();
 	case SEXP_NIL:
-		return make_nil();
+		return sexp_make_nil();
 	case SEXP_NUM:
-		return make_num(spec->num);
+		return sexp_make_num(spec->num);
 	case SEXP_BOOL:
-		return make_bool(spec->num);
+		return sexp_make_bool(spec->num);
 	case SEXP_CHAR:
-		return make_char(spec->num);
+		return sexp_make_char(spec->num);
 	case SEXP_PAIR:
-		return make_pair(spec->pair.car, spec->pair.cdr);
+		return sexp_make_pair(spec->pair.car, spec->pair.cdr);
 	case SEXP_STRING:
-		return to_string(spec->str);
+		return sexp_from_c_string(spec->str);
 	case SEXP_SYMBOL:
-		return make_symbol(spec->str);
+		return sexp_make_symbol(spec->str);
 	case SEXP_VECTOR:
-		return make_vector(spec->size);
+		return sexp_make_vector(spec->size);
 	case SEXP_BYTEVEC:
-		return make_bytevec(spec->size);
+		return sexp_make_bytevec(spec->size);
 	case SEXP_MACRO:
 	case SEXP_SPECIAL:
 	case SEXP_FUNCTION:
@@ -388,7 +393,7 @@ bool eqvp(sexp_t fst, sexp_t snd)
 
 DEFUN(scm_eqvp, args, env)
 {
-	return make_bool(eqvp(car(args), cadr(args)));
+	return sexp_make_bool(eqvp(car(args), cadr(args)));
 }
 
 static inline void gc_set_mark(sexp_t obj)
@@ -457,7 +462,7 @@ static void gc_mark_env(struct sexp_scope *env)
 	for (unsigned i = 0; i < ENV_HT_SIZE; i++) {
 		struct sexp_binding *bind;
 		hlist_for_each_entry(bind, &env->bindings[i], chain) {
-			if (ptr_type(bind->object))
+			if (sexp_ptr_type(bind->object))
 				gc_mark_obj(bind->object);
 		}
 	}
@@ -494,7 +499,7 @@ void invoke_gc(void)
 DEFUN(scm_gc_collect, args, env)
 {
 	invoke_gc();
-	return unspecified();
+	return sexp_unspecified();
 }
 
 DEFUN(scm_gc_count, args, env)
@@ -508,5 +513,5 @@ DEFUN(scm_gc_count, args, env)
 		sexp_write((sexp_t)sexp, env);
 		putchar('\n');
 	}
-	return unspecified();
+	return sexp_unspecified();
 }

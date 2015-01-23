@@ -1,6 +1,6 @@
 CC        = gcc
 CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-empty-body -g -O2
-ALLCFLAGS = $(CFLAGS) -std=gnu11
+ALLCFLAGS = $(CFLAGS) -std=gnu11 -D NAVI_COMPILE
 AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)

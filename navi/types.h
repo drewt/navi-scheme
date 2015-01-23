@@ -23,6 +23,12 @@
 #include "clist.h"
 #include "uchar.h"
 
+#ifdef NAVI_COMPILE
+#define SEXP_PREFIX(name) name
+#else
+#define SEXP_PREFIX(name) sexp_##name
+#endif
+
 #define ENV_HT_SIZE 64
 
 #define IMMEDIATE_TAG_SIZE 0x4
@@ -242,62 +248,62 @@ static inline struct sexp_pair *sexp_pair(sexp_t sexp)
 	return &sexp.p->data->pair;
 }
 
-static inline sexp_t car(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(car)(sexp_t sexp)
 {
 	return sexp_pair(sexp)->car;
 }
 
-static inline sexp_t cdr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cdr)(sexp_t sexp)
 {
 	return sexp_pair(sexp)->cdr;
 }
 
-static inline sexp_t caar(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(caar)(sexp_t sexp)
 {
 	return sexp_pair(car(sexp))->car;
 }
 
-static inline sexp_t cadr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cadr)(sexp_t sexp)
 {
 	return sexp_pair(cdr(sexp))->car;
 }
 
-static inline sexp_t cdar(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cdar)(sexp_t sexp)
 {
 	return sexp_pair(car(sexp))->cdr;
 }
 
-static inline sexp_t cddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cddr)(sexp_t sexp)
 {
 	return sexp_pair(cdr(sexp))->cdr;
 }
 
-static inline sexp_t caddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(caddr)(sexp_t sexp)
 {
 	return sexp_pair(cddr(sexp))->car;
 }
 
-static inline sexp_t cadar(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cadar)(sexp_t sexp)
 {
 	return sexp_pair(cdar(sexp))->car;
 }
 
-static inline sexp_t cdddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cdddr)(sexp_t sexp)
 {
 	return sexp_pair(cddr(sexp))->cdr;
 }
 
-static inline sexp_t cadddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cadddr)(sexp_t sexp)
 {
 	return sexp_pair(cdddr(sexp))->car;
 }
 
-static inline sexp_t cddddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(cddddr)(sexp_t sexp)
 {
 	return sexp_pair(cdddr(sexp))->cdr;
 }
 
-static inline sexp_t caddddr(sexp_t sexp)
+static inline sexp_t SEXP_PREFIX(caddddr)(sexp_t sexp)
 {
 	return sexp_pair(cddddr(sexp))->car;
 }

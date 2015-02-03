@@ -107,7 +107,7 @@ DEFSPECIAL(scm_caselambda, caselambda, env)
 static navi_t eval_defvar(navi_t sym, navi_t rest, navi_env_t env)
 {
 	if (navi_type(navi_cdr(rest)) != NAVI_NIL)
-		navi_error(env, "too many arguments to define");
+		navi_arity_error(env, "define");
 
 	navi_scope_set(env, sym, navi_eval(navi_car(rest), env));
 	return navi_unspecified();
@@ -148,13 +148,13 @@ static void extend_with_values(navi_t vars, navi_t vals, navi_env_t env)
 
 	if (navi_type(vals) != NAVI_VALUES) {
 		if (navi_list_length(vars) != 1)
-			navi_error(env, "wrong number of values");
+			navi_arity_error(env, "let-values/define-values");
 		navi_scope_set(env, navi_car(vars), vals);
 		return;
 	}
 
 	if ((size_t)navi_list_length(vars) != navi_vector_length(vals))
-		navi_error(env, "wrong number of values");
+		navi_arity_error(env, "let-values/define-values");
 
 	navi_list_for_each(cons, vars) {
 		navi_scope_set(env, navi_car(cons), navi_vector_ref(vals, i++));
@@ -329,7 +329,7 @@ DEFSPECIAL(scm_quote, quote, env)
 DEFSPECIAL(scm_unquote, unquote, env)
 {
 	if (navi_list_length(unquote) != 1)
-		navi_error(env, "wrong number of arguments to unquote");
+		navi_arity_error(env, "unquote");
 	return navi_eval(navi_car(unquote), env);
 }
 
@@ -374,7 +374,7 @@ static navi_t eval_qq(navi_t expr, navi_env_t env)
 DEFSPECIAL(scm_quasiquote, quote, env)
 {
 	if (!navi_is_nil(navi_cdr(quote)))
-		navi_error(env, "too many arguments to quasiquote");
+		navi_arity_error(env, "quasiquote");
 	return eval_qq(navi_car(quote), env);	
 }
 
@@ -478,7 +478,7 @@ DEFSPECIAL(scm_if, sif, env)
 	int nr_args = navi_list_length(sif);
 
 	if (nr_args != 2 && nr_args != 3)
-		navi_error(env, "wrong number of arguments to 'if'");
+		navi_arity_error(env, "if");
 
 	test = navi_eval(navi_car(sif), env);
 	if (navi_is_true(test))
@@ -538,7 +538,7 @@ static navi_t apply(struct navi_function *fun, navi_t args, navi_env_t env)
 {
 	navi_env_t new_env;
 	if (!arity_satisfied(fun, args))
-		navi_error(env, "wrong number of arguments");
+		navi_arity_error(env, fun->name);
 	if (fun->builtin)
 		return fun->fn(args, env);
 	new_env = navi_extend_environment(fun->env, fun->args, args);
@@ -581,17 +581,13 @@ static navi_t caselambda_call(navi_t lambda, navi_t args, navi_env_t env)
 		if (fun->arity == nr_args || (fun->arity < nr_args && fun->variadic))
 			return apply(fun, args, env);
 	}
-	navi_error(env, "wrong number of arguments");
+	navi_arity_error(env, "caselambda");
 }
 
 static navi_t eval_call(navi_t call, navi_env_t env)
 {
-	int length;
-	navi_t expr;
-	navi_t fun = navi_eval(navi_car(call), env);
-	enum navi_type type = navi_type(fun);
-
-	switch (type) {
+	navi_t expr, fun = navi_eval(navi_car(call), env);
+	switch (navi_type(fun)) {
 	/* special: pass args unevaluated, return result */
 	case NAVI_SPECIAL:
 		return apply(navi_fun(fun), navi_cdr(call), env);
@@ -605,8 +601,7 @@ static navi_t eval_call(navi_t call, navi_env_t env)
 		return _eval(expr, env);
 	/* escape: magic */
 	case NAVI_ESCAPE:
-		length = navi_list_length(call);
-		expr = length < 2 ? navi_make_nil() : navi_cadr(call);
+		expr = navi_list_length(call) < 2 ? navi_make_nil() : navi_cadr(call);
 		return navi_call_escape(fun, expr);
 	/* caselambda: magic */
 	case NAVI_CASELAMBDA:
@@ -644,15 +639,13 @@ static navi_t _eval(navi_t expr, navi_env_t env)
 		return navi_vector_ref(expr, 0);
 	case NAVI_SYMBOL:
 		val = navi_env_lookup(env, expr);
-		if (navi_type(val) == NAVI_VOID) {
+		if (navi_type(val) == NAVI_VOID)
 			unbound_identifier(expr, env);
-		}
 		return val;
 	case NAVI_PAIR:
 		if (!navi_is_proper_list(expr))
 			navi_error(env, "malformed expression",
 					navi_make_apair("expression", expr));
-
 		return eval_call(expr, env);
 	}
 	return navi_unspecified();

@@ -16,10 +16,12 @@
 #ifndef _NAVI_ERROR_H
 #define _NAVI_ERROR_H
 
+#include <stdio.h>
 #include "types.h"
 #include "symbols.h"
 
 _Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
+_Noreturn void navi_arity_error(navi_env_t env, const char *name);
 #define navi_error(env, msg, ...) \
 	_navi_error(env, msg, ##__VA_ARGS__, navi_make_void())
 #define navi_read_error(env, msg, ...) \
@@ -27,7 +29,7 @@ _Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
 #define navi_file_error(env, msg, ...) \
 	navi_error(env, msg, navi_sym_file_error, ##__VA_ARGS__, navi_make_void())
 #define navi_enomem(env) \
-	navi_error(env, "not enough memory", navi_make_void())
+	navi_error(env, "not enough memory")
 
 static inline navi_t navi_type_check(navi_t obj, enum navi_type type, navi_env_t env)
 {

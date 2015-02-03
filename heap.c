@@ -17,14 +17,6 @@
 
 #include "navi.h"
 
-extern struct navi_clist_head active_environments;
-
-void navi_free(struct navi_object *obj)
-{
-	obj->type = NAVI_VOID;
-	free(obj);
-}
-
 #define SYMTAB_SIZE 64
 
 struct navi_symbol {
@@ -32,8 +24,8 @@ struct navi_symbol {
 	struct navi_object object;
 };
 
+extern struct navi_clist_head active_environments;
 static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
-
 static NAVI_LIST_HEAD(heap);
 
 navi_t navi_sym_lambda;
@@ -67,6 +59,12 @@ navi_t navi_sym_current_error;
 navi_t navi_sym_read_error;
 navi_t navi_sym_file_error;
 navi_t navi_sym_repl;
+
+void navi_free(struct navi_object *obj)
+{
+	obj->type = NAVI_VOID;
+	free(obj);
+}
 
 static inline navi_t symbol_object(struct navi_symbol *sym)
 {

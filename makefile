@@ -7,7 +7,7 @@ LD        = $(CC)
 LDFLAGS   =
 
 libobjects = arithmetic.o bytevector.o char.o control_features.o display.o \
-	     environment.o eval.o list.o port.o read.o sexp.o string.o \
+	     environment.o eval.o heap.o list.o port.o read.o string.o \
 	     vector.o uchar.o
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o tests/main.o
 objects = $(libobjects) $(testobjects) repl.o

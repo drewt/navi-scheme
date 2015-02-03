@@ -310,3 +310,30 @@ DEFUN(scm_string_copy_to, args, env)
 	copy_to(to, at, from, start, end);
 	return navi_unspecified();
 }
+
+static navi_t string_map_ip(navi_t fun, navi_t str, navi_env_t env)
+{
+	struct navi_string *vec = navi_string_cast(str, env);
+
+	for (size_t i = 0; i < vec->size; i++) {
+		navi_t call = navi_list(fun, navi_make_char(vec->data[i]), navi_make_void());
+		vec->data[i] = navi_char_cast(navi_eval(call, env), env);
+	}
+	return str;
+}
+
+DEFUN(scm_string_map_ip, args, env)
+{
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_STRING, env);
+
+	return string_map_ip(navi_car(args), navi_cadr(args), env);
+}
+
+DEFUN(scm_string_map, args, env)
+{
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_STRING, env);
+
+	return string_map_ip(navi_car(args), navi_string_copy(navi_cadr(args)), env);
+}

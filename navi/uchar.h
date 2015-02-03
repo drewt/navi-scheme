@@ -1,4 +1,4 @@
-/* Copyright 2014 Drew Thoreson
+/* Copyright 2014-2015 Drew Thoreson
  * Copyright 2008-2013 Various Authors
  * Copyright 2005 Timo Hirvonen
  *

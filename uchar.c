@@ -1,4 +1,4 @@
-/* Copyright 2014 Drew Thoreson
+/* Copyright 2014-2015 Drew Thoreson
  * Copyright 2008-2013 Various Authors
  * Copyright 2005 Timo Hirvonen
  *
@@ -20,7 +20,6 @@
 #include "compiler.h"
 #include "navi/uchar.h"
 
-#include <stdio.h> // XXX: remove
 #include <stdint.h>
 
 const char hex_tab[16] = "0123456789abcdef";

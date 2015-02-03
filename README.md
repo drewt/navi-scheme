@@ -1,7 +1,7 @@
 Navi Scheme
 ===========
 
-Copyright © 2014 Drew Thoreson
+Copyright © 2014-2015 Drew Thoreson
 
 Navi Scheme is an implementation of R7RS scheme.  It is currently a work in
 progress.

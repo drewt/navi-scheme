@@ -35,20 +35,20 @@ static int no_fold_case(int c)
 
 static int (*handle_case)(int) = no_fold_case;
 
-static inline void unexpected_eof(env_t env)
+static inline void unexpected_eof(navi_env_t env)
 {
-	read_error(env, "unexpected end of file");
+	navi_read_error(env, "unexpected end of file");
 }
 
-static inline int peek_char(struct sexp_port *port, env_t env)
+static inline int peek_char(struct navi_port *port, navi_env_t env)
 {
-	sexp_t ch = port_peek_char(port, env);
-	if (sexp_is_eof(ch))
+	navi_t ch = navi_port_peek_char(port, env);
+	if (navi_is_eof(ch))
 		return EOF;
-	return sexp_char(ch);
+	return navi_char(ch);
 }
 
-static inline int ipeek_char(struct sexp_port *port, env_t env)
+static inline int ipeek_char(struct navi_port *port, navi_env_t env)
 {
 	int c = peek_char(port, env);
 	if (c == EOF)
@@ -56,15 +56,15 @@ static inline int ipeek_char(struct sexp_port *port, env_t env)
 	return c;
 }
 
-static inline int read_char(struct sexp_port *port, env_t env)
+static inline int read_char(struct navi_port *port, navi_env_t env)
 {
-	sexp_t ch = port_read_char(port, env);
-	if (sexp_is_eof(ch))
+	navi_t ch = navi_port_read_char(port, env);
+	if (navi_is_eof(ch))
 		return EOF;
-	return sexp_char(ch);
+	return navi_char(ch);
 }
 
-static inline int iread_char(struct sexp_port *port, env_t env)
+static inline int iread_char(struct navi_port *port, navi_env_t env)
 {
 	int c = read_char(port, env);
 	if (c == EOF)
@@ -72,7 +72,7 @@ static inline int iread_char(struct sexp_port *port, env_t env)
 	return c;
 }
 
-static inline int peek_first_char(struct sexp_port *port, env_t env)
+static inline int peek_first_char(struct navi_port *port, navi_env_t env)
 {
 	int c;
 	while (isspace((c = peek_char(port, env))))
@@ -80,7 +80,7 @@ static inline int peek_first_char(struct sexp_port *port, env_t env)
 	return c;
 }
 
-static inline int ipeek_first_char(struct sexp_port *port, env_t env)
+static inline int ipeek_first_char(struct navi_port *port, navi_env_t env)
 {
 	int c = peek_first_char(port, env);
 	if (c == EOF)
@@ -88,12 +88,12 @@ static inline int ipeek_first_char(struct sexp_port *port, env_t env)
 	return c;
 }
 
-static inline sexp_t sexp_iread(struct sexp_port *port, env_t env)
+static inline navi_t navi_iread(struct navi_port *port, navi_env_t env)
 {
-	sexp_t sexp = sexp_read(port, env);
-	if (sexp_is_eof(sexp))
+	navi_t expr = navi_read(port, env);
+	if (navi_is_eof(expr))
 		unexpected_eof(env);
-	return sexp;
+	return expr;
 }
 
 static int isodigit(int c)
@@ -106,24 +106,24 @@ static int isbdigit(int c)
 	return c == '0' || c == '1';
 }
 
-static int ispipe(int c, env_t env)
+static int ispipe(int c, navi_env_t env)
 {
 	if (c == EOF)
 		unexpected_eof(env);
 	return c == '|';
 }
 
-static int isterminal(int c, env_t env)
+static int isterminal(int c, navi_env_t env)
 {
 	return isspace(c) || c == '(' || c == ')' || c == EOF;
 }
 
-static long decimal_value(char c, env_t env)
+static long decimal_value(char c, navi_env_t env)
 {
 	return c - '0';
 }
 
-static long hex_value(char c, env_t env)
+static long hex_value(char c, navi_env_t env)
 {
 	switch (c) {
 	case '0': return 0;
@@ -143,12 +143,12 @@ static long hex_value(char c, env_t env)
 	case 'e': case 'E': return 14;
 	case 'f': case 'F': return 15;
 	}
-	read_error(env, "invalid hex digit",
-			sexp_make_apair("digit", sexp_make_char(c)));
+	navi_read_error(env, "invalid hex digit",
+			navi_make_apair("digit", navi_make_char(c)));
 }
 
-static unsigned long read_unum(struct sexp_port *port, int radix,
-		int (*ctype)(int), long (*tonum)(char,env_t), env_t env)
+static unsigned long read_unum(struct navi_port *port, int radix,
+		int (*ctype)(int), long (*tonum)(char,navi_env_t), navi_env_t env)
 {
 	char c;
 	unsigned long n = 0;
@@ -160,8 +160,8 @@ static unsigned long read_unum(struct sexp_port *port, int radix,
 	return n;
 }
 
-static long read_num(struct sexp_port *port, int radix, int (*ctype)(int),
-		long (*tonum)(char,env_t), env_t env)
+static long read_num(struct navi_port *port, int radix, int (*ctype)(int),
+		long (*tonum)(char,navi_env_t), navi_env_t env)
 {
 	char c;
 	long sign = 1;
@@ -176,33 +176,34 @@ static long read_num(struct sexp_port *port, int radix, int (*ctype)(int),
 	return sign * read_unum(port, radix, ctype, tonum, env);
 }
 
-static sexp_t read_decimal(struct sexp_port *port, env_t env)
+static navi_t read_decimal(struct navi_port *port, navi_env_t env)
 {
-	return sexp_make_num(read_num(port, 10, isdigit, decimal_value, env));
+	return navi_make_num(read_num(port, 10, isdigit, decimal_value, env));
 }
 
-static sexp_t read_hex(struct sexp_port *port, env_t env)
+static navi_t read_hex(struct navi_port *port, navi_env_t env)
 {
-	return sexp_make_num(read_num(port, 16, isxdigit, hex_value, env));
+	return navi_make_num(read_num(port, 16, isxdigit, hex_value, env));
 }
 
-static sexp_t read_octal(struct sexp_port *port, env_t env)
+static navi_t read_octal(struct navi_port *port, navi_env_t env)
 {
-	return sexp_make_num(read_num(port, 8, isodigit, decimal_value, env));
+	return navi_make_num(read_num(port, 8, isodigit, decimal_value, env));
 }
 
-static sexp_t read_binary(struct sexp_port *port, env_t env)
+static navi_t read_binary(struct navi_port *port, navi_env_t env)
 {
-	return sexp_make_num(read_num(port, 2, isbdigit, decimal_value, env));
+	return navi_make_num(read_num(port, 2, isbdigit, decimal_value, env));
 }
 
-static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t env)
+static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t), navi_env_t env)
 {
 	uchar c;
 	size_t pos = 0;
 	size_t buf_len = STR_BUF_LEN;
-	char *str = xmalloc(buf_len);
-
+	char *str = malloc(buf_len);
+	if (!str)
+		navi_enomem(env);
 	while (!ctype((c = peek_char(port, env)), env)) {
 		read_char(port, env);
 
@@ -220,7 +221,7 @@ static char *read_until(struct sexp_port *port, int(*ctype)(int,env_t), env_t en
 	return str;
 }
 
-static unsigned long read_string_escape(struct sexp_port *port, env_t env)
+static unsigned long read_string_escape(struct navi_port *port, navi_env_t env)
 {
 	unsigned long c = iread_char(port, env);
 	switch (c) {
@@ -238,21 +239,22 @@ static unsigned long read_string_escape(struct sexp_port *port, env_t env)
 	case 'x':
 		c = read_unum(port, 16, isxdigit, hex_value, env);
 		if (ipeek_char(port, env) != ';')
-			read_error(env, "missing terminator on string hex escape");
+			navi_read_error(env, "missing terminator on string hex escape");
 		read_char(port, env);
 		return c;
 	}
-	read_error(env, "unknown string escape", sexp_make_apair("char", sexp_make_char(c)));
+	navi_read_error(env, "unknown string escape", navi_make_apair("char", navi_make_char(c)));
 }
 
-static sexp_t read_string(struct sexp_port *port, env_t env)
+static navi_t read_string(struct navi_port *port, navi_env_t env)
 {
-	sexp_t r;
+	navi_t r;
 	unsigned long c;
 	size_t pos = 0;
 	size_t buf_len = STR_BUF_LEN;
-	char *str = xmalloc(buf_len);
-
+	char *str = malloc(buf_len);
+	if (!str)
+		navi_enomem(env);
 	while ((c = iread_char(port, env)) != '"') {
 		if (c == '\\')
 			c = read_string_escape(port, env);
@@ -267,44 +269,45 @@ static sexp_t read_string(struct sexp_port *port, env_t env)
 	}
 
 	str[pos] = '\0';
-	r = sexp_from_c_string(str);
+	r = navi_cstr_to_string(str);
 	free(str);
 	return r;
 }
 
-static inline sexp_t read_symbol(struct sexp_port *port, int (*stop)(int,env_t),
-		env_t env)
+static inline navi_t read_symbol(struct navi_port *port, int (*stop)(int,navi_env_t),
+		navi_env_t env)
 {
 	char *str = read_until(port, stop, env);
 
 	for (unsigned i = 0; str[i] != '\0'; i++)
 		str[i] = handle_case(str[i]);
-	return sexp_make_symbol(str);
+	return navi_make_symbol(str);
 }
 
-static sexp_t read_symbol_with_prefix(struct sexp_port *port,
-		int(*stop)(int,env_t), int first, env_t env)
+static navi_t read_symbol_with_prefix(struct navi_port *port,
+		int(*stop)(int,navi_env_t), int first, navi_env_t env)
 {
 	char *unfixed = read_until(port, stop, env);
 	size_t length = strlen(unfixed);
-	char *prefixed = xmalloc(length + 2);
-
+	char *prefixed = malloc(length + 2);
+	if (!prefixed)
+		navi_enomem(env);
 	prefixed[0] = first;
 	for (size_t i = 0; i < length+1; i++)
 		prefixed[i+1] = handle_case(unfixed[i]);
 
-	return sexp_make_symbol(prefixed);
+	return navi_make_symbol(prefixed);
 }
 
-static sexp_t read_character(struct sexp_port *port, env_t env)
+static navi_t read_character(struct navi_port *port, navi_env_t env)
 {
-	sexp_t ret;
+	navi_t ret;
 	char *str = read_until(port, isterminal, env);
 	size_t len = strlen(str);
 
 	ret.n = 0;
 	if (len == 1) {
-		ret = sexp_make_char(str[0]);
+		ret = navi_make_char(str[0]);
 		goto end;
 	}
 
@@ -320,15 +323,15 @@ static sexp_t read_character(struct sexp_port *port, env_t env)
 			ch += hex_value(str[i], env);
 		}
 		if (!u_is_unicode(ch))
-			read_error(env, "invalid unicode literal",
-					sexp_make_apair("value", sexp_make_num(ch)));
-		ret = sexp_make_char(ch);
+			navi_read_error(env, "invalid unicode literal",
+					navi_make_apair("value", navi_make_num(ch)));
+		ret = navi_make_char(ch);
 		goto end;
 	}
 
 	#define named_char(name, ch) \
 		if (!strcmp(str, name)) \
-			ret = sexp_make_char(ch);
+			ret = navi_make_char(ch);
 	named_char("alarm",     '\x7');
 	named_char("backspace", '\x8');
 	named_char("delete",    '\x7f');
@@ -341,92 +344,92 @@ static sexp_t read_character(struct sexp_port *port, env_t env)
 	#undef named_char
 
 	if (ret.n == 0)
-		read_error(env, "unknown named character",
-				sexp_make_apair("name", sexp_from_c_string(str)));
+		navi_read_error(env, "unknown named character",
+				navi_make_apair("name", navi_cstr_to_string(str)));
 end:
 	free(str);
 	return ret;
 }
 
-static sexp_t read_sharp(struct sexp_port *port, env_t env);
+static navi_t read_sharp(struct navi_port *port, navi_env_t env);
 
-static sexp_t read_list(struct sexp_port *port, env_t env)
+static navi_t read_list(struct navi_port *port, navi_env_t env)
 {
-	struct sexp_pair head, *elmptr;
+	struct navi_pair head, *elmptr;
 
 	elmptr = &head;
 	for (;;) {
-		sexp_t sexp;
+		navi_t expr;
 		char c = ipeek_first_char(port, env);
 		switch (c) {
 		case ')':
 			read_char(port, env);
-			elmptr->cdr = sexp_make_nil();
+			elmptr->cdr = navi_make_nil();
 			return head.cdr;
 		case '.':
 			read_char(port, env);
-			elmptr->cdr = sexp_read(port, env);
+			elmptr->cdr = navi_read(port, env);
 			if ((c = peek_first_char(port, env)) != ')')
-				read_error(env, "missing list terminator");
+				navi_read_error(env, "missing list terminator");
 			read_char(port, env);
 			return head.cdr;
 		case '#':
 			read_char(port, env);
-			if (sexp_type((sexp = read_sharp(port, env))) == SEXP_VOID)
+			if (navi_type((expr = read_sharp(port, env))) == NAVI_VOID)
 				continue;
 			break;
 		default:
-			sexp = sexp_iread(port, env);
+			expr = navi_iread(port, env);
 		}
-		elmptr->cdr = sexp_make_empty_pair();
+		elmptr->cdr = navi_make_empty_pair();
 		elmptr = &elmptr->cdr.p->data->pair;
-		elmptr->car = sexp;
+		elmptr->car = expr;
 	}
 	return head.cdr;
 }
 
-static sexp_t read_vector(struct sexp_port *port, env_t env)
+static navi_t read_vector(struct navi_port *port, navi_env_t env)
 {
-	return list_to_vector(read_list(port, env));
+	return navi_list_to_vector(read_list(port, env));
 }
 
-static sexp_t read_bytevec(struct sexp_port *port, env_t env)
+static navi_t read_bytevec(struct navi_port *port, navi_env_t env)
 {
-	return list_to_bytevec(read_list(port, env), env);
+	return navi_list_to_bytevec(read_list(port, env), env);
 }
 
-static sexp_t read_sharp_bang(struct sexp_port *port, env_t env)
+static navi_t read_sharp_bang(struct navi_port *port, navi_env_t env)
 {
 	char *str = read_until(port, isterminal, env);
 	if (str[0] == '/') {
 		while (iread_char(port, env) != '\n');
-		return sexp_make_void();
+		return navi_make_void();
 	}
 	#define read_syntax(name) if (!strcmp(str, name))
 	read_syntax("eof")
-		return sexp_make_eof();
+		return navi_make_eof();
 	read_syntax("fold-case") {
 		handle_case = fold_case;
-		return sexp_make_void();
+		return navi_make_void();
 	}
 	read_syntax("no-fold-case") {
 		handle_case = no_fold_case;
-		return sexp_make_void();
+		return navi_make_void();
 	}
 	#undef read_syntax
-	read_error(env, "unknown shebang directive",
-			sexp_make_apair("directive", sexp_from_c_string(str)));
+	navi_read_error(env, "unknown shebang directive",
+			navi_make_apair("directive", navi_cstr_to_string(str)));
 }
 
-static sexp_t read_sharp(struct sexp_port *port, env_t env)
+static navi_t read_sharp(struct navi_port *port, navi_env_t env)
 {
 	char c, n;
 
 	switch ((c = iread_char(port, env))) {
 	case 't':
-		return sexp_make_bool(true);
+		return navi_make_bool(true);
 	case 'f':
-		return sexp_make_bool(false);
+		return navi_make_bool(false);
 	case '\\':
 		return read_character(port, env);
 	case '(':
@@ -445,34 +448,34 @@ static sexp_t read_sharp(struct sexp_port *port, env_t env)
 	case '!':
 		return read_sharp_bang(port, env);
 	case ';':
-		sexp_read(port, env);
-		return sexp_make_void();
+		navi_read(port, env);
+		return navi_make_void();
 	case '|':
 		for (;;) {
 			while (iread_char(port, env) != '|');
 			if (iread_char(port, env) == '#')
 				break;
 		}
-		return sexp_make_void();
+		return navi_make_void();
 	case '/':
 		while (iread_char(port, env) != '\n');
-		return sexp_make_void();
+		return navi_make_void();
 
 	}
-	read_error(env, "unknown disciminator",
-			sexp_make_apair("discriminator", sexp_make_char(c)));
+	navi_read_error(env, "unknown disciminator",
+			navi_make_apair("discriminator", navi_make_char(c)));
 }
 
-static sexp_t sym_wrap(sexp_t symbol, sexp_t sexp)
+static navi_t navi_sym_wrap(navi_t symbol, navi_t expr)
 {
-	return sexp_make_pair(symbol, sexp_make_pair(sexp, sexp_make_nil()));
+	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
 }
 
-sexp_t sexp_read(struct sexp_port *port, env_t env)
+navi_t navi_read(struct navi_port *port, navi_env_t env)
 {
 	char c, d;
 	int sign;
-	sexp_t sexp;
+	navi_t expr;
 
 	switch ((c = peek_first_char(port, env))) {
 	case '0': case '1': case '2': case '3': case '4':
@@ -483,22 +486,22 @@ sexp_t sexp_read(struct sexp_port *port, env_t env)
 		return read_string(port, env);
 	case '\'':
 		read_char(port, env);
-		return sym_wrap(sym_quote, sexp_read(port, env));
+		return navi_sym_wrap(navi_sym_quote, navi_read(port, env));
 	case '`':
 		read_char(port, env);
-		return sym_wrap(sym_quasiquote, sexp_read(port, env));
+		return navi_sym_wrap(navi_sym_quasiquote, navi_read(port, env));
 	case ',':
 		read_char(port, env);
 		if ((c = ipeek_char(port, env)) == '@') {
 			read_char(port, env);
-			return sym_wrap(sym_splice, sexp_read(port, env));
+			return navi_sym_wrap(navi_sym_splice, navi_read(port, env));
 		}
-		return sym_wrap(sym_unquote, sexp_read(port, env));
+		return navi_sym_wrap(navi_sym_unquote, navi_read(port, env));
 	case '#':
 		read_char(port, env);
-		if (sexp_type((sexp = read_sharp(port, env))) == SEXP_VOID)
-			return sexp_read(port, env);
-		return sexp;
+		if (navi_type((expr = read_sharp(port, env))) == NAVI_VOID)
+			return navi_read(port, env);
+		return expr;
 	case '(':
 		read_char(port, env);
 		return read_list(port, env);
@@ -508,26 +511,26 @@ sexp_t sexp_read(struct sexp_port *port, env_t env)
 		break;
 	case ';':
 		while ((c = read_char(port, env)) != '\n' && c != EOF);
-		return sexp_read(port, env);
+		return navi_read(port, env);
 	case EOF:
-		return sexp_make_eof();
+		return navi_make_eof();
 	case '|':
 		read_char(port, env);
-		sexp = read_symbol(port, ispipe, env);
+		expr = read_symbol(port, ispipe, env);
 		read_char(port, env); /* consume closing pipe */
-		return sexp;
+		return expr;
 	case '+':
 	case '-':
 		read_char(port, env);
 		sign = c == '+' ? 1 : -1;
 		if (isdigit((d = peek_char(port, env)))) {
-			sexp = read_decimal(port, env);
-			return sexp_make_num(sexp_num(sexp) * sign);
+			expr = read_decimal(port, env);
+			return navi_make_num(navi_num(expr) * sign);
 		}
 		return read_symbol_with_prefix(port, isterminal, c, env);
 	default:
 		return read_symbol(port, isterminal, env);
 	}
-	read_error(env, "unexpected character",
-			sexp_make_apair("character", sexp_make_char(c)));
+	navi_read_error(env, "unexpected character",
+			navi_make_apair("character", navi_make_char(c)));
 }

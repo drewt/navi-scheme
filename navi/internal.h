@@ -47,79 +47,65 @@ static inline void *xrealloc(void *p, size_t size)
 	return r;
 }
 
-extern struct list_head active_environments;
+navi_t navi_read(struct navi_port *port, navi_env_t env);
 
-sexp_t sexp_read(struct sexp_port *port, env_t env);
-
-#define sexp_write(sexp, env) scm_write(sexp_make_pair(sexp, sexp_make_nil()), env)
-#define display(sexp, env) scm_display(sexp_make_pair(sexp, sexp_make_nil()), env)
-void _display(struct sexp_port *port, sexp_t sexp, bool write, env_t env);
+#define navi_write(expr, env) scm_write(navi_make_pair(expr, navi_make_nil()), env)
+#define navi_display(expr, env) scm_display(navi_make_pair(expr, navi_make_nil()), env)
+void _navi_display(struct navi_port *port, navi_t expr, bool write, navi_env_t env);
 
 /* environment.c */
-struct sexp_binding *env_binding(env_t env, sexp_t symbol);
-env_t env_new_scope(env_t env);
-int env_set(env_t env, sexp_t symbol, sexp_t object);
-int scope_set(env_t env, sexp_t symbol, sexp_t object);
-int scope_unset(env_t env, sexp_t symbol);
-env_t extend_environment(env_t env, sexp_t vars, sexp_t args);
-env_t make_default_environment(void);
+struct navi_binding *navi_env_binding(navi_env_t env, navi_t symbol);
+navi_env_t navi_env_new_scope(navi_env_t env);
+void navi_scope_set(navi_env_t env, navi_t symbol, navi_t object);
+int navi_scope_unset(navi_env_t env, navi_t symbol);
+navi_env_t navi_extend_environment(navi_env_t env, navi_t vars, navi_t args);
+navi_env_t navi_make_default_environment(void);
 
-static inline sexp_t env_lookup(env_t env, sexp_t symbol)
+static inline navi_t navi_env_lookup(navi_env_t env, navi_t symbol)
 {
-	struct sexp_binding *binding = env_binding(env, symbol);
-	return binding == NULL ? sexp_make_void() : binding->object;
+	struct navi_binding *binding = navi_env_binding(env, symbol);
+	return binding == NULL ? navi_make_void() : binding->object;
 }
 
-sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data);
+navi_t navi_map(navi_t list, navi_leaf_t fn, void *data);
 
 /* eval.c */
-sexp_t eval(sexp_t sexp, env_t env);
-sexp_t apply(struct sexp_function *fun, sexp_t args, env_t env);
-sexp_t trampoline(sexp_t sexp, env_t env);
+navi_t navi_eval(navi_t expr, navi_env_t env);
+navi_t navi_call_escape(navi_t escape, navi_t arg);
 
-sexp_t call_escape(sexp_t escape, sexp_t arg);
+navi_t navi_vlist(navi_t first, va_list ap);
+navi_t navi_list(navi_t first, ...);
+navi_t navi_string_copy(navi_t str);
 
-sexp_t vlist(sexp_t first, va_list ap);
-sexp_t list(sexp_t first, ...);
-sexp_t string_copy(sexp_t str);
+navi_t navi_capture_env(navi_env_t env);
+navi_t navi_from_spec(struct navi_spec *spec);
+bool navi_eqvp(navi_t fst, navi_t snd);
 
-sexp_t capture_env(env_t env);
-sexp_t sexp_from_spec(struct sexp_spec *spec);
-bool eqvp(sexp_t fst, sexp_t snd);
-
-static inline bool last_pair(sexp_t pair)
+static inline bool navi_last_pair(navi_t pair)
 {
-	return sexp_type(cdr(pair)) == SEXP_NIL;
+	return navi_type(navi_cdr(pair)) == NAVI_NIL;
 }
 
-static inline bool sexp_is_true(sexp_t sexp)
+static inline bool navi_is_true(navi_t expr)
 {
-	return sexp_type(sexp) != SEXP_BOOL || sexp_bool(sexp);
+	return navi_type(expr) != NAVI_BOOL || navi_bool(expr);
 }
 
-static inline bool symbol_eq(sexp_t sexp, sexp_t symbol)
+static inline bool navi_symbol_eq(navi_t expr, navi_t symbol)
 {
-	return sexp_is_symbol(sexp) && sexp.p == symbol.p;
+	return navi_is_symbol(expr) && expr.p == symbol.p;
 }
 
-static inline int list_length(sexp_t list)
+static inline int navi_list_length(navi_t list)
 {
 	int i;
 
-	for (i = 0; sexp_type(list) == SEXP_PAIR; i++)
-		list = cdr(list);
+	for (i = 0; navi_type(list) == NAVI_PAIR; i++)
+		list = navi_cdr(list);
 
-	if (sexp_type(list) != SEXP_NIL)
+	if (navi_type(list) != NAVI_NIL)
 		die("not a proper list"); // TODO: error
 
-	return i;
-}
-
-static inline unsigned count_pairs(sexp_t list)
-{
-	sexp_t cons;
-	unsigned i = 0;
-	sexp_list_for_each(cons, list) { i++; }
 	return i;
 }
 

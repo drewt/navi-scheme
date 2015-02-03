@@ -17,23 +17,23 @@
 
 #include "navi.h"
 
-static inline bool both_chars(sexp_t a, sexp_t b)
+static inline bool both_chars(navi_t a, navi_t b)
 {
-	return sexp_type(a) == SEXP_CHAR && sexp_type(b) == SEXP_CHAR;
+	return navi_type(a) == NAVI_CHAR && navi_type(b) == NAVI_CHAR;
 }
 
 DEFUN(scm_charp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_CHAR);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_CHAR);
 }
 
 #define BINARY_PREDICATE(cname, op) \
 	DEFUN(cname, args, env) \
 	{ \
-		sexp_t fst = car(args), snd = cadr(args); \
-		type_check(fst, SEXP_CHAR, env); \
-		type_check(snd, SEXP_CHAR, env); \
-		return sexp_make_bool(sexp_char(fst) op sexp_char(snd)); \
+		navi_t fst = navi_car(args), snd = navi_cadr(args); \
+		navi_type_check(fst, NAVI_CHAR, env); \
+		navi_type_check(snd, NAVI_CHAR, env); \
+		return navi_make_bool(navi_char(fst) op navi_char(snd)); \
 	}
 
 BINARY_PREDICATE(scm_char_lt,  <)
@@ -45,11 +45,11 @@ BINARY_PREDICATE(scm_char_gte, >=)
 #define BINARY_CI_PREDICATE(cname, op) \
 	DEFUN(cname, args, env) \
 	{ \
-		sexp_t fst = car(args), snd = cadr(args); \
-		type_check(fst, SEXP_CHAR, env); \
-		type_check(snd, SEXP_CHAR, env); \
-		return sexp_make_bool(tolower(sexp_char(fst)) op \
-				tolower(sexp_char(snd))); \
+		navi_t fst = navi_car(args), snd = navi_cadr(args); \
+		navi_type_check(fst, NAVI_CHAR, env); \
+		navi_type_check(snd, NAVI_CHAR, env); \
+		return navi_make_bool(tolower(navi_char(fst)) op \
+				tolower(navi_char(snd))); \
 	}
 
 BINARY_CI_PREDICATE(scm_char_ci_lt,  <)
@@ -58,22 +58,22 @@ BINARY_CI_PREDICATE(scm_char_ci_eq,  ==)
 BINARY_CI_PREDICATE(scm_char_ci_lte, <=)
 BINARY_CI_PREDICATE(scm_char_ci_gte, >=)
 
-sexp_t char_upcase(sexp_t ch)
+navi_t navi_char_upcase(navi_t ch)
 {
-	return sexp_make_char(toupper(sexp_char(ch)));
+	return navi_make_char(toupper(navi_char(ch)));
 }
 
-sexp_t char_downcase(sexp_t ch)
+navi_t navi_char_downcase(navi_t ch)
 {
-	return sexp_make_char(tolower(sexp_char(ch)));
+	return navi_make_char(tolower(navi_char(ch)));
 }
 
 DEFUN(scm_char_upcase, args, env)
 {
-	return char_upcase(type_check(car(args), SEXP_CHAR, env));
+	return navi_char_upcase(navi_type_check(navi_car(args), NAVI_CHAR, env));
 }
 
 DEFUN(scm_char_downcase, args, env)
 {
-	return char_downcase(type_check(car(args), SEXP_CHAR, env));
+	return navi_char_downcase(navi_type_check(navi_car(args), NAVI_CHAR, env));
 }

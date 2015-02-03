@@ -35,24 +35,24 @@
 }
 
 #define SPECIAL(scmname, _fn, ary, var) \
-	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_SPECIAL)
+	FUNCTION_TYPE(scmname, _fn, ary, var, NAVI_SPECIAL)
 
 #define FUNCTION(scmname, _fn, ary, var) \
-	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_FUNCTION)
+	FUNCTION_TYPE(scmname, _fn, ary, var, NAVI_FUNCTION)
 
 #define MACRO(scmname, _fn, ary, var) \
-	FUNCTION_TYPE(scmname, _fn, ary, var, SEXP_MACRO)
+	FUNCTION_TYPE(scmname, _fn, ary, var, NAVI_MACRO)
 
 #define NUMBER(scmname, val) \
 { \
-	.type = SEXP_NUM, \
+	.type = NAVI_NUM, \
 	.num = val, \
 	.ident = scmname, \
 }
 
 #define BOOLEAN(scmname, val) \
 { \
-	.type = SEXP_BOOL, \
+	.type = NAVI_BOOL, \
 	.num = val, \
 	.ident = scmname, \
 }
@@ -60,29 +60,29 @@
 static DECLARE(scm_toplevel_exn);
 #define TOPLEVEL_EXN_INDEX 0
 
-struct sexp_spec default_bindings[] = {
+static struct navi_spec default_bindings[] = {
 	[TOPLEVEL_EXN_INDEX] = FUNCTION("#exn",  scm_toplevel_exn, 1, 0),
 
-	SPECIAL("lambda",        eval_lambda,         2, 1),
-	SPECIAL("case-lambda",   eval_caselambda,     2, 1),
-	SPECIAL("define",        eval_define,         2, 1),
-	SPECIAL("define-values", eval_define_values,  2, 1),
-	SPECIAL("define-macro",  eval_defmacro,       2, 1),
-	SPECIAL("begin",         eval_begin,          1, 1),
-	SPECIAL("let",           eval_let,            2, 1),
-	SPECIAL("let*",          eval_sequential_let, 2, 1),
-	SPECIAL("letrec",        eval_let,            2, 1),
-	SPECIAL("letrec*",       eval_sequential_let, 2, 1),
-	SPECIAL("let-values",    eval_let_values,     2, 1),
-	SPECIAL("set!",          eval_set,            2, 0),
-	SPECIAL("quote",         eval_quote,          1, 0),
-	SPECIAL("quasiquote",    eval_quasiquote,     1, 0),
-	SPECIAL("case",          eval_case,           2, 1),
-	SPECIAL("cond",          eval_cond,           1, 1),
-	SPECIAL("if",            eval_if,             2, 1),
-	SPECIAL("and",           eval_and,            0, 1),
-	SPECIAL("or",            eval_or,             0, 1),
-	SPECIAL("delay",         eval_delay,          1, 0),
+	SPECIAL("lambda",        scm_lambda,         2, 1),
+	SPECIAL("case-lambda",   scm_caselambda,     2, 1),
+	SPECIAL("define",        scm_define,         2, 1),
+	SPECIAL("define-values", scm_define_values,  2, 1),
+	SPECIAL("define-macro",  scm_defmacro,       2, 1),
+	SPECIAL("begin",         scm_begin,          1, 1),
+	SPECIAL("let",           scm_let,            2, 1),
+	SPECIAL("let*",          scm_sequential_let, 2, 1),
+	SPECIAL("letrec",        scm_let,            2, 1),
+	SPECIAL("letrec*",       scm_sequential_let, 2, 1),
+	SPECIAL("let-values",    scm_let_values,     2, 1),
+	SPECIAL("set!",          scm_set,            2, 0),
+	SPECIAL("quote",         scm_quote,          1, 0),
+	SPECIAL("quasiquote",    scm_quasiquote,     1, 0),
+	SPECIAL("case",          scm_case,           2, 1),
+	SPECIAL("cond",          scm_cond,           1, 1),
+	SPECIAL("if",            scm_if,             2, 1),
+	SPECIAL("and",           scm_and,            0, 1),
+	SPECIAL("or",            scm_or,             0, 1),
+	SPECIAL("delay",         scm_delay,          1, 0),
 
 	FUNCTION("gensym", scm_gensym, 0, 0),
 
@@ -254,17 +254,17 @@ struct sexp_spec default_bindings[] = {
  */
 static DEFUN(scm_toplevel_exn, args, env)
 {
-	sexp_t cont;
+	navi_t cont;
 
-	sexp_write(car(args), env);
+	navi_write(navi_car(args), env);
 	putchar('\n');
 
-	cont = env_lookup(env, sym_repl);
-	if (sexp_type(cont) != SEXP_ESCAPE)
+	cont = navi_env_lookup(env, navi_sym_repl);
+	if (navi_type(cont) != NAVI_ESCAPE)
 		die("#repl not bound to continuation");
 
-	scope_set(env, sym_exn, sexp_from_spec(&default_bindings[0]));
-	longjmp(sexp_escape(cont)->state, 1);
+	navi_scope_set(env, navi_sym_exn, navi_from_spec(&default_bindings[0]));
+	longjmp(navi_escape(cont)->state, 1);
 }
 
 

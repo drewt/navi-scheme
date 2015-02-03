@@ -17,106 +17,106 @@
 
 #define ARITHMETIC_FOLD(operator, args, acc, env) \
 	do { \
-		sexp_t ____MAF_CONS; \
-		type_check(car(args), SEXP_NUM, env); \
-		acc = car(args); \
-		sexp_list_for_each(____MAF_CONS, cdr(args)) { \
-			type_check(car(____MAF_CONS), SEXP_NUM, env); \
-			acc.n = operator(acc.n, car(____MAF_CONS).n); \
+		navi_t ____MAF_CONS; \
+		navi_type_check(navi_car(args), NAVI_NUM, env); \
+		acc = navi_car(args); \
+		navi_list_for_each(____MAF_CONS, navi_cdr(args)) { \
+			navi_type_check(navi_car(____MAF_CONS), NAVI_NUM, env); \
+			acc.n = operator(acc.n, navi_car(____MAF_CONS).n); \
 		} \
 	} while (0)
 
 #define ARITHMETIC_DEFUN(cname, operator) \
 	DEFUN(cname, ____MAD_ARGS, env) \
 	{ \
-		sexp_t ____MAD_ACC; \
+		navi_t ____MAD_ACC; \
 		ARITHMETIC_FOLD(operator, ____MAD_ARGS, ____MAD_ACC, env); \
 		return ____MAD_ACC; \
 	}
 
 DEFUN(scm_add, args, env)
 {
-	sexp_t acc = sexp_make_num(0);
-	if (sexp_is_nil(args))
-		return sexp_make_num(0);
-	if (sexp_is_nil(cdr(args)))
-		return car(args);
-	ARITHMETIC_FOLD(fixnum_plus, args, acc, env);
+	navi_t acc = navi_make_num(0);
+	if (navi_is_nil(args))
+		return navi_make_num(0);
+	if (navi_is_nil(navi_cdr(args)))
+		return navi_car(args);
+	ARITHMETIC_FOLD(navi_fixnum_plus, args, acc, env);
 	return acc;
 }
 
 DEFUN(scm_sub, args, env)
 {
-	sexp_t acc;
-	if (sexp_is_nil(cdr(args))) {
-		acc.n = fixnum_minus(sexp_make_num(0).n, car(args).n);
+	navi_t acc;
+	if (navi_is_nil(navi_cdr(args))) {
+		acc.n = navi_fixnum_minus(navi_make_num(0).n, navi_car(args).n);
 		return acc;
 	}
-	ARITHMETIC_FOLD(fixnum_minus, args, acc, env);
+	ARITHMETIC_FOLD(navi_fixnum_minus, args, acc, env);
 	return acc;
 }
 
 DEFUN(scm_mul, args, env)
 {
-	sexp_t acc;
-	if (sexp_is_nil(args))
-		return sexp_make_num(1);
-	if (sexp_is_nil(cdr(args)))
-		return car(args);
-	ARITHMETIC_FOLD(fixnum_times, args, acc, env);
+	navi_t acc;
+	if (navi_is_nil(args))
+		return navi_make_num(1);
+	if (navi_is_nil(navi_cdr(args)))
+		return navi_car(args);
+	ARITHMETIC_FOLD(navi_fixnum_times, args, acc, env);
 	return acc;
 }
 
 DEFUN(scm_div, args, env)
 {
-	sexp_t acc;
-	if (sexp_is_nil(cdr(args))) {
-		acc.n = fixnum_divide(sexp_make_num(1).n, car(args).n);
+	navi_t acc;
+	if (navi_is_nil(navi_cdr(args))) {
+		acc.n = navi_fixnum_divide(navi_make_num(1).n, navi_car(args).n);
 		return acc;
 	}
-	ARITHMETIC_FOLD(fixnum_divide, args, acc, env);
+	ARITHMETIC_FOLD(navi_fixnum_divide, args, acc, env);
 	return acc;
 }
 
 DEFUN(scm_quotient, args, env)
 {
-	type_check(car(args),  SEXP_NUM, env);
-	type_check(cadr(args), SEXP_NUM, env);
-	return sexp_make_num(sexp_num(car(args)) / sexp_num(cadr(args)));
+	navi_type_check(navi_car(args),  NAVI_NUM, env);
+	navi_type_check(navi_cadr(args), NAVI_NUM, env);
+	return navi_make_num(navi_num(navi_car(args)) / navi_num(navi_cadr(args)));
 }
 
 DEFUN(scm_remainder, args, env)
 {
-	type_check(car(args),  SEXP_NUM, env);
-	type_check(cadr(args), SEXP_NUM, env);
-	return sexp_make_num(sexp_num(car(args)) % sexp_num(cadr(args)));
+	navi_type_check(navi_car(args),  NAVI_NUM, env);
+	navi_type_check(navi_cadr(args), NAVI_NUM, env);
+	return navi_make_num(navi_num(navi_car(args)) % navi_num(navi_cadr(args)));
 }
 
-static bool fold_pairs(sexp_t list, bool (*compare)(sexp_t,sexp_t,env_t),
-		env_t env)
+static bool fold_pairs(navi_t list, bool (*compare)(navi_t,navi_t,navi_env_t),
+		navi_env_t env)
 {
-	sexp_t cons;
+	navi_t cons;
 
-	sexp_list_for_each(cons, list) {
-		if (sexp_type(cdr(cons)) == SEXP_NIL)
+	navi_list_for_each(cons, list) {
+		if (navi_type(navi_cdr(cons)) == NAVI_NIL)
 			return true;
-		if (!compare(car(cons), cadr(cons), env))
+		if (!compare(navi_car(cons), navi_cadr(cons), env))
 			return false;
 	}
 	return true;
 }
 
 #define VARIADIC_PREDICATE(cname, symbol) \
-	static bool ____ ## cname(sexp_t ____MAP_A, sexp_t ____MAP_B, \
-			env_t ____MAP_ENV) \
+	static bool _ ## cname(navi_t ____MAP_A, navi_t ____MAP_B, \
+			navi_env_t ____MAP_ENV) \
 	{ \
-		type_check(____MAP_A, SEXP_NUM, ____MAP_ENV); \
-		type_check(____MAP_B, SEXP_NUM, ____MAP_ENV); \
-		return sexp_num(____MAP_A) symbol sexp_num(____MAP_B); \
+		navi_type_check(____MAP_A, NAVI_NUM, ____MAP_ENV); \
+		navi_type_check(____MAP_B, NAVI_NUM, ____MAP_ENV); \
+		return navi_num(____MAP_A) symbol navi_num(____MAP_B); \
 	} \
 	DEFUN(cname, args, env) \
 	{ \
-		return sexp_make_bool(fold_pairs(args, ____ ## cname, env)); \
+		return navi_make_bool(fold_pairs(args, _ ## cname, env)); \
 	}
 
 VARIADIC_PREDICATE(scm_lt,    <)
@@ -128,8 +128,8 @@ VARIADIC_PREDICATE(scm_numeq, ==)
 #define UNARY_PREDICATE(cname, test) \
 	DEFUN(cname, args, env) \
 	{ \
-		type_check(car(args), SEXP_NUM, env); \
-		return sexp_make_bool(sexp_num(car(args)) test); \
+		navi_type_check(navi_car(args), NAVI_NUM, env); \
+		return navi_make_bool(navi_num(navi_car(args)) test); \
 	}
 
 UNARY_PREDICATE(scm_zerop,     == 0)
@@ -143,26 +143,26 @@ DEFUN(scm_number_to_string, args, env)
 	char buf[64];
 	long radix = 10;
 
-	type_check(car(args), SEXP_NUM, env);
-	if (sexp_type(cdr(args)) != SEXP_NIL) {
-		type_check(cadr(args), SEXP_NUM, env);
-		radix = sexp_num(cadr(args));
+	navi_type_check(navi_car(args), NAVI_NUM, env);
+	if (navi_type(navi_cdr(args)) != NAVI_NIL) {
+		navi_type_check(navi_cadr(args), NAVI_NUM, env);
+		radix = navi_num(navi_cadr(args));
 	}
 
 	switch (radix) {
 	case 8:
-		snprintf(buf, 64, "%lo", sexp_num(car(args)));
+		snprintf(buf, 64, "%lo", navi_num(navi_car(args)));
 		break;
 	case 10:
-		snprintf(buf, 64, "%ld", sexp_num(car(args)));
+		snprintf(buf, 64, "%ld", navi_num(navi_car(args)));
 		break;
 	case 16:
-		snprintf(buf, 64, "%lx", sexp_num(car(args)));
+		snprintf(buf, 64, "%lx", navi_num(navi_car(args)));
 		break;
 	default:
-		error(env, "unsupported radix");
+		navi_error(env, "unsupported radix");
 	}
-	return sexp_from_c_string(buf);
+	return navi_cstr_to_string(buf);
 }
 
 static int explicit_radix(const char *str)
@@ -180,14 +180,14 @@ static int explicit_radix(const char *str)
 
 DEFUN(scm_string_to_number, args, env)
 {
-	sexp_t bytes;
+	navi_t bytes;
 	char *string, *endptr;
 	long n, radix;
 
-	bytes = type_check(car(args), SEXP_STRING, env);
-	string = (char*) sexp_string(bytes)->data;
+	bytes = navi_type_check(navi_car(args), NAVI_STRING, env);
+	string = (char*) navi_string(bytes)->data;
 
-	radix = sexp_is_nil(cdr(args)) ? 10 : fixnum_cast(cadr(args), env);
+	radix = navi_is_nil(navi_cdr(args)) ? 10 : navi_fixnum_cast(navi_cadr(args), env);
 
 	if ((n = explicit_radix(string)) != 0) {
 		string += 2;
@@ -196,32 +196,32 @@ DEFUN(scm_string_to_number, args, env)
 
 	n = strtol(string, &endptr, radix);
 	if (*endptr != '\0')
-		return sexp_make_bool(false);
-	return sexp_make_num(n);
+		return navi_make_bool(false);
+	return navi_make_num(n);
 }
 
 DEFUN(scm_not, args, env)
 {
-	return sexp_make_bool(!sexp_is_true(car(args)));
+	return navi_make_bool(!navi_is_true(navi_car(args)));
 }
 
 DEFUN(scm_booleanp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_BOOL);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BOOL);
 }
 
 DEFUN(scm_boolean_eq, args, env)
 {
-	sexp_t cons;
-	sexp_t bval;
+	navi_t cons;
+	navi_t bval;
 
-	type_check(car(args), SEXP_BOOL, env);
-	bval = car(args);
+	navi_type_check(navi_car(args), NAVI_BOOL, env);
+	bval = navi_car(args);
 
-	sexp_list_for_each(cons, cdr(args)) {
-		type_check(car(cons), SEXP_BOOL, env);
-		if (car(cons).n != bval.n)
-			return sexp_make_bool(false);
+	navi_list_for_each(cons, navi_cdr(args)) {
+		navi_type_check(navi_car(cons), NAVI_BOOL, env);
+		if (navi_car(cons).n != bval.n)
+			return navi_make_bool(false);
 	}
-	return sexp_make_bool(true);
+	return navi_make_bool(true);
 }

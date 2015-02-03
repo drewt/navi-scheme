@@ -17,65 +17,64 @@
 
 #include "navi.h"
 
-void sexp_free(struct sexp *sexp)
+extern struct navi_clist_head active_environments;
+
+void navi_free(struct navi_object *obj)
 {
-	sexp->type = SEXP_VOID;
-	free(sexp);
+	obj->type = NAVI_VOID;
+	free(obj);
 }
 
 #define SYMTAB_SIZE 64
 
-struct sexp_symbol {
-	struct hlist_node chain;
-	struct sexp object;
+struct navi_symbol {
+	struct navi_hlist_node chain;
+	struct navi_object object;
 };
 
-struct hlist_head symbol_table[SYMTAB_SIZE];
+static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
 
-LIST_HEAD(heap);
+static NAVI_LIST_HEAD(heap);
 
-sexp_t sym_lambda;
-sexp_t sym_caselambda;
-sexp_t sym_define;
-sexp_t sym_defmacro;
-sexp_t sym_begin;
-sexp_t sym_let;
-sexp_t sym_seqlet;
-sexp_t sym_letrec;
-sexp_t sym_seqletrec;
-sexp_t sym_set;
-sexp_t sym_quote;
-sexp_t sym_quasiquote;
-sexp_t sym_unquote;
-sexp_t sym_splice;
-sexp_t sym_guard;
-sexp_t sym_case;
-sexp_t sym_cond;
-sexp_t sym_if;
-sexp_t sym_and;
-sexp_t sym_or;
+navi_t navi_sym_lambda;
+navi_t navi_sym_caselambda;
+navi_t navi_sym_define;
+navi_t navi_sym_defmacro;
+navi_t navi_sym_begin;
+navi_t navi_sym_let;
+navi_t navi_sym_seqlet;
+navi_t navi_sym_letrec;
+navi_t navi_sym_seqletrec;
+navi_t navi_sym_set;
+navi_t navi_sym_quote;
+navi_t navi_sym_quasiquote;
+navi_t navi_sym_unquote;
+navi_t navi_sym_splice;
+navi_t navi_sym_guard;
+navi_t navi_sym_case;
+navi_t navi_sym_cond;
+navi_t navi_sym_if;
+navi_t navi_sym_and;
+navi_t navi_sym_or;
+navi_t navi_sym_else;
+navi_t navi_sym_eq_lt;
+navi_t navi_sym_thunk;
+navi_t navi_sym_question;
+navi_t navi_sym_exn;
+navi_t navi_sym_current_input;
+navi_t navi_sym_current_output;
+navi_t navi_sym_current_error;
+navi_t navi_sym_read_error;
+navi_t navi_sym_file_error;
+navi_t navi_sym_repl;
 
-sexp_t sym_else;
-sexp_t sym_eq_lt;
-
-sexp_t sym_thunk;
-sexp_t sym_question;
-
-sexp_t sym_exn;
-sexp_t sym_current_input;
-sexp_t sym_current_output;
-sexp_t sym_current_error;
-sexp_t sym_read_error;
-sexp_t sym_file_error;
-sexp_t sym_repl;
-
-static inline sexp_t symbol_object(struct sexp_symbol *sym)
+static inline navi_t symbol_object(struct navi_symbol *sym)
 {
-	return (sexp_t) &sym->object;
+	return (navi_t) &sym->object;
 }
 
 /* FIXME: this is a really bad hash function! */
-unsigned long symbol_hash(const char *symbol)
+static unsigned long symbol_hash(const char *symbol)
 {
 	unsigned long hash = 0;
 	while (*symbol != '\0')
@@ -86,39 +85,39 @@ unsigned long symbol_hash(const char *symbol)
 static void symbol_table_init(void)
 {
 	for (unsigned i = 0; i < SYMTAB_SIZE; i++)
-		INIT_HLIST_HEAD(&symbol_table[i]);
+		NAVI_INIT_HLIST_HEAD(&symbol_table[i]);
 
-	#define intern(cname, name) cname = sexp_make_symbol(name)
-	intern(sym_lambda,         "lambda");
-	intern(sym_caselambda,     "case-lambda");
-	intern(sym_define,         "define");
-	intern(sym_defmacro,       "define-macro");
-	intern(sym_begin,          "begin");
-	intern(sym_let,            "let");
-	intern(sym_seqlet,         "let*");
-	intern(sym_letrec,         "letrec");
-	intern(sym_seqletrec,      "letrec*");
-	intern(sym_set,            "set!");
-	intern(sym_quote,          "quote");
-	intern(sym_quasiquote,     "quasiquote");
-	intern(sym_unquote,        "unquote");
-	intern(sym_splice,         "unquote-splice");
-	intern(sym_case,           "case");
-	intern(sym_cond,           "cond");
-	intern(sym_if,             "if");
-	intern(sym_and,            "and");
-	intern(sym_or,             "or");
-	intern(sym_else,           "else");
-	intern(sym_eq_lt,          "=>");
-	intern(sym_thunk,          "#thunk");
-	intern(sym_question,       "?");
-	intern(sym_exn,            "#exn");
-	intern(sym_current_input,  "#current-input-port");
-	intern(sym_current_output, "#current-output-port");
-	intern(sym_current_error,  "#current-error-port");
-	intern(sym_read_error,     "#read-error");
-	intern(sym_file_error,     "#file-error");
-	intern(sym_repl,           "#repl");
+	#define intern(cname, name) cname = navi_make_symbol(name)
+	intern(navi_sym_lambda,         "lambda");
+	intern(navi_sym_caselambda,     "case-lambda");
+	intern(navi_sym_define,         "define");
+	intern(navi_sym_defmacro,       "define-macro");
+	intern(navi_sym_begin,          "begin");
+	intern(navi_sym_let,            "let");
+	intern(navi_sym_seqlet,         "let*");
+	intern(navi_sym_letrec,         "letrec");
+	intern(navi_sym_seqletrec,      "letrec*");
+	intern(navi_sym_set,            "set!");
+	intern(navi_sym_quote,          "quote");
+	intern(navi_sym_quasiquote,     "quasiquote");
+	intern(navi_sym_unquote,        "unquote");
+	intern(navi_sym_splice,         "unquote-splice");
+	intern(navi_sym_case,           "case");
+	intern(navi_sym_cond,           "cond");
+	intern(navi_sym_if,             "if");
+	intern(navi_sym_and,            "and");
+	intern(navi_sym_or,             "or");
+	intern(navi_sym_else,           "else");
+	intern(navi_sym_eq_lt,          "=>");
+	intern(navi_sym_thunk,          "#thunk");
+	intern(navi_sym_question,       "?");
+	intern(navi_sym_exn,            "#exn");
+	intern(navi_sym_current_input,  "#current-input-port");
+	intern(navi_sym_current_output, "#current-output-port");
+	intern(navi_sym_current_error,  "#current-error-port");
+	intern(navi_sym_read_error,     "#read-error");
+	intern(navi_sym_file_error,     "#file-error");
+	intern(navi_sym_repl,           "#repl");
 	#undef intern
 }
 
@@ -127,36 +126,36 @@ void navi_init(void)
 	symbol_table_init();
 }
 
-static sexp_t symbol_lookup(const char *str, unsigned long hashcode)
+static navi_t symbol_lookup(const char *str, unsigned long hashcode)
 {
-	struct sexp_symbol *it;
-	struct hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
+	struct navi_symbol *it;
+	struct navi_hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
 
-	hlist_for_each_entry(it, head, chain) {
-		if (bytevec_equal(symbol_object(it), str))
+	navi_hlist_for_each_entry(it, head, chain) {
+		if (navi_bytevec_equal(symbol_object(it), str))
 			return symbol_object(it);
 	}
-	return (sexp_t) 0L;
+	return (navi_t) 0L;
 }
 
 /* Only called if symbol doesn't already exist */
-static sexp_t new_symbol(const char *str, unsigned long hashcode)
+static navi_t new_symbol(const char *str, unsigned long hashcode)
 {
 	size_t len = strlen(str);
-	struct sexp_symbol *symbol;
+	struct navi_symbol *symbol;
 	
-	symbol = xmalloc(sizeof(struct sexp_symbol) +
-			sizeof(struct sexp_bytevec) + len + 1);
+	symbol = xmalloc(sizeof(struct navi_symbol) +
+			sizeof(struct navi_bytevec) + len + 1);
 
 	for (size_t i = 0; i < len; i++)
 		symbol->object.data->bvec.data[i] = str[i];
 	symbol->object.data->bvec.data[len] = '\0';
 
 	symbol->object.data->bvec.size = len;
-	symbol->object.type = SEXP_SYMBOL;
+	symbol->object.type = NAVI_SYMBOL;
 
-	hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
-	return (sexp_t) &symbol->object;
+	navi_hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
+	return (navi_t) &symbol->object;
 }
 
 DEFUN(scm_gensym, args, env)
@@ -166,21 +165,21 @@ DEFUN(scm_gensym, args, env)
 
 	snprintf(buf, 64, "g%u", count++);
 	buf[63] = '\0';
-	return sexp_make_uninterned(buf);
+	return navi_make_uninterned(buf);
 }
 
-struct sexp *make_sexp(enum sexp_type type, size_t size)
+static struct navi_object *make_object(enum navi_type type, size_t size)
 {
-	struct sexp *sexp = xmalloc(sizeof(struct sexp) + size);
-	list_add(&sexp->chain, &heap);
-	sexp->type = type;
-	return sexp;
+	struct navi_object *obj = xmalloc(sizeof(struct navi_object) + size);
+	navi_clist_add(&obj->chain, &heap);
+	obj->type = type;
+	return obj;
 }
 
-sexp_t sexp_make_symbol(const char *str)
+navi_t navi_make_symbol(const char *str)
 {
 	unsigned long hashcode = symbol_hash(str);
-	sexp_t symbol = symbol_lookup(str, hashcode);
+	navi_t symbol = symbol_lookup(str, hashcode);
 
 	if (symbol.n != 0)
 		return symbol;
@@ -188,281 +187,284 @@ sexp_t sexp_make_symbol(const char *str)
 }
 
 /* FIXME: unicode? */
-sexp_t sexp_from_c_string(const char *str)
+navi_t navi_cstr_to_string(const char *str)
 {
 	size_t len = strlen(str);
-	sexp_t sexp = sexp_make_string(len, len, len);
-	struct sexp_string *vec = sexp_string(sexp);
+	navi_t expr = navi_make_string(len, len, len);
+	struct navi_string *vec = navi_string(expr);
 
 	for (size_t i = 0; i < len; i++) {
 		vec->data[i] = str[i];
 	}
 	vec->size = len;
 
-	return sexp;
+	return expr;
 }
 
-sexp_t sexp_from_c_bytevec(const char *str)
+navi_t navi_cstr_to_bytevec(const char *str)
 {
 	size_t len = strlen(str);
-	sexp_t sexp = sexp_make_bytevec(len);
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	navi_t expr = navi_make_bytevec(len);
+	struct navi_bytevec *vec = navi_bytevec(expr);
 
 	for (size_t i = 0; i < len; i++)
 		vec->data[i] = str[i];
 	vec->size = len;
-	return sexp;
+	return expr;
 }
 
-sexp_t sexp_make_string(size_t storage, size_t size, size_t length)
+navi_t navi_make_string(size_t storage, size_t size, size_t length)
 {
-	struct sexp *sexp = make_sexp(SEXP_STRING, sizeof(struct sexp_string));
-	sexp->data->str.data = xmalloc(storage + 1);
-	sexp->data->str.data[storage] = '\0';
-	sexp->data->str.data[size] = '\0';
-	sexp->data->str.storage = storage;
-	sexp->data->str.size = size;
-	sexp->data->str.length = length;
-	return (sexp_t) sexp;
+	struct navi_object *str = make_object(NAVI_STRING, sizeof(struct navi_string));
+	str->data->str.data = xmalloc(storage + 1);
+	str->data->str.data[storage] = '\0';
+	str->data->str.data[size] = '\0';
+	str->data->str.storage = storage;
+	str->data->str.size = size;
+	str->data->str.length = length;
+	return (navi_t) str;
 }
 
-sexp_t sexp_make_pair(sexp_t car, sexp_t cdr)
+navi_t navi_make_pair(navi_t car, navi_t cdr)
 {
-	struct sexp *sexp = make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
-	sexp->data->pair.car = car;
-	sexp->data->pair.cdr = cdr;
-	return (sexp_t) sexp;
+	struct navi_object *pair = make_object(NAVI_PAIR, sizeof(struct navi_pair));
+	pair->data->pair.car = car;
+	pair->data->pair.cdr = cdr;
+	return (navi_t) pair;
 }
 
-sexp_t sexp_make_empty_pair(void)
+navi_t navi_make_empty_pair(void)
 {
-	return (sexp_t) make_sexp(SEXP_PAIR, sizeof(struct sexp_pair));
+	return (navi_t) make_object(NAVI_PAIR, sizeof(struct navi_pair));
 }
 
-sexp_t sexp_make_port(int(*read)(struct sexp_port*, env_t),
-		void(*write)(unsigned char,struct sexp_port*, env_t),
-		void(*close_in)(struct sexp_port*, env_t),
-		void(*close_out)(struct sexp_port*, env_t),
+navi_t navi_make_port(int(*read)(struct navi_port*, navi_env_t),
+		void(*write)(unsigned char,struct navi_port*, navi_env_t),
+		void(*close_in)(struct navi_port*, navi_env_t),
+		void(*close_out)(struct navi_port*, navi_env_t),
 		void *specific)
 {
-	struct sexp *sexp = make_sexp(SEXP_PORT, sizeof(struct sexp_port));
-	sexp->data->port.read_u8 = read;
-	sexp->data->port.write_u8 = write;
-	sexp->data->port.close_in = close_in;
-	sexp->data->port.close_out = close_out;
-	sexp->data->port.flags = 0;
-	sexp->data->port.sexp = sexp_make_void();
-	sexp->data->port.pos = 0;
-	sexp->data->port.specific = specific;
-	return (sexp_t) sexp;
+	struct navi_object *port = make_object(NAVI_PORT, sizeof(struct navi_port));
+	port->data->port.read_u8 = read;
+	port->data->port.write_u8 = write;
+	port->data->port.close_in = close_in;
+	port->data->port.close_out = close_out;
+	port->data->port.flags = 0;
+	port->data->port.expr = navi_make_void();
+	port->data->port.pos = 0;
+	port->data->port.specific = specific;
+	return (navi_t) port;
 }
 
-sexp_t sexp_make_vector(size_t size)
+navi_t navi_make_vector(size_t size)
 {
-	struct sexp *sexp = make_sexp(SEXP_VECTOR,
-			sizeof(struct sexp_vector) + sizeof(sexp_t)*size);
-	sexp->data->vec.size = size;
-	return (sexp_t) sexp;
+	struct navi_object *vec = make_object(NAVI_VECTOR,
+			sizeof(struct navi_vector) + sizeof(navi_t)*size);
+	vec->data->vec.size = size;
+	return (navi_t) vec;
 }
 
-sexp_t sexp_make_bytevec(size_t size)
+navi_t navi_make_bytevec(size_t size)
 {
-	struct sexp *sexp = make_sexp(SEXP_BYTEVEC,
-			sizeof(struct sexp_bytevec) + size + 1);
-	sexp->data->bvec.size = size;
-	sexp->data->bvec.data[size] = '\0';
-	return (sexp_t) sexp;
+	struct navi_object *vec = make_object(NAVI_BYTEVEC,
+			sizeof(struct navi_bytevec) + size + 1);
+	vec->data->bvec.size = size;
+	vec->data->bvec.data[size] = '\0';
+	return (navi_t) vec;
 }
 
-sexp_t sexp_make_function(sexp_t args, sexp_t body, char *name, env_t env)
+static inline unsigned count_pairs(navi_t list)
 {
-	struct sexp *sexp = make_sexp(SEXP_FUNCTION,
-			sizeof(struct sexp_function));
-	struct sexp_function *fun = &sexp->data->fun;
+	navi_t cons;
+	unsigned i = 0;
+	navi_list_for_each(cons, list) { i++; }
+	return i;
+}
+
+navi_t navi_make_function(navi_t args, navi_t body, char *name, navi_env_t env)
+{
+	struct navi_object *obj = make_object(NAVI_FUNCTION,
+			sizeof(struct navi_function));
+	struct navi_function *fun = &obj->data->fun;
 	fun->name = name;
 	fun->args = args;
 	fun->body = body;
 	fun->builtin = false;
-	fun->arity = count_pairs((sexp_t)args);
-	fun->variadic = !sexp_is_proper_list((sexp_t)args);
+	fun->arity = count_pairs((navi_t)args);
+	fun->variadic = !navi_is_proper_list((navi_t)args);
 	fun->env = env;
-	scope_ref(env);
-	return (sexp_t) sexp;
+	navi_scope_ref(env);
+	return (navi_t) obj;
 }
 
-sexp_t make_thunk(sexp_t body, env_t env)
+navi_t navi_make_escape(void)
 {
-	return sexp_make_function(sexp_make_nil(), body, "#thunk", env);
+	return (navi_t) make_object(NAVI_ESCAPE, sizeof(struct navi_escape));
 }
 
-sexp_t sexp_make_escape(void)
+navi_t navi_capture_env(navi_env_t env)
 {
-	return (sexp_t) make_sexp(SEXP_ESCAPE, sizeof(struct sexp_escape));
+	struct navi_object *obj = make_object(NAVI_ENVIRONMENT,
+			sizeof(struct navi_scope*));
+	obj->data->env = env;
+	return (navi_t) obj;
 }
 
-sexp_t capture_env(env_t env)
+navi_t navi_from_spec(struct navi_spec *spec)
 {
-	struct sexp *sexp = make_sexp(SEXP_ENVIRONMENT,
-			sizeof(struct sexp_scope*));
-	sexp->data->env = env;
-	return (sexp_t) sexp;
-}
-
-sexp_t sexp_from_spec(struct sexp_spec *spec)
-{
-	struct sexp *sexp;
-	struct sexp_function *fun;
+	struct navi_object *obj;
+	struct navi_function *fun;
 
 	switch (spec->type) {
-	case SEXP_EOF:
-		return sexp_make_eof();
-	case SEXP_NIL:
-		return sexp_make_nil();
-	case SEXP_NUM:
-		return sexp_make_num(spec->num);
-	case SEXP_BOOL:
-		return sexp_make_bool(spec->num);
-	case SEXP_CHAR:
-		return sexp_make_char(spec->num);
-	case SEXP_PAIR:
-		return sexp_make_pair(spec->pair.car, spec->pair.cdr);
-	case SEXP_STRING:
-		return sexp_from_c_string(spec->str);
-	case SEXP_SYMBOL:
-		return sexp_make_symbol(spec->str);
-	case SEXP_VECTOR:
-		return sexp_make_vector(spec->size);
-	case SEXP_BYTEVEC:
-		return sexp_make_bytevec(spec->size);
-	case SEXP_MACRO:
-	case SEXP_SPECIAL:
-	case SEXP_FUNCTION:
-		sexp = make_sexp(spec->type, sizeof(struct sexp_function));
-		fun = (void*) sexp->data;
-		memcpy(fun, &spec->fun, sizeof(struct sexp_function));
-		return (sexp_t) sexp;
-	case SEXP_VOID:
-	case SEXP_PORT:
-	case SEXP_VALUES:
-	case SEXP_PROMISE:
-	case SEXP_CASELAMBDA:
-	case SEXP_ESCAPE:
-	case SEXP_ENVIRONMENT:
-	case SEXP_BOUNCE:
+	case NAVI_EOF:
+		return navi_make_eof();
+	case NAVI_NIL:
+		return navi_make_nil();
+	case NAVI_NUM:
+		return navi_make_num(spec->num);
+	case NAVI_BOOL:
+		return navi_make_bool(spec->num);
+	case NAVI_CHAR:
+		return navi_make_char(spec->num);
+	case NAVI_PAIR:
+		return navi_make_pair(spec->pair.car, spec->pair.cdr);
+	case NAVI_STRING:
+		return navi_cstr_to_string(spec->str);
+	case NAVI_SYMBOL:
+		return navi_make_symbol(spec->str);
+	case NAVI_VECTOR:
+		return navi_make_vector(spec->size);
+	case NAVI_BYTEVEC:
+		return navi_make_bytevec(spec->size);
+	case NAVI_MACRO:
+	case NAVI_SPECIAL:
+	case NAVI_FUNCTION:
+		obj = make_object(spec->type, sizeof(struct navi_function));
+		fun = (void*) obj->data;
+		memcpy(fun, &spec->fun, sizeof(struct navi_function));
+		return (navi_t) obj;
+	case NAVI_VOID:
+	case NAVI_PORT:
+	case NAVI_VALUES:
+	case NAVI_PROMISE:
+	case NAVI_CASELAMBDA:
+	case NAVI_ESCAPE:
+	case NAVI_ENVIRONMENT:
+	case NAVI_BOUNCE:
 		break;
 	}
-	die("sexp_from_spec: unknown or unsupported type");
+	die("navi_from_spec: unknown or unsupported type");
 }
 
-bool eqvp(sexp_t fst, sexp_t snd)
+bool navi_eqvp(navi_t fst, navi_t snd)
 {
-	if (sexp_type(fst) != sexp_type(snd))
+	if (navi_type(fst) != navi_type(snd))
 		return false;
 
-	switch (sexp_type(fst)) {
-	case SEXP_VOID:
-	case SEXP_NIL:
-	case SEXP_EOF:
+	switch (navi_type(fst)) {
+	case NAVI_VOID:
+	case NAVI_NIL:
+	case NAVI_EOF:
 		return true;
-	case SEXP_NUM:
-		return sexp_num(fst) == sexp_num(snd);
-	case SEXP_BOOL:
-		return sexp_bool(fst) ? sexp_bool(snd) : !sexp_bool(snd);
-	case SEXP_CHAR:
-		return sexp_char(fst) == sexp_char(snd);
-	case SEXP_PAIR:
-	case SEXP_PORT:
-	case SEXP_SYMBOL:
-	case SEXP_VECTOR:
-	case SEXP_VALUES:
-	case SEXP_BYTEVEC:
-	case SEXP_MACRO:
-	case SEXP_SPECIAL:
-	case SEXP_PROMISE:
-	case SEXP_FUNCTION:
-	case SEXP_CASELAMBDA:
-	case SEXP_ESCAPE:
-	case SEXP_ENVIRONMENT:
-	case SEXP_BOUNCE:
+	case NAVI_NUM:
+		return navi_num(fst) == navi_num(snd);
+	case NAVI_BOOL:
+		return navi_bool(fst) ? navi_bool(snd) : !navi_bool(snd);
+	case NAVI_CHAR:
+		return navi_char(fst) == navi_char(snd);
+	case NAVI_PAIR:
+	case NAVI_PORT:
+	case NAVI_SYMBOL:
+	case NAVI_VECTOR:
+	case NAVI_VALUES:
+	case NAVI_BYTEVEC:
+	case NAVI_MACRO:
+	case NAVI_SPECIAL:
+	case NAVI_PROMISE:
+	case NAVI_FUNCTION:
+	case NAVI_CASELAMBDA:
+	case NAVI_ESCAPE:
+	case NAVI_ENVIRONMENT:
+	case NAVI_BOUNCE:
 		return fst.p == snd.p;
-	case SEXP_STRING:
-		return sexp_string_equal(fst, snd);
+	case NAVI_STRING:
+		return navi_string_equal(fst, snd);
 	}
-	die("eqvp: unknown type");
+	die("navi_eqvp: unknown type");
 }
 
 DEFUN(scm_eqvp, args, env)
 {
-	return sexp_make_bool(eqvp(car(args), cadr(args)));
+	return navi_make_bool(navi_eqvp(navi_car(args), navi_cadr(args)));
 }
 
-static inline void gc_set_mark(sexp_t obj)
+static inline void gc_set_mark(navi_t obj)
 {
-	sexp_ptr(obj)->gc_mark = true;
+	navi_ptr(obj)->gc_mark = true;
 }
 
-static void gc_mark_obj(sexp_t obj)
+static void gc_mark_obj(navi_t obj)
 {
-	struct sexp_vector *vec;
-	struct sexp_function *fun;
+	struct navi_vector *vec;
+	struct navi_function *fun;
 
-	switch (sexp_type(obj)) {
-	case SEXP_VOID:
-	case SEXP_NIL:
-	case SEXP_EOF:
-	case SEXP_NUM:
-	case SEXP_BOOL:
-	case SEXP_CHAR:
+	switch (navi_type(obj)) {
+	case NAVI_VOID:
+	case NAVI_NIL:
+	case NAVI_EOF:
+	case NAVI_NUM:
+	case NAVI_BOOL:
+	case NAVI_CHAR:
 		break;
-	case SEXP_PAIR:
-	case SEXP_BOUNCE:
+	case NAVI_PAIR:
+	case NAVI_BOUNCE:
 		gc_set_mark(obj);
-		gc_mark_obj(car(obj));
-		gc_mark_obj(cdr(obj));
+		gc_mark_obj(navi_car(obj));
+		gc_mark_obj(navi_cdr(obj));
 		break;
-	case SEXP_PORT:
+	case NAVI_PORT:
 		gc_set_mark(obj);
-		gc_mark_obj(sexp_port(obj)->sexp);
+		gc_mark_obj(navi_port(obj)->expr);
 		break;
-	case SEXP_SYMBOL:
-	case SEXP_STRING:
-	case SEXP_BYTEVEC:
+	case NAVI_SYMBOL:
+	case NAVI_STRING:
+	case NAVI_BYTEVEC:
 		gc_set_mark(obj);
 		break;
-	case SEXP_VECTOR:
-	case SEXP_VALUES:
-	case SEXP_CASELAMBDA:
+	case NAVI_VECTOR:
+	case NAVI_VALUES:
+	case NAVI_CASELAMBDA:
 		gc_set_mark(obj);
-		vec = sexp_vector(obj);
+		vec = navi_vector(obj);
 		for (size_t i = 0; i < vec->size; i++)
 			gc_mark_obj(vec->data[i]);
 		break;
-	case SEXP_MACRO:
-	case SEXP_SPECIAL:
-	case SEXP_PROMISE:
-	case SEXP_FUNCTION:
+	case NAVI_MACRO:
+	case NAVI_SPECIAL:
+	case NAVI_PROMISE:
+	case NAVI_FUNCTION:
 		gc_set_mark(obj);
-		fun = sexp_fun(obj);
+		fun = navi_fun(obj);
 		if (!fun->builtin)
 			gc_mark_obj(fun->body);
 		gc_mark_obj(fun->args);
 		break;
-	case SEXP_ESCAPE:
+	case NAVI_ESCAPE:
 		gc_set_mark(obj);
-		gc_mark_obj(sexp_escape(obj)->arg);
+		gc_mark_obj(navi_escape(obj)->arg);
 		break;
-	case SEXP_ENVIRONMENT:
+	case NAVI_ENVIRONMENT:
 		gc_set_mark(obj);
 		break;
 	}
 }
 
-static void gc_mark_env(struct sexp_scope *env)
+static void gc_mark_env(struct navi_scope *env)
 {
-	for (unsigned i = 0; i < ENV_HT_SIZE; i++) {
-		struct sexp_binding *bind;
-		hlist_for_each_entry(bind, &env->bindings[i], chain) {
-			if (sexp_ptr_type(bind->object))
+	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
+		struct navi_binding *bind;
+		navi_hlist_for_each_entry(bind, &env->bindings[i], chain) {
+			if (navi_ptr_type(bind->object))
 				gc_mark_obj(bind->object);
 		}
 	}
@@ -470,27 +472,27 @@ static void gc_mark_env(struct sexp_scope *env)
 
 static void gc_mark(void)
 {
-	struct sexp_scope *scope;
-	list_for_each_entry(scope, &active_environments, chain) {
+	struct navi_scope *scope;
+	navi_clist_for_each_entry(scope, &active_environments, chain) {
 		gc_mark_env(scope);
 	}
 }
 
 static void gc_sweep(void)
 {
-	struct sexp *sexp, *p;
+	struct navi_object *obj, *p;
 
-	list_for_each_entry_safe(sexp, p, &heap, chain) {
-		if (sexp->gc_mark) {
-			sexp->gc_mark = false;
+	navi_clist_for_each_entry_safe(obj, p, &heap, chain) {
+		if (obj->gc_mark) {
+			obj->gc_mark = false;
 			continue;
 		}
-		list_del(&sexp->chain);
-		sexp_free(sexp);
+		navi_clist_del(&obj->chain);
+		navi_free(obj);
 	}
 }
 
-void invoke_gc(void)
+void navi_gc_collect(void)
 {
 	gc_mark();
 	gc_sweep();
@@ -498,20 +500,20 @@ void invoke_gc(void)
 
 DEFUN(scm_gc_collect, args, env)
 {
-	invoke_gc();
-	return sexp_unspecified();
+	navi_gc_collect();
+	return navi_unspecified();
 }
 
 DEFUN(scm_gc_count, args, env)
 {
-	struct sexp *sexp;
-	list_for_each_entry(sexp, &heap, chain) {
-		if (sexp_type((sexp_t)sexp) == SEXP_FUNCTION &&
-				sexp_fun((sexp_t)sexp)->builtin)
+	struct navi_object *expr;
+	navi_clist_for_each_entry(expr, &heap, chain) {
+		if (navi_type((navi_t)expr) == NAVI_FUNCTION &&
+				navi_fun((navi_t)expr)->builtin)
 			continue;
-		printf("<%p> ", sexp);
-		sexp_write((sexp_t)sexp, env);
+		printf("<%p> ", expr);
+		navi_write((navi_t)expr, env);
 		putchar('\n');
 	}
-	return sexp_unspecified();
+	return navi_unspecified();
 }

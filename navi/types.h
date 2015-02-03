@@ -23,489 +23,474 @@
 #include "clist.h"
 #include "uchar.h"
 
-#ifdef NAVI_COMPILE
-#define SEXP_PREFIX(name) name
-#else
-#define SEXP_PREFIX(name) sexp_##name
-#endif
+#define NAVI_ENV_HT_SIZE 64
 
-#define ENV_HT_SIZE 64
-
-#define IMMEDIATE_TAG_SIZE 0x4
-#define IMMEDIATE_TAG_MASK 0xF
-#define VOID_TAG 0x0L
-#define BOOL_TAG 0x2L
-#define CHAR_TAG 0x6L
-#define NIL_TAG  0xAL
-#define EOF_TAG  0xEL
+#define NAVI_IMMEDIATE_TAG_BITS 0x4
+#define NAVI_IMMEDIATE_TAG_MASK 0xF
+#define NAVI_VOID_TAG 0x0L
+#define NAVI_BOOL_TAG 0x2L
+#define NAVI_CHAR_TAG 0x6L
+#define NAVI_NIL_TAG  0xAL
+#define NAVI_EOF_TAG  0xEL
 
 /* C types {{{ */
 
 typedef union {
 	long n;
-	struct sexp *p;
-} sexp_t;
+	struct navi_object *p;
+} navi_t;
 
-struct sexp_scope {
-	struct list_head chain;
-	struct sexp_scope *next;
+struct navi_scope {
+	struct navi_clist_head chain;
+	struct navi_scope *next;
 	unsigned int refs;
-	struct hlist_head bindings[ENV_HT_SIZE];
+	struct navi_hlist_head bindings[NAVI_ENV_HT_SIZE];
 };
-typedef struct sexp_scope *env_t;
+typedef struct navi_scope *navi_env_t;
 
-typedef sexp_t (*builtin_t)(sexp_t,env_t);
-typedef sexp_t(*sexp_leaf_t)(sexp_t, void*);
+typedef navi_t (*navi_builtin_t)(navi_t,navi_env_t);
+typedef navi_t (*navi_leaf_t)(navi_t, void*);
 
-enum sexp_type {
-	SEXP_VOID,
-	SEXP_NIL,
-	SEXP_NUM,
-	SEXP_EOF,
-	SEXP_BOOL,
-	SEXP_CHAR,
-	SEXP_PAIR,
-	SEXP_PORT,
-	SEXP_STRING,
-	SEXP_SYMBOL,
-	SEXP_VECTOR,
-	SEXP_BYTEVEC,
-	SEXP_VALUES,
-	SEXP_MACRO,
-	SEXP_SPECIAL,
-	SEXP_PROMISE,
-	SEXP_FUNCTION,
-	SEXP_CASELAMBDA,
-	SEXP_ESCAPE,
-	SEXP_BOUNCE,
-	SEXP_ENVIRONMENT,
+enum navi_type {
+	NAVI_VOID,
+	NAVI_NIL,
+	NAVI_NUM,
+	NAVI_EOF,
+	NAVI_BOOL,
+	NAVI_CHAR,
+	NAVI_PAIR,
+	NAVI_PORT,
+	NAVI_STRING,
+	NAVI_SYMBOL,
+	NAVI_VECTOR,
+	NAVI_BYTEVEC,
+	NAVI_VALUES,
+	NAVI_MACRO,
+	NAVI_SPECIAL,
+	NAVI_PROMISE,
+	NAVI_FUNCTION,
+	NAVI_CASELAMBDA,
+	NAVI_ESCAPE,
+	NAVI_BOUNCE,
+	NAVI_ENVIRONMENT,
 };
 
-struct sexp_escape {
+struct navi_escape {
 	jmp_buf state;
-	env_t env;
-	sexp_t arg;
+	navi_env_t env;
+	navi_t arg;
 };
 
-struct sexp_function {
+struct navi_function {
 	union {
-		sexp_t body;
-		builtin_t fn;
+		navi_t body;
+		navi_builtin_t fn;
 	};
-	sexp_t args;
+	navi_t args;
 	char *name;
-	env_t env;
+	navi_env_t env;
 	unsigned short arity;
 	bool variadic;
 	bool builtin;
 };
 
-struct sexp_vector {
+struct navi_vector {
 	size_t size;
-	sexp_t data[];
+	navi_t data[];
 };
 
-struct sexp_bytevec {
+struct navi_bytevec {
 	size_t size;
 	unsigned char data[];
 };
 
-struct sexp_string {
+struct navi_string {
 	size_t storage;
 	size_t size;
 	size_t length;
 	char *data;
 };
 
-struct sexp_pair {
-	sexp_t car;
-	sexp_t cdr;
+struct navi_pair {
+	navi_t car;
+	navi_t cdr;
 };
 
-struct sexp_port {
-	int (*read_u8)(struct sexp_port*, env_t);
-	void (*write_u8)(unsigned char, struct sexp_port*, env_t);
-	void (*close_in)(struct sexp_port*, env_t);
-	void (*close_out)(struct sexp_port*, env_t);
+struct navi_port {
+	int (*read_u8)(struct navi_port*, navi_env_t);
+	void (*write_u8)(unsigned char, struct navi_port*, navi_env_t);
+	void (*close_in)(struct navi_port*, navi_env_t);
+	void (*close_out)(struct navi_port*, navi_env_t);
 	unsigned long flags;
 	uchar buffer;
-	sexp_t sexp;
+	navi_t expr;
 	size_t pos;
 	void *specific;
 };
 
-union sexp_object {
-	struct sexp_scope *env;
-	struct sexp_escape esc;
-	struct sexp_function fun;
-	struct sexp_vector vec;
-	struct sexp_bytevec bvec;
-	struct sexp_string str;
-	struct sexp_pair pair;
-	struct sexp_port port;
-};
-
-struct sexp {
-	struct list_head chain;
-	enum sexp_type type;
+struct navi_object {
+	struct navi_clist_head chain;
+	enum navi_type type;
 	bool gc_mark;
-	union sexp_object data[];
+	union {
+		struct navi_scope *env;
+		struct navi_escape esc;
+		struct navi_function fun;
+		struct navi_vector vec;
+		struct navi_bytevec bvec;
+		struct navi_string str;
+		struct navi_pair pair;
+		struct navi_port port;
+	} data[];
 };
 
-struct sexp_spec {
-	enum sexp_type type;
+struct navi_spec {
+	enum navi_type type;
 	union {
 		long num;
 		char *str;
-		struct sexp_function fun;
-		struct sexp_vector vec;
-		struct sexp_pair pair;
+		struct navi_function fun;
+		struct navi_vector vec;
+		struct navi_pair pair;
 	};
 	size_t size;
 	const char *ident;
 };
 
-struct sexp_binding {
-	struct hlist_node chain;
-	sexp_t symbol;
-	sexp_t object;
+struct navi_binding {
+	struct navi_hlist_node chain;
+	navi_t symbol;
+	navi_t object;
 };
 
 /* C types }}} */
 
-void scope_free(env_t scope);
+void navi_scope_free(navi_env_t scope);
 
-static inline void scope_unref(env_t env)
+static inline void navi_scope_unref(navi_env_t env)
 {
 	if (--env->refs == 0)
-		scope_free(env);
+		navi_scope_free(env);
 }
 
-static inline void scope_ref(env_t env)
+static inline void navi_scope_ref(navi_env_t env)
 {
 	env->refs++;
 }
 
 /* Accessors {{{ */
 
-static inline long sexp_num(sexp_t sexp)
+static inline long navi_num(navi_t obj)
 {
-	return sexp.n >> 1;
+	return obj.n >> 1;
 }
 
-static inline bool sexp_bool(sexp_t sexp)
+static inline bool navi_bool(navi_t obj)
 {
-	return sexp.n >> IMMEDIATE_TAG_SIZE;
+	return obj.n >> NAVI_IMMEDIATE_TAG_BITS;
 }
 
-static inline unsigned long sexp_char(sexp_t sexp)
+static inline unsigned long navi_char(navi_t obj)
 {
-	return sexp.n >> IMMEDIATE_TAG_SIZE;
+	return obj.n >> NAVI_IMMEDIATE_TAG_BITS;
 }
 
-static inline struct sexp *sexp_ptr(sexp_t sexp)
+static inline struct navi_object *navi_ptr(navi_t obj)
 {
-	return sexp.p;
+	return obj.p;
 }
 
-static inline struct sexp_vector *sexp_vector(sexp_t sexp)
+static inline struct navi_vector *navi_vector(navi_t obj)
 {
-	return &sexp.p->data->vec;
+	return &obj.p->data->vec;
 }
 
-static inline struct sexp_bytevec *sexp_bytevec(sexp_t sexp)
+static inline struct navi_bytevec *navi_bytevec(navi_t obj)
 {
-	return &sexp.p->data->bvec;
+	return &obj.p->data->bvec;
 }
 
-static inline struct sexp_string *sexp_string(sexp_t sexp)
+static inline struct navi_string *navi_string(navi_t obj)
 {
-	return &sexp.p->data->str;
+	return &obj.p->data->str;
 }
 
-static inline struct sexp_function *sexp_fun(sexp_t sexp)
+static inline struct navi_function *navi_fun(navi_t obj)
 {
-	return &sexp.p->data->fun;
+	return &obj.p->data->fun;
 }
 
-static inline struct sexp_escape *sexp_escape(sexp_t sexp)
+static inline struct navi_escape *navi_escape(navi_t obj)
 {
-	return &sexp.p->data->esc;
+	return &obj.p->data->esc;
 }
 
-static inline struct sexp_port *sexp_port(sexp_t sexp)
+static inline struct navi_port *navi_port(navi_t obj)
 {
-	return &sexp.p->data->port;
+	return &obj.p->data->port;
 }
 
-static inline env_t sexp_env(sexp_t sexp)
+static inline navi_env_t navi_env(navi_t obj)
 {
-	return sexp.p->data->env;
+	return obj.p->data->env;
 }
 
-static inline struct sexp_pair *sexp_pair(sexp_t sexp)
+static inline struct navi_pair *navi_pair(navi_t obj)
 {
-	return &sexp.p->data->pair;
+	return &obj.p->data->pair;
 }
 
-static inline sexp_t SEXP_PREFIX(car)(sexp_t sexp)
+static inline navi_t navi_car(navi_t obj)
 {
-	return sexp_pair(sexp)->car;
+	return navi_pair(obj)->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cdr)(sexp_t sexp)
+static inline navi_t navi_cdr(navi_t obj)
 {
-	return sexp_pair(sexp)->cdr;
+	return navi_pair(obj)->cdr;
 }
 
-static inline sexp_t SEXP_PREFIX(caar)(sexp_t sexp)
+static inline navi_t navi_caar(navi_t obj)
 {
-	return sexp_pair(car(sexp))->car;
+	return navi_pair(navi_car(obj))->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cadr)(sexp_t sexp)
+static inline navi_t navi_cadr(navi_t obj)
 {
-	return sexp_pair(cdr(sexp))->car;
+	return navi_pair(navi_cdr(obj))->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cdar)(sexp_t sexp)
+static inline navi_t navi_cdar(navi_t obj)
 {
-	return sexp_pair(car(sexp))->cdr;
+	return navi_pair(navi_car(obj))->cdr;
 }
 
-static inline sexp_t SEXP_PREFIX(cddr)(sexp_t sexp)
+static inline navi_t navi_cddr(navi_t obj)
 {
-	return sexp_pair(cdr(sexp))->cdr;
+	return navi_pair(navi_cdr(obj))->cdr;
 }
 
-static inline sexp_t SEXP_PREFIX(caddr)(sexp_t sexp)
+static inline navi_t navi_caddr(navi_t obj)
 {
-	return sexp_pair(cddr(sexp))->car;
+	return navi_pair(navi_cddr(obj))->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cadar)(sexp_t sexp)
+static inline navi_t navi_cadar(navi_t obj)
 {
-	return sexp_pair(cdar(sexp))->car;
+	return navi_pair(navi_cdar(obj))->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cdddr)(sexp_t sexp)
+static inline navi_t navi_cdddr(navi_t obj)
 {
-	return sexp_pair(cddr(sexp))->cdr;
+	return navi_pair(navi_cddr(obj))->cdr;
 }
 
-static inline sexp_t SEXP_PREFIX(cadddr)(sexp_t sexp)
+static inline navi_t navi_cadddr(navi_t obj)
 {
-	return sexp_pair(cdddr(sexp))->car;
+	return navi_pair(navi_cdddr(obj))->car;
 }
 
-static inline sexp_t SEXP_PREFIX(cddddr)(sexp_t sexp)
+static inline navi_t navi_cddddr(navi_t obj)
 {
-	return sexp_pair(cdddr(sexp))->cdr;
+	return navi_pair(navi_cdddr(obj))->cdr;
 }
 
-static inline sexp_t SEXP_PREFIX(caddddr)(sexp_t sexp)
+static inline navi_t navi_caddddr(navi_t obj)
 {
-	return sexp_pair(cddddr(sexp))->car;
+	return navi_pair(navi_cddddr(obj))->car;
 }
 
 /* Accessors }}} */
 
-static inline enum sexp_type sexp_immediate_type(sexp_t val)
+static inline enum navi_type navi_immediate_type(navi_t obj)
 {
-	unsigned long tag = val.n & IMMEDIATE_TAG_MASK;
+	unsigned long tag = obj.n & NAVI_IMMEDIATE_TAG_MASK;
 	switch (tag) {
-	case BOOL_TAG: return SEXP_BOOL;
-	case CHAR_TAG: return SEXP_CHAR;
-	case NIL_TAG:  return SEXP_NIL;
-	case EOF_TAG:  return SEXP_EOF;
+	case NAVI_BOOL_TAG: return NAVI_BOOL;
+	case NAVI_CHAR_TAG: return NAVI_CHAR;
+	case NAVI_NIL_TAG:  return NAVI_NIL;
+	case NAVI_EOF_TAG:  return NAVI_EOF;
 	}
 	return -1;
 }
 
-static inline enum sexp_type sexp_type(sexp_t val)
+static inline enum navi_type navi_type(navi_t obj)
 {
-	if (val.n == 0)
-		return SEXP_VOID;
-	if (val.n & 1)
-		return SEXP_NUM;
-	if (val.n & 2)
-		return sexp_immediate_type(val);
-	return val.p->type;
+	if (obj.n == 0)
+		return NAVI_VOID;
+	if (obj.n & 1)
+		return NAVI_NUM;
+	if (obj.n & 2)
+		return navi_immediate_type(obj);
+	return obj.p->type;
 }
 
-static inline bool sexp_ptr_type(sexp_t val)
+static inline bool navi_ptr_type(navi_t obj)
 {
-	return val.n != 0 && (val.n & 3) == 0;
+	return obj.n != 0 && (obj.n & 3) == 0;
 }
 
-static inline sexp_t sexp_last_cons(sexp_t list)
+static inline navi_t navi_last_cons(navi_t list)
 {
-	while (sexp_type(cdr(list)) == SEXP_PAIR)
-		list = cdr(list);
+	while (navi_type(navi_cdr(list)) == NAVI_PAIR)
+		list = navi_cdr(list);
 	return list;
 }
 
-sexp_t port_read_byte(struct sexp_port *port, env_t env);
-sexp_t port_peek_byte(struct sexp_port *port, env_t env);
-sexp_t port_read_char(struct sexp_port *port, env_t env);
-sexp_t port_peek_char(struct sexp_port *port, env_t env);
-void port_write_byte(unsigned char ch, struct sexp_port *port, env_t env);
-void port_write_char(uchar ch, struct sexp_port *port, env_t env);
-void port_write_c_string(const char *str, struct sexp_port *port, env_t env);
+navi_t navi_char_upcase(navi_t ch);
+navi_t navi_char_downcase(navi_t ch);
+
+navi_t navi_port_read_byte(struct navi_port *port, navi_env_t env);
+navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env);
+navi_t navi_port_read_char(struct navi_port *port, navi_env_t env);
+navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env);
+void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env);
+void navi_port_write_char(uchar ch, struct navi_port *port, navi_env_t env);
+void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env);
 
 /* conversion */
-sexp_t list_to_vector(sexp_t list);
-sexp_t vector_to_list(sexp_t vector);
-sexp_t list_to_bytevec(sexp_t list, env_t env);
-sexp_t bytevec_to_list(sexp_t sexp);
-char *scm_to_c_string(sexp_t string);
-char *bytevec_to_c_string(sexp_t sexp);
-sexp_t string_to_bytevec(sexp_t string);
-sexp_t bytevec_to_string(sexp_t bytevec);
+navi_t navi_list_to_vector(navi_t list);
+navi_t navi_vector_to_list(navi_t vector);
+navi_t navi_list_to_bytevec(navi_t list, navi_env_t env);
+navi_t navi_bytevec_to_list(navi_t vec);
+char *navi_string_to_cstr(navi_t string);
+char *navi_bytevec_to_cstr(navi_t vec);
+navi_t navi_string_to_bytevec(navi_t string);
+navi_t navi_bytevec_to_string(navi_t bytevec);
 
 void navi_init(void);
-void sexp_free(struct sexp *sexp);
-struct sexp *make_sexp(enum sexp_type type, size_t size);
+void navi_free(struct navi_object *obj);
 
 /* Constructors {{{ */
 
-sexp_t sexp_from_c_string(const char *str);
-sexp_t sexp_from_c_bytevec(const char *str);
-sexp_t sexp_make_symbol(const char *sym);
-sexp_t sexp_make_pair(sexp_t car, sexp_t cdr);
-sexp_t sexp_make_empty_pair(void);
-sexp_t sexp_make_port(int(*read)(struct sexp_port*, env_t),
-		void(*write)(unsigned char,struct sexp_port*, env_t),
-		void(*close_in)(struct sexp_port*, env_t),
-		void(*close_out)(struct sexp_port*, env_t),
+navi_t navi_cstr_to_string(const char *str);
+navi_t navi_cstr_to_bytevec(const char *str);
+navi_t navi_make_symbol(const char *sym);
+navi_t navi_make_pair(navi_t car, navi_t cdr);
+navi_t navi_make_empty_pair(void);
+navi_t navi_make_port(int(*read)(struct navi_port*, navi_env_t),
+		void(*write)(unsigned char,struct navi_port*, navi_env_t),
+		void(*close_in)(struct navi_port*, navi_env_t),
+		void(*close_out)(struct navi_port*, navi_env_t),
 		void *specific);
-#define sexp_make_input_port(read, close, specific) \
-	sexp_make_port(read, NULL, close, NULL, specific)
-#define sexp_make_output_port(write, close, specific) \
-	sexp_make_port(NULL, write, NULL, close, specific)
-sexp_t sexp_make_file_input_port(FILE *file);
-sexp_t sexp_make_file_output_port(FILE *file);
-sexp_t sexp_make_vector(size_t size);
-sexp_t sexp_make_bytevec(size_t size);
-sexp_t sexp_make_string(size_t storage, size_t size, size_t length);
-sexp_t sexp_make_function(sexp_t args, sexp_t body, char *name, env_t env);
-sexp_t sexp_make_escape(void);
+#define navi_make_input_port(read, close, specific) \
+	navi_make_port(read, NULL, close, NULL, specific)
+#define navi_make_output_port(write, close, specific) \
+	navi_make_port(NULL, write, NULL, close, specific)
+navi_t navi_make_file_input_port(FILE *file);
+navi_t navi_make_file_output_port(FILE *file);
+navi_t navi_make_vector(size_t size);
+navi_t navi_make_bytevec(size_t size);
+navi_t navi_make_string(size_t storage, size_t size, size_t length);
+navi_t navi_make_function(navi_t args, navi_t body, char *name, navi_env_t env);
+navi_t navi_make_escape(void);
 
-static inline sexp_t sexp_make_void(void)
+static inline navi_t navi_make_void(void)
 {
-	return (sexp_t) VOID_TAG;
+	return (navi_t) NAVI_VOID_TAG;
 }
 
-static inline sexp_t sexp_make_nil(void)
+static inline navi_t navi_make_nil(void)
 {
-	return (sexp_t) NIL_TAG;
+	return (navi_t) NAVI_NIL_TAG;
 }
 
-static inline sexp_t sexp_make_eof(void)
+static inline navi_t navi_make_eof(void)
 {
-	return (sexp_t) EOF_TAG;
+	return (navi_t) NAVI_EOF_TAG;
 }
 
-static inline sexp_t sexp_make_num(long num)
+static inline navi_t navi_make_num(long num)
 {
-	return (sexp_t) { .n = (num << 1) | 1 };
+	return (navi_t) { .n = (num << 1) | 1 };
 }
 
-static inline sexp_t sexp_make_bool(bool b)
+static inline navi_t navi_make_bool(bool b)
 {
-	return (sexp_t) { .n = (b << IMMEDIATE_TAG_SIZE) | BOOL_TAG };
+	return (navi_t) { .n = (b << NAVI_IMMEDIATE_TAG_BITS) | NAVI_BOOL_TAG };
 }
 
-static inline sexp_t sexp_make_char(unsigned long c)
+static inline navi_t navi_make_char(unsigned long c)
 {
-	return (sexp_t) { .n = (c << IMMEDIATE_TAG_SIZE) | CHAR_TAG };
+	return (navi_t) { .n = (c << NAVI_IMMEDIATE_TAG_BITS) | NAVI_CHAR_TAG };
 }
 
-static inline sexp_t sexp_make_uninterned(const char *str)
+static inline navi_t navi_make_uninterned(const char *str)
 {
-	sexp_t sym = sexp_from_c_bytevec(str);
-	sym.p->type = SEXP_SYMBOL;
+	navi_t sym = navi_cstr_to_bytevec(str);
+	sym.p->type = NAVI_SYMBOL;
 	return sym;
 }
 
-static inline sexp_t sexp_make_macro(sexp_t args, sexp_t body, char *name, env_t env)
+static inline navi_t navi_make_macro(navi_t args, navi_t body, char *name, navi_env_t env)
 {
-	sexp_t macro = sexp_make_function(args, body, name, env);
-	macro.p->type = SEXP_MACRO;
+	navi_t macro = navi_make_function(args, body, name, env);
+	macro.p->type = NAVI_MACRO;
 	return macro;
 }
 
-static inline sexp_t sexp_make_promise(sexp_t e, env_t env)
+static inline navi_t navi_make_promise(navi_t e, navi_env_t env)
 {
-	sexp_t body = sexp_make_pair(e, sexp_make_nil());
-	sexp_t promise = sexp_make_function(sexp_make_nil(), body, "", env);
-	promise.p->type = SEXP_PROMISE;
+	navi_t body = navi_make_pair(e, navi_make_nil());
+	navi_t promise = navi_make_function(navi_make_nil(), body, "", env);
+	promise.p->type = NAVI_PROMISE;
 	return promise;
 }
 
-static inline sexp_t sexp_make_caselambda(size_t size)
+static inline navi_t navi_make_caselambda(size_t size)
 {
-	sexp_t lambda = sexp_make_vector(size);
-	lambda.p->type = SEXP_CASELAMBDA;
+	navi_t lambda = navi_make_vector(size);
+	lambda.p->type = NAVI_CASELAMBDA;
 	return lambda;
 }
 
-static inline sexp_t sexp_make_apair(const char *sym, sexp_t val)
+static inline navi_t navi_make_apair(const char *sym, navi_t val)
 {
-	return sexp_make_pair(sexp_make_symbol(sym), val);
+	return navi_make_pair(navi_make_symbol(sym), val);
 }
 
-static inline sexp_t sexp_make_bounce(sexp_t object, sexp_t env)
+static inline navi_t navi_make_bounce(navi_t object, navi_t env)
 {
-	sexp_t ret = sexp_make_pair(object, env);
-	ret.p->type = SEXP_BOUNCE;
-	scope_ref(sexp_env(env));
+	navi_t ret = navi_make_pair(object, env);
+	ret.p->type = NAVI_BOUNCE;
+	navi_scope_ref(navi_env(env));
 	return ret;
 }
 
 /* Constructors }}} */
 
-static inline sexp_t sexp_unspecified(void)
+static inline navi_t navi_unspecified(void)
 {
-	return sexp_make_void();
+	return navi_make_void();
 }
 
-static inline sexp_t vector_ref(sexp_t sexp, size_t i)
+static inline navi_t navi_vector_ref(navi_t vec, size_t i)
 {
-	return sexp_vector(sexp)->data[i];
+	return navi_vector(vec)->data[i];
 }
 
-static inline size_t vector_length(sexp_t sexp)
+static inline size_t navi_vector_length(navi_t vec)
 {
-	return sexp.p->data->vec.size;
+	return vec.p->data->vec.size;
 }
 
-static inline sexp_t bytevec_ref(sexp_t sexp, size_t i)
+static inline navi_t navi_bytevec_ref(navi_t vec, size_t i)
 {
-	return sexp_make_num(sexp_bytevec(sexp)->data[i]);
+	return navi_make_num(navi_bytevec(vec)->data[i]);
 }
 
-static inline bool bytevec_equal(sexp_t sexp, const char *cstr)
+static inline bool navi_bytevec_equal(navi_t obj, const char *cstr)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct navi_bytevec *vec = navi_bytevec(obj);
 	for (size_t i = 0; i < vec->size; i++)
 		if (vec->data[i] != (unsigned char) cstr[i])
 			return false;
 	return true;
 }
 
-static inline bool string_equal(sexp_t sexp, const char *cstr)
+static inline bool navi_string_equal(navi_t a, navi_t b)
 {
-	struct sexp_string *string = sexp_string(sexp);
-	for (size_t i = 0; i < string->size; i++)
-		if (string->data[i] != cstr[i])
-			return false;
-	return true;
-}
-
-static inline bool sexp_string_equal(sexp_t a, sexp_t b)
-{
-	struct sexp_string *sa = sexp_string(a), *sb = sexp_string(b);
+	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
 	if (sa->size != sb->size || sa->length != sb->length)
 		return false;
 	for (size_t i = 0; i < sa->size; i++)
@@ -514,67 +499,67 @@ static inline bool sexp_string_equal(sexp_t a, sexp_t b)
 	return true;
 }
 
-static inline const char *sexp_strtype(enum sexp_type type)
+static inline const char *navi_strtype(enum navi_type type)
 {
 	switch (type) {
-	case SEXP_VOID:        return "void";
-	case SEXP_NIL:         return "nil";
-	case SEXP_EOF:         return "eof-object";
-	case SEXP_NUM:         return "number";
-	case SEXP_BOOL:        return "boolean";
-	case SEXP_CHAR:        return "character";
-	case SEXP_VALUES:      return "values";
-	case SEXP_PAIR:        return "pair";
-	case SEXP_PORT:        return "port";
-	case SEXP_STRING:      return "string";
-	case SEXP_SYMBOL:      return "symbol";
-	case SEXP_VECTOR:      return "vector";
-	case SEXP_BYTEVEC:     return "bytevector";
-	case SEXP_MACRO:       return "macro";
-	case SEXP_SPECIAL:     return "special";
-	case SEXP_PROMISE:     return "promise";
-	case SEXP_FUNCTION:    return "function";
-	case SEXP_CASELAMBDA:  return "case-lambda";
-	case SEXP_ESCAPE:      return "escape";
-	case SEXP_ENVIRONMENT: return "environment";
-	case SEXP_BOUNCE:      return "bounce";
+	case NAVI_VOID:        return "void";
+	case NAVI_NIL:         return "nil";
+	case NAVI_EOF:         return "eof-object";
+	case NAVI_NUM:         return "number";
+	case NAVI_BOOL:        return "boolean";
+	case NAVI_CHAR:        return "character";
+	case NAVI_VALUES:      return "values";
+	case NAVI_PAIR:        return "pair";
+	case NAVI_PORT:        return "port";
+	case NAVI_STRING:      return "string";
+	case NAVI_SYMBOL:      return "symbol";
+	case NAVI_VECTOR:      return "vector";
+	case NAVI_BYTEVEC:     return "bytevector";
+	case NAVI_MACRO:       return "macro";
+	case NAVI_SPECIAL:     return "special";
+	case NAVI_PROMISE:     return "promise";
+	case NAVI_FUNCTION:    return "function";
+	case NAVI_CASELAMBDA:  return "case-lambda";
+	case NAVI_ESCAPE:      return "escape";
+	case NAVI_ENVIRONMENT: return "environment";
+	case NAVI_BOUNCE:      return "bounce";
 	}
 	return "unknown";
 }
 
-static inline sexp_t sexp_typesym(enum sexp_type type)
+static inline navi_t navi_typesym(enum navi_type type)
 {
-	return sexp_make_symbol(sexp_strtype(type));
+	return navi_make_symbol(navi_strtype(type));
 }
 
 /* type predicates */
 
 #define TYPE_PREDICATE(name, type) \
-	static inline bool name(sexp_t sexp) \
+	static inline bool name(navi_t obj) \
 	{ \
-		return sexp_type(sexp) == type; \
+		return navi_type(obj) == type; \
 	}
 
-TYPE_PREDICATE(sexp_is_void, SEXP_VOID)
-TYPE_PREDICATE(sexp_is_nil,  SEXP_NIL)
-TYPE_PREDICATE(sexp_is_eof,  SEXP_EOF)
-TYPE_PREDICATE(sexp_is_num,  SEXP_NUM)
-TYPE_PREDICATE(sexp_is_bool, SEXP_BOOL)
-TYPE_PREDICATE(sexp_is_char, SEXP_CHAR)
-TYPE_PREDICATE(sexp_is_values, SEXP_VALUES)
-TYPE_PREDICATE(sexp_is_pair, SEXP_PAIR)
-TYPE_PREDICATE(sexp_is_string, SEXP_STRING)
-TYPE_PREDICATE(sexp_is_symbol, SEXP_SYMBOL)
-TYPE_PREDICATE(sexp_is_vector, SEXP_VECTOR)
-TYPE_PREDICATE(sexp_is_bytevec, SEXP_BYTEVEC)
-TYPE_PREDICATE(sexp_is_macro, SEXP_MACRO)
-TYPE_PREDICATE(sexp_is_function, SEXP_FUNCTION)
-TYPE_PREDICATE(sexp_is_caselambda, SEXP_CASELAMBDA)
-TYPE_PREDICATE(sexp_is_escape, SEXP_ESCAPE)
-TYPE_PREDICATE(sexp_is_environment, SEXP_ENVIRONMENT)
-TYPE_PREDICATE(sexp_is_bounce, SEXP_BOUNCE)
+TYPE_PREDICATE(navi_is_void, NAVI_VOID)
+TYPE_PREDICATE(navi_is_nil,  NAVI_NIL)
+TYPE_PREDICATE(navi_is_eof,  NAVI_EOF)
+TYPE_PREDICATE(navi_is_num,  NAVI_NUM)
+TYPE_PREDICATE(navi_is_bool, NAVI_BOOL)
+TYPE_PREDICATE(navi_is_char, NAVI_CHAR)
+TYPE_PREDICATE(navi_is_values, NAVI_VALUES)
+TYPE_PREDICATE(navi_is_pair, NAVI_PAIR)
+TYPE_PREDICATE(navi_is_string, NAVI_STRING)
+TYPE_PREDICATE(navi_is_symbol, NAVI_SYMBOL)
+TYPE_PREDICATE(navi_is_vector, NAVI_VECTOR)
+TYPE_PREDICATE(navi_is_bytevec, NAVI_BYTEVEC)
+TYPE_PREDICATE(navi_is_macro, NAVI_MACRO)
+TYPE_PREDICATE(navi_is_function, NAVI_FUNCTION)
+TYPE_PREDICATE(navi_is_caselambda, NAVI_CASELAMBDA)
+TYPE_PREDICATE(navi_is_escape, NAVI_ESCAPE)
+TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
+TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 #undef TYPE_PREDICATE
 
-bool sexp_is_proper_list(sexp_t list);
+bool navi_is_proper_list(navi_t list);
 
 #endif

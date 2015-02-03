@@ -20,10 +20,10 @@
 #include <check.h>
 #include "../navi.h"
 
-#define $$(fn) fn(sexp_make_nil(), env)
-#define $(fn, ...) fn(list(__VA_ARGS__, sexp_make_void()), env)
+#define $$(fn) fn(navi_make_nil(), env)
+#define $(fn, ...) fn(navi_list(__VA_ARGS__, navi_make_void()), env)
 
-env_t env;
+navi_env_t env;
 
 TCase *arithmetic_tests(void);
 TCase *char_tests(void);

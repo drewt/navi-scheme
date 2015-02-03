@@ -20,33 +20,33 @@
 
 #include "navi.h"
 
-static sexp_t call_read(env_t env)
+static navi_t call_read(navi_env_t env)
 {
-	return scm_read(sexp_make_nil(), env);
+	return scm_read(navi_make_nil(), env);
 }
 
 static _Noreturn void repl(void)
 {
-	env_t env = make_default_environment();
-	sexp_t cont = sexp_make_escape();
-	struct sexp_escape *escape = sexp_escape(cont);
+	navi_env_t env = navi_make_default_environment();
+	navi_t cont = navi_make_escape();
+	struct navi_escape *escape = navi_escape(cont);
 
-	scope_set(env, sym_repl, cont);
+	navi_scope_set(env, navi_sym_repl, cont);
 
 	for (volatile int i = 0;; i++) {
-		sexp_t sexp;
+		navi_t expr;
 
 		setjmp(escape->state);
 
 		printf("\n#;%d> ", i);
-		if ((sexp = call_read(env)).n == 0)
+		if ((expr = call_read(env)).n == 0)
 			continue;
-		printf("read: "); sexp_write(sexp, env); putchar('\n');
-		if (sexp_is_eof(sexp))
+		printf("read: "); navi_write(expr, env); putchar('\n');
+		if (navi_is_eof(expr))
 			break;
-		if ((sexp = trampoline(sexp, env)).n == 0)
+		if ((expr = navi_eval(expr, env)).n == 0)
 			continue;
-		sexp_write(sexp, env);
+		navi_write(expr, env);
 	}
 	putchar('\n');
 	exit(0);
@@ -54,13 +54,13 @@ static _Noreturn void repl(void)
 
 static _Noreturn void script(void)
 {
-	env_t env = make_default_environment();
+	navi_env_t env = navi_make_default_environment();
 
 	for (;;) {
-		sexp_t sexp = call_read(env);
-		if (sexp_is_eof(sexp))
+		navi_t expr = call_read(env);
+		if (navi_is_eof(expr))
 			break;
-		sexp_write(trampoline(sexp, env), env);
+		navi_write(navi_eval(expr, env), env);
 	}
 	putchar('\n');
 	exit(0);

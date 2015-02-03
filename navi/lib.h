@@ -18,26 +18,27 @@
 
 #include "types.h"
 
-#define DECLARE(fname) sexp_t fname (sexp_t,env_t)
+#define DECLARE(fname) navi_t fname (navi_t,navi_env_t)
 
-DECLARE(eval_lambda);
-DECLARE(eval_caselambda);
-DECLARE(eval_define);
-DECLARE(eval_define_values);
-DECLARE(eval_defmacro);
-DECLARE(eval_begin);
-DECLARE(eval_let);
-DECLARE(eval_sequential_let);
-DECLARE(eval_let_values);
-DECLARE(eval_set);
-DECLARE(eval_quote);
-DECLARE(eval_quasiquote);
-DECLARE(eval_case);
-DECLARE(eval_cond);
-DECLARE(eval_if);
-DECLARE(eval_and);
-DECLARE(eval_or);
-DECLARE(eval_delay);
+DECLARE(scm_lambda);
+DECLARE(scm_caselambda);
+DECLARE(scm_define);
+DECLARE(scm_define_values);
+DECLARE(scm_defmacro);
+DECLARE(scm_begin);
+DECLARE(scm_let);
+DECLARE(scm_sequential_let);
+DECLARE(scm_let_values);
+DECLARE(scm_set);
+DECLARE(scm_quote);
+DECLARE(scm_unquote);
+DECLARE(scm_quasiquote);
+DECLARE(scm_case);
+DECLARE(scm_cond);
+DECLARE(scm_if);
+DECLARE(scm_and);
+DECLARE(scm_or);
+DECLARE(scm_delay);
 
 DECLARE(scm_gensym);
 

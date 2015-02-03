@@ -17,34 +17,34 @@
 #define _NAVI_SYMBOLS_H
 
 /* automatically interned symbols */
-extern sexp_t sym_lambda;
-extern sexp_t sym_caselambda;
-extern sexp_t sym_define;
-extern sexp_t sym_defmacro;
-extern sexp_t sym_begin;
-extern sexp_t sym_let;
-extern sexp_t sym_seqlet;
-extern sexp_t sym_letrec;
-extern sexp_t sym_seqletrec;
-extern sexp_t sym_set;
-extern sexp_t sym_quote;
-extern sexp_t sym_quasiquote;
-extern sexp_t sym_unquote;
-extern sexp_t sym_splice;
-extern sexp_t sym_case;
-extern sexp_t sym_cond;
-extern sexp_t sym_if;
-extern sexp_t sym_and;
-extern sexp_t sym_or;
-extern sexp_t sym_else;
-extern sexp_t sym_eq_lt;
-extern sexp_t sym_question;
-extern sexp_t sym_exn;
-extern sexp_t sym_current_input;
-extern sexp_t sym_current_output;
-extern sexp_t sym_current_error;
-extern sexp_t sym_read_error;
-extern sexp_t sym_file_error;
-extern sexp_t sym_repl;
+extern navi_t navi_sym_lambda;
+extern navi_t navi_sym_caselambda;
+extern navi_t navi_sym_define;
+extern navi_t navi_sym_defmacro;
+extern navi_t navi_sym_begin;
+extern navi_t navi_sym_let;
+extern navi_t navi_sym_seqlet;
+extern navi_t navi_sym_letrec;
+extern navi_t navi_sym_seqletrec;
+extern navi_t navi_sym_set;
+extern navi_t navi_sym_quote;
+extern navi_t navi_sym_quasiquote;
+extern navi_t navi_sym_unquote;
+extern navi_t navi_sym_splice;
+extern navi_t navi_sym_case;
+extern navi_t navi_sym_cond;
+extern navi_t navi_sym_if;
+extern navi_t navi_sym_and;
+extern navi_t navi_sym_or;
+extern navi_t navi_sym_else;
+extern navi_t navi_sym_eq_lt;
+extern navi_t navi_sym_question;
+extern navi_t navi_sym_exn;
+extern navi_t navi_sym_current_input;
+extern navi_t navi_sym_current_output;
+extern navi_t navi_sym_current_error;
+extern navi_t navi_sym_read_error;
+extern navi_t navi_sym_file_error;
+extern navi_t navi_sym_repl;
 
 #endif

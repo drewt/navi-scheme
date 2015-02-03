@@ -17,103 +17,105 @@
 
 #include "navi.h"
 
-sexp_t vlist(sexp_t first, va_list ap)
+navi_t navi_vlist(navi_t first, va_list ap)
 {
-	sexp_t list, listptr;
+	navi_t list, listptr;
 
-	list = listptr = sexp_make_empty_pair();
-	sexp_pair(list)->car = first;
-	sexp_for_each_arg(arg, ap) {
-		sexp_pair(listptr)->cdr = sexp_make_empty_pair();
-		listptr = cdr(listptr);
-		sexp_pair(listptr)->car = arg;
+	list = listptr = navi_make_empty_pair();
+	navi_pair(list)->car = first;
+	for (navi_t arg = va_arg(ap, navi_t);
+			navi_type(arg) != NAVI_VOID;
+			arg = va_arg(ap, navi_t)) {
+		navi_pair(listptr)->cdr = navi_make_empty_pair();
+		listptr = navi_cdr(listptr);
+		navi_pair(listptr)->car = arg;
 	}
-	sexp_pair(listptr)->cdr = sexp_make_nil();
+	navi_pair(listptr)->cdr = navi_make_nil();
 	return list;
 }
 
-sexp_t list(sexp_t first, ...)
+navi_t navi_list(navi_t first, ...)
 {
 	va_list ap;
-	sexp_t list;
+	navi_t list;
 
-	if (sexp_type(first) == SEXP_VOID)
-		return sexp_make_nil();
+	if (navi_type(first) == NAVI_VOID)
+		return navi_make_nil();
 
 	va_start(ap, first);
-	list = vlist(first, ap);
+	list = navi_vlist(first, ap);
 	va_end(ap);
 
 	return list;
 }
 
-bool sexp_is_proper_list(sexp_t list)
+bool navi_is_proper_list(navi_t list)
 {
-	sexp_t cons;
-	enum sexp_type type = sexp_type(list);
-	if (type == SEXP_NIL)
+	navi_t cons;
+	enum navi_type type = navi_type(list);
+	if (type == NAVI_NIL)
 		return true;
-	if (type != SEXP_PAIR)
+	if (type != NAVI_PAIR)
 		return false;
-	sexp_list_for_each(cons, list);
-	return sexp_is_nil(cons);
+	navi_list_for_each(cons, list);
+	return navi_is_nil(cons);
 }
 
-sexp_t map(sexp_t sexp, sexp_leaf_t fn, void *data)
+navi_t navi_map(navi_t list, navi_leaf_t fn, void *data)
 {
-	sexp_t cons;
-	struct sexp_pair head, *ptr;
+	navi_t cons;
+	struct navi_pair head, *ptr;
 
 	ptr = &head;
-	sexp_list_for_each(cons, sexp) {
-		ptr->cdr = sexp_make_empty_pair();
-		ptr = sexp_pair(ptr->cdr);
-		ptr->car = fn(car(cons), data);
+	navi_list_for_each(cons, list) {
+		ptr->cdr = navi_make_empty_pair();
+		ptr = navi_pair(ptr->cdr);
+		ptr->car = fn(navi_car(cons), data);
 	}
-	ptr->cdr = sexp_make_nil();
+	ptr->cdr = navi_make_nil();
 	return head.cdr;
 }
 
 DEFUN(scm_cons, args, env)
 {
-	return sexp_make_pair(car((sexp_t)args), cadr((sexp_t)args));
+	return navi_make_pair(navi_car((navi_t)args), navi_cadr((navi_t)args));
 }
 
 DEFUN(scm_car, args, env)
 {
-	type_check(car(args), SEXP_PAIR, env);
-	return car(car(args));
+	navi_type_check(navi_car(args), NAVI_PAIR, env);
+	return navi_car(navi_car(args));
 }
 
 DEFUN(scm_cdr, args, env)
 {
-	type_check(car(args), SEXP_PAIR, env);
-	return cdr(car(args));
+	navi_type_check(navi_car(args), NAVI_PAIR, env);
+	return navi_cdr(navi_car(args));
 }
 
 DEFUN(scm_pairp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_PAIR);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PAIR);
 }
 
 DEFUN(scm_listp, args, env)
 {
-	sexp_t cons, list = car(args);
-	enum sexp_type type = sexp_type(list);
-	if (type != SEXP_PAIR && type != SEXP_NIL)
-		return sexp_make_bool(false);
-	sexp_list_for_each(cons, list);
-	return sexp_make_bool(sexp_type(cons) == SEXP_NIL);
+	navi_t cons, list = navi_car(args);
+	enum navi_type type = navi_type(list);
+	if (type != NAVI_PAIR && type != NAVI_NIL)
+		return navi_make_bool(false);
+	navi_list_for_each(cons, list);
+	return navi_make_bool(navi_type(cons) == NAVI_NIL);
 }
 
 DEFUN(scm_nullp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_NIL);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_NIL);
 }
 
 DEFUN(scm_length, args, env)
 {
-	return sexp_make_num(list_length(car(args)));
+	return navi_make_num(navi_list_length(navi_car(args)));
 }
 
 DEFUN(scm_list, args, env)

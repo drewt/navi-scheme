@@ -15,71 +15,71 @@
 
 #include "navi.h"
 
-void bytevec_fill(sexp_t vector, unsigned char fill)
+static void bytevec_fill(navi_t vector, unsigned char fill)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(vector);
+	struct navi_bytevec *vec = navi_bytevec(vector);
 
 	for (size_t i = 0; i < vec->size; i++)
 		vec->data[i] = fill;
 }
 
-sexp_t list_to_bytevec(sexp_t list, env_t env)
+navi_t navi_list_to_bytevec(navi_t list, navi_env_t env)
 {
-	sexp_t cons, vec = sexp_make_bytevec(list_length(list));
+	navi_t cons, vec = navi_make_bytevec(navi_list_length(list));
 
 	unsigned i = 0;
-	struct sexp_bytevec *vector = sexp_bytevec(vec);
-	sexp_list_for_each(cons, list) {
-		type_check_byte(car(cons), env);
-		vector->data[i++] = sexp_num(car(cons));
+	struct navi_bytevec *vector = navi_bytevec(vec);
+	navi_list_for_each(cons, list) {
+		navi_type_check_byte(navi_car(cons), env);
+		vector->data[i++] = navi_num(navi_car(cons));
 	}
 	return vec;
 }
 
-sexp_t bytevec_to_list(sexp_t sexp)
+navi_t navi_bytevec_to_list(navi_t obj)
 {
-	struct sexp_bytevec *vector;
-	struct sexp_pair head, *ptr = &head;
+	struct navi_bytevec *vector;
+	struct navi_pair head, *ptr = &head;
 
-	vector = sexp_bytevec(sexp);
+	vector = navi_bytevec(obj);
 	for (size_t i = 0; i < vector->size; i++) {
-		ptr->cdr = sexp_make_empty_pair();
+		ptr->cdr = navi_make_empty_pair();
 		ptr = &ptr->cdr.p->data->pair;
-		ptr->car = sexp_make_char(vector->data[i]);
+		ptr->car = navi_make_char(vector->data[i]);
 	}
-	ptr->cdr = sexp_make_nil();
+	ptr->cdr = navi_make_nil();
 	return head.cdr;
 }
 
 /* FIXME: assumes ASCII */
-sexp_t string_to_bytevec(sexp_t string)
+navi_t navi_string_to_bytevec(navi_t string)
 {
-	struct sexp_vector *svec = sexp_vector(string);
-	sexp_t sexp = sexp_make_bytevec(svec->size);
-	struct sexp_bytevec *bvec = sexp_bytevec(sexp);
+	struct navi_vector *svec = navi_vector(string);
+	navi_t obj = navi_make_bytevec(svec->size);
+	struct navi_bytevec *bvec = navi_bytevec(obj);
 
 	for (size_t i = 0; i < svec->size; i++)
-		bvec->data[i] = sexp_char(svec->data[i]);
+		bvec->data[i] = navi_char(svec->data[i]);
 
-	return sexp;
+	return obj;
 }
 
 /* FIXME: assumes ASCII */
-sexp_t bytevec_to_string(sexp_t bytevec)
+navi_t navi_bytevec_to_string(navi_t bytevec)
 {
-	struct sexp_bytevec *bvec = sexp_bytevec(bytevec);
-	sexp_t sexp = sexp_make_string(bvec->size, bvec->size, bvec->size);
-	struct sexp_vector *svec = sexp_vector(sexp);
+	struct navi_bytevec *bvec = navi_bytevec(bytevec);
+	navi_t obj = navi_make_string(bvec->size, bvec->size, bvec->size);
+	struct navi_vector *svec = navi_vector(obj);
 
 	for (size_t i = 0; i < bvec->size; i++)
-		svec->data[i] = sexp_make_char(bvec->data[i]);
+		svec->data[i] = navi_make_char(bvec->data[i]);
 
-	return sexp;
+	return obj;
 }
 
-char *bytevec_to_c_string(sexp_t sexp)
+char *navi_bytevec_to_cstr(navi_t obj)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct navi_bytevec *vec = navi_bytevec(obj);
 	char *cstr = xmalloc(vec->size + 1);
 
 	for (size_t i = 0; i < vec->size; i++)
@@ -90,82 +90,82 @@ char *bytevec_to_c_string(sexp_t sexp)
 
 DEFUN(scm_bytevectorp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_BYTEVEC);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BYTEVEC);
 }
 
 DEFUN(scm_make_bytevector, args, env)
 {
-	sexp_t sexp;
-	int nr_args = list_length(args);
+	navi_t obj;
+	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
-		error(env, "wrong number of arguments");
+		navi_error(env, "wrong number of arguments");
 
-	type_check(car(args), SEXP_NUM, env);
+	navi_type_check(navi_car(args), NAVI_NUM, env);
 
-	sexp = sexp_make_bytevec(sexp_num(car(args)));
+	obj = navi_make_bytevec(navi_num(navi_car(args)));
 	if (nr_args == 2) {
-		type_check_byte(cadr(args), env);
-		bytevec_fill(sexp, sexp_num(cadr(args)));
+		navi_type_check_byte(navi_cadr(args), env);
+		bytevec_fill(obj, navi_num(navi_cadr(args)));
 	}
-	return sexp;
+	return obj;
 }
 
 DEFUN(scm_bytevector, args, env)
 {
-	return list_to_bytevec(args, env);
+	return navi_list_to_bytevec(args, env);
 }
 
 DEFUN(scm_bytevector_length, args, env)
 {
-	type_check(car(args), SEXP_BYTEVEC, env);
-	return sexp_make_num(sexp_bytevec(car(args))->size);
+	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
+	return navi_make_num(navi_bytevec(navi_car(args))->size);
 }
 
 DEFUN(scm_bytevector_u8_ref, args, env)
 {
-	type_check(car(args),  SEXP_BYTEVEC, env);
-	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size, env);
+	navi_type_check(navi_car(args),  NAVI_BYTEVEC, env);
+	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
 
-	return bytevec_ref(car(args), sexp_num(cadr(args)));
+	return navi_bytevec_ref(navi_car(args), navi_num(navi_cadr(args)));
 }
 
 DEFUN(scm_bytevector_u8_set, args, env)
 {
-	type_check(car(args), SEXP_BYTEVEC, env);
-	type_check_range(cadr(args), 0, sexp_bytevec(car(args))->size, env);
-	type_check_byte(caddr(args), env);
+	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
+	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
+	navi_type_check_byte(navi_caddr(args), env);
 
-	sexp_bytevec(car(args))->data[sexp_num(cadr(args))] = sexp_num(caddr(args));
-	return sexp_unspecified();
+	navi_bytevec(navi_car(args))->data[navi_num(navi_cadr(args))] = navi_num(navi_caddr(args));
+	return navi_unspecified();
 }
 
 DEFUN(scm_bytevector_append, args, env)
 {
-	sexp_t cons, sexp;
-	struct sexp_bytevec *vec;
+	navi_t cons, obj;
+	struct navi_bytevec *vec;
 	size_t i = 0, size = 0;
 
-	sexp_list_for_each(cons, args) {
-		size += bytevec_cast(car(cons), SEXP_BYTEVEC, env)->size;
+	navi_list_for_each(cons, args) {
+		size += navi_bytevec_cast(navi_car(cons), NAVI_BYTEVEC, env)->size;
 	}
 
-	sexp = sexp_make_bytevec(size);
-	vec = sexp_bytevec(sexp);
+	obj = navi_make_bytevec(size);
+	vec = navi_bytevec(obj);
 
-	sexp_list_for_each(cons, args) {
-		struct sexp_bytevec *other = sexp_bytevec(car(cons));
+	navi_list_for_each(cons, args) {
+		struct navi_bytevec *other = navi_bytevec(navi_car(cons));
 		for (size_t j = 0; j < other->size; j++)
 			vec->data[i++] = other->data[j];
 	}
 	vec->data[i] = '\0';
-	return sexp;
+	return obj;
 }
 
-static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
+static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 		size_t end)
 {
-	struct sexp_bytevec *tov = sexp_bytevec(to), *fromv = sexp_bytevec(from);
+	struct navi_bytevec *tov = navi_bytevec(to), *fromv = navi_bytevec(from);
 	for (size_t i = start; i < end; i++)
 		tov->data[at++] = fromv->data[i];
 	return to;
@@ -173,82 +173,82 @@ static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
 
 DEFUN(scm_bytevector_copy, args, env)
 {
-	sexp_t from;
+	navi_t from;
 	long start, end;
-	struct sexp_bytevec *vec;
-	int nr_args = list_length(args);
+	struct navi_bytevec *vec;
+	int nr_args = navi_list_length(args);
 
-	from = type_check(car(args), SEXP_BYTEVEC, env);
-	vec = sexp_bytevec(from);
-	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) vec->size;
+	from = navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
+	vec = navi_bytevec(from);
+	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end, env);
+	navi_check_copy(vec->size, start, end, env);
 
-	return copy_to(sexp_make_bytevec(end - start), 0, from, start, end);
+	return copy_to(navi_make_bytevec(end - start), 0, from, start, end);
 }
 
 DEFUN(scm_bytevector_copy_to, args, env)
 {
-	sexp_t to, from;
+	navi_t to, from;
 	long at, start, end;
-	struct sexp_bytevec *from_vec, *to_vec;
-	int nr_args = list_length(args);
+	struct navi_bytevec *from_vec, *to_vec;
+	int nr_args = navi_list_length(args);
 
-	to = type_check(car(args), SEXP_BYTEVEC, env);
-	at = fixnum_cast(cadr(args), env);
-	from = type_check(caddr(args), SEXP_BYTEVEC, env);
-	to_vec = sexp_bytevec(to);
-	from_vec = sexp_bytevec(from);
-	start = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : 0;
-	end = (nr_args > 4) ? fixnum_cast(caddddr(args), env)
+	to = navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
+	at = navi_fixnum_cast(navi_cadr(args), env);
+	from = navi_type_check(navi_caddr(args), NAVI_BYTEVEC, env);
+	to_vec = navi_bytevec(to);
+	from_vec = navi_bytevec(from);
+	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
+	end = (nr_args > 4) ? navi_fixnum_cast(navi_caddddr(args), env)
 		: (long)from_vec->size;
 
-	check_copy_to(to_vec->size, at, from_vec->size, start, end, env);
+	navi_check_copy_to(to_vec->size, at, from_vec->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
-	return sexp_unspecified();
+	return navi_unspecified();
 }
 
 DEFUN(scm_utf8_to_string, args, env)
 {
-	sexp_t r;
+	navi_t r;
 	long start, end;
-	struct sexp_bytevec *vec = bytevec_cast(car(args), SEXP_BYTEVEC, env);
-	int nr_args = list_length(args);
+	struct navi_bytevec *vec = navi_bytevec_cast(navi_car(args), NAVI_BYTEVEC, env);
+	int nr_args = navi_list_length(args);
 
-	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) vec->size;
+	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end, env);
+	navi_check_copy(vec->size, start, end, env);
 	if (!u_is_valid((char*)vec->data, start, end))
-		error(env, "invalid UTF-8");
+		navi_error(env, "invalid UTF-8");
 
-	r = sexp_make_string(end - start, end - start, end - start);
-	memcpy(sexp_string(r)->data, vec->data + start, end - start);
-	sexp_string(r)->length = u_strlen(sexp_string(r)->data);
+	r = navi_make_string(end - start, end - start, end - start);
+	memcpy(navi_string(r)->data, vec->data + start, end - start);
+	navi_string(r)->length = u_strlen(navi_string(r)->data);
 
 	return r;
 }
 
 DEFUN(scm_string_to_utf8, args, env)
 {
-	sexp_t r;
+	navi_t r;
 	long start, end;
-	struct sexp_string *str = string_cast(car(args), env);
-	int nr_args = list_length(args);
+	struct navi_string *str = navi_string_cast(navi_car(args), env);
+	int nr_args = navi_list_length(args);
 	size_t size, i = 0;
 
-	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args), env)
+	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env)
 		: (long) u_strlen((char*)str->data);
 
-	check_copy(str->length, start, end, env);
+	navi_check_copy(str->length, start, end, env);
 
 	u_skip_chars(str->data, start, &i);
 	size = u_strsize(str->data + i, 0, end - start);
-	r = sexp_make_bytevec(size);
-	memcpy(sexp_bytevec(r)->data, str->data + i, size);
+	r = navi_make_bytevec(size);
+	memcpy(navi_bytevec(r)->data, str->data + i, size);
 
 	return r;
 }

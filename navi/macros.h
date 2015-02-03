@@ -17,31 +17,26 @@
 #define _NAVI_MACROS_H
 
 #define DEFSPECIAL(fname, aname, ename) \
-	sexp_t fname (sexp_t aname, env_t ename)
+	navi_t fname (navi_t aname, navi_env_t ename)
 #define DEFUN DEFSPECIAL
 #define DEFMACRO DEFSPECIAL
 
-#define sexp_list_for_each(cons, head) \
-	for (cons = (sexp_t) (head); sexp_type(cons) == SEXP_PAIR; \
-			cons = sexp_pair(cons)->cdr)
+#define navi_list_for_each(cons, head) \
+	for (cons = (navi_t) (head); navi_type(cons) == NAVI_PAIR; \
+			cons = navi_pair(cons)->cdr)
 
-#define sexp_list_for_each_safe(cons, n, head) \
-	for (cons = (sexp_t) (head), n = cdr(head); \
-			sexp_type(cons) == SEXP_PAIR; \
+#define navi_list_for_each_safe(cons, n, head) \
+	for (cons = (navi_t) (head), n = navi_cdr(head); \
+			navi_type(cons) == NAVI_PAIR; \
 			cons = n, \
-			n = (sexp_type(n) == SEXP_PAIR) ? cdr(n) : n)
+			n = (navi_type(n) == NAVI_PAIR) ? navi_cdr(n) : n)
 
-#define sexp_zipped_for_each(cons_a, cons_b, head_a, head_b) \
-	for (cons_a = (sexp_t) (head_a), cons_b = (sexp_t) (head_b); \
-			sexp_type(cons_a) == SEXP_PAIR && \
-			sexp_type(cons_b) == SEXP_PAIR; \
-			cons_a = sexp_pair(cons_a)->cdr, \
-			cons_b = sexp_pair(cons_b)->cdr)
-
-#define sexp_for_each_arg(arg, valist) \
-	for (sexp_t arg = va_arg(valist, sexp_t); \
-			sexp_type(arg) != SEXP_VOID; \
-			arg = va_arg(valist, sexp_t))
+#define navi_list_for_each_zipped(cons_a, cons_b, head_a, head_b) \
+	for (cons_a = (navi_t) (head_a), cons_b = (navi_t) (head_b); \
+			navi_type(cons_a) == NAVI_PAIR && \
+			navi_type(cons_b) == NAVI_PAIR; \
+			cons_a = navi_pair(cons_a)->cdr, \
+			cons_b = navi_pair(cons_b)->cdr)
 
 /* Stolen from chicken.h
 ;
@@ -71,16 +66,16 @@
 */
 
 
-#define fixnum_fix(n)   (((n) << 1) | 1)
-#define fixnum_unfix(n) ((n) >> 1)
+#define navi_fixnum_fix(n)   (((n) << 1) | 1)
+#define navi_fixnum_unfix(n) ((n) >> 1)
 
-#define u_fixnum_plus(n1, n2)  (((n1) - 1) + (n2))
-#define fixnum_plus(n1, n2)    (u_fixnum_plus(n1, n2) | 1)
-#define u_fixnum_minus(n1, n2) ((n1) - (n2) + 1)
-#define fixnum_minus(n1, n2)   (u_fixnum_minus(n1, n2) | 1)
-#define fixnum_times(n1, n2)   (fixnum_fix(fixnum_unfix(n1) * fixnum_unfix(n2)))
-#define fixnum_divide(n1, n2)  (fixnum_fix(fixnum_unfix(n1) / fixnum_unfix(n2)))
-#define fixnum_modulo(n1, n2)  (fixnum_fix(fixnum_unfix(n1) % fixnum_unfix(n2)))
+#define navi_u_fixnum_plus(n1, n2)  (((n1) - 1) + (n2))
+#define navi_fixnum_plus(n1, n2)    (navi_u_fixnum_plus(n1, n2) | 1)
+#define navi_u_fixnum_minus(n1, n2) ((n1) - (n2) + 1)
+#define navi_fixnum_minus(n1, n2)   (navi_u_fixnum_minus(n1, n2) | 1)
+#define navi_fixnum_times(n1, n2)   (navi_fixnum_fix(navi_fixnum_unfix(n1) * navi_fixnum_unfix(n2)))
+#define navi_fixnum_divide(n1, n2)  (navi_fixnum_fix(navi_fixnum_unfix(n1) / navi_fixnum_unfix(n2)))
+#define navi_fixnum_modulo(n1, n2)  (navi_fixnum_fix(navi_fixnum_unfix(n1) % navi_fixnum_unfix(n2)))
 
 
 #endif

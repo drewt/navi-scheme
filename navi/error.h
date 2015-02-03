@@ -19,102 +19,101 @@
 #include "types.h"
 #include "symbols.h"
 
-#define error(env, msg, ...) _error(env, msg, ##__VA_ARGS__, sexp_make_void())
-_Noreturn void _error(env_t env, const char *msg, ...);
+_Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
+#define navi_error(env, msg, ...) \
+	_navi_error(env, msg, ##__VA_ARGS__, navi_make_void())
+#define navi_read_error(env, msg, ...) \
+	navi_error(env, msg, navi_sym_read_error, ##__VA_ARGS__, navi_make_void())
+#define navi_file_error(env, msg, ...) \
+	navi_error(env, msg, navi_sym_file_error, ##__VA_ARGS__, navi_make_void())
+#define navi_enomem(env) \
+	navi_error(env, "not enough memory", navi_make_void())
 
-#define read_error(env, msg, ...) error(env, msg, sym_read_error, \
-		##__VA_ARGS__, sexp_make_void())
-
-static inline bool has_type(sexp_t sexp, enum sexp_type type)
+static inline navi_t navi_type_check(navi_t obj, enum navi_type type, navi_env_t env)
 {
-	return sexp_type(sexp) == type;
+	if (navi_type(obj) != type)
+		navi_error(env, "type error",
+				navi_make_apair("expected", navi_typesym(type)),
+				navi_make_apair("actual", navi_typesym(navi_type(obj))));
+	return obj;
 }
 
-static inline sexp_t type_check(sexp_t sexp, enum sexp_type type, env_t env)
+static inline long navi_type_check_range(navi_t n, long min, long max, navi_env_t env)
 {
-	if (!has_type(sexp, type))
-		error(env, "type error",
-				sexp_make_apair("expected", sexp_typesym(type)),
-				sexp_make_apair("actual", sexp_typesym(sexp_type(sexp))));
-	return sexp;
+	navi_type_check(n, NAVI_NUM, env);
+	if (navi_num(n) < min || navi_num(n) >= max)
+		navi_error(env, "argument not in allowed range",
+				navi_make_apair("min", navi_make_num(min)),
+				navi_make_apair("max", navi_make_num(max)),
+				navi_make_apair("actual", n));
+	return navi_num(n);
 }
 
-static inline long type_check_range(sexp_t n, long min, long max, env_t env)
+static inline navi_t navi_type_check_list(navi_t list, navi_env_t env)
 {
-	type_check(n, SEXP_NUM, env);
-	if (sexp_num(n) < min || sexp_num(n) >= max)
-		error(env, "argument not in allowed range",
-				sexp_make_apair("min", sexp_make_num(min)),
-				sexp_make_apair("max", sexp_make_num(max)),
-				sexp_make_apair("actual", n));
-	return sexp_num(n);
-}
-
-static inline sexp_t type_check_list(sexp_t list, env_t env)
-{
-	if (!sexp_is_proper_list(list))
-		error(env, "type error: not a proper list");
+	if (!navi_is_proper_list(list))
+		navi_error(env, "type error: not a proper list");
 	return list;
 }
 
-static inline sexp_t type_check_fun(sexp_t fun, int arity, env_t env)
+static inline navi_t navi_type_check_fun(navi_t fun, int arity, navi_env_t env)
 {
-	type_check(fun, SEXP_FUNCTION, env);
-	int actual = sexp_fun(fun)->arity;
+	navi_type_check(fun, NAVI_FUNCTION, env);
+	int actual = navi_fun(fun)->arity;
 	if (actual != arity)
-		error(env, "wrong arity",
-				sexp_make_apair("expected", sexp_make_num(arity)),
-				sexp_make_apair("actual", sexp_make_num(actual)));
+		navi_error(env, "wrong arity",
+				navi_make_apair("expected", navi_make_num(arity)),
+				navi_make_apair("actual", navi_make_num(actual)));
 	return fun;
 }
 
-static inline long fixnum_cast(sexp_t sexp, env_t env)
+static inline long navi_fixnum_cast(navi_t num, navi_env_t env)
 {
-	return sexp_num(type_check(sexp, SEXP_NUM, env));
+	return navi_num(navi_type_check(num, NAVI_NUM, env));
 }
 
-static inline unsigned long char_cast(sexp_t sexp, env_t env)
+static inline unsigned long navi_char_cast(navi_t ch, navi_env_t env)
 {
-	return sexp_char(type_check(sexp, SEXP_CHAR, env));
+	return navi_char(navi_type_check(ch, NAVI_CHAR, env));
 }
 
-static inline struct sexp_string *string_cast(sexp_t sexp, env_t env)
+static inline struct navi_string *navi_string_cast(navi_t str, navi_env_t env)
 {
-	return sexp_string(type_check(sexp, SEXP_STRING, env));
+	return navi_string(navi_type_check(str, NAVI_STRING, env));
 }
 
-static inline struct sexp_bytevec *bytevec_cast(sexp_t sexp,
-		enum sexp_type type, env_t env)
+static inline struct navi_bytevec *navi_bytevec_cast(navi_t vec,
+		enum navi_type type, navi_env_t env)
 {
-	return sexp_bytevec(type_check(sexp, type, env));
+	return navi_bytevec(navi_type_check(vec, type, env));
 }
 
-static inline struct sexp_vector *vector_cast(sexp_t sexp,
-		enum sexp_type type, env_t env)
+static inline struct navi_vector *navi_vector_cast(navi_t vec,
+		enum navi_type type, navi_env_t env)
 {
-	return sexp_vector(type_check(sexp, type, env));
+	return navi_vector(navi_type_check(vec, type, env));
 }
 
-static inline struct sexp_port *port_cast(sexp_t sexp, env_t env)
+static inline struct navi_port *navi_port_cast(navi_t port, navi_env_t env)
 {
-	return sexp_port(type_check(sexp, SEXP_PORT, env));
+	return navi_port(navi_type_check(port, NAVI_PORT, env));
 }
 
-static inline unsigned char type_check_byte(sexp_t sexp, env_t env)
+static inline unsigned char navi_type_check_byte(navi_t byte, navi_env_t env)
 {
-	return type_check_range(sexp, 0, 256, env);
+	return navi_type_check_range(byte, 0, 256, env);
 }
 
-static inline void check_copy_to(size_t to, long at, size_t from, long start,
-		long end, env_t env)
+static inline void navi_check_copy_to(size_t to, long at, size_t from,
+		long start, long end, navi_env_t env)
 {
 	if (at < 0 || (size_t)at >= to || start < 0 || (size_t)start >= from
 			|| end < start || (size_t)end > from
 			|| to - at < (size_t)(end - start))
-		error(env, "invalid indices for copy");
+		navi_error(env, "invalid indices for copy");
 }
 
-#define check_copy(size, start, end, env) \
-	check_copy_to(size, 0, size, start, end, env)
+#define navi_check_copy(size, start, end, env) \
+	navi_check_copy_to(size, 0, size, start, end, env)
 
 #endif

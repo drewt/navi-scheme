@@ -17,166 +17,166 @@
 
 #include "navi.h"
 
-static void display_cdr(struct sexp_port *port, sexp_t cdr, bool head,
-		bool write, env_t env)
+static void display_cdr(struct navi_port *port, navi_t cdr, bool head,
+		bool write, navi_env_t env)
 {
-	switch (sexp_type(cdr)) {
-	case SEXP_PAIR:
-		if (!head) port_write_c_string(" ", port, env);
-		_display(port, sexp_pair(cdr)->car, write, env);
-		display_cdr(port, sexp_pair(cdr)->cdr, false, write, env);
+	switch (navi_type(cdr)) {
+	case NAVI_PAIR:
+		if (!head) navi_port_write_cstr(" ", port, env);
+		_navi_display(port, navi_pair(cdr)->car, write, env);
+		display_cdr(port, navi_pair(cdr)->cdr, false, write, env);
 		break;
-	case SEXP_NIL:
-		port_write_c_string(")", port, env);
+	case NAVI_NIL:
+		navi_port_write_cstr(")", port, env);
 		break;
 	default:
-		port_write_c_string(" . ", port, env);
-		_display(port, cdr, write, env);
-		port_write_c_string(")", port, env);
+		navi_port_write_cstr(" . ", port, env);
+		_navi_display(port, cdr, write, env);
+		navi_port_write_cstr(")", port, env);
 		break;
 	}
 }
 
-static void display_vector(struct sexp_port *port, sexp_t sexp, bool write,
-		env_t env)
+static void display_vector(struct navi_port *port, navi_t obj, bool write,
+		navi_env_t env)
 {
-	struct sexp_vector *vec = sexp_vector(sexp);
+	struct navi_vector *vec = navi_vector(obj);
 
 	if (vec->size == 0) {
-		port_write_c_string("#()", port, env);
+		navi_port_write_cstr("#()", port, env);
 		return;
 	}
 
-	port_write_c_string("#(", port, env);
-	_display(port, vec->data[0], write, env);
+	navi_port_write_cstr("#(", port, env);
+	_navi_display(port, vec->data[0], write, env);
 
 	for (size_t i = 1; i < vec->size; i++) {
-		port_write_c_string(" ", port, env);
-		_display(port, vec->data[i], write, env);
+		navi_port_write_cstr(" ", port, env);
+		_navi_display(port, vec->data[i], write, env);
 	}
 
-	port_write_c_string(")", port, env);
+	navi_port_write_cstr(")", port, env);
 }
 
-static void display_bytevec(struct sexp_port *port, sexp_t sexp, env_t env)
+static void display_bytevec(struct navi_port *port, navi_t obj, navi_env_t env)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct navi_bytevec *vec = navi_bytevec(obj);
 
 	if (vec->size == 0) {
-		port_write_c_string("#u8(", port, env);
+		navi_port_write_cstr("#u8(", port, env);
 		return;
 	}
 
-	port_write_c_string("#u8(", port, env);
-	_display(port, sexp_make_num(vec->data[0]), false, env);
+	navi_port_write_cstr("#u8(", port, env);
+	_navi_display(port, navi_make_num(vec->data[0]), false, env);
 
 	for (size_t i = 1; i < vec->size; i++) {
-		port_write_c_string(" ", port, env);
-		_display(port, sexp_make_num(vec->data[i]), false, env);
+		navi_port_write_cstr(" ", port, env);
+		_navi_display(port, navi_make_num(vec->data[i]), false, env);
 	}
 
-	port_write_c_string(")", port, env);
+	navi_port_write_cstr(")", port, env);
 }
 
-static void display_symbol(struct sexp_port *port, sexp_t sexp, env_t env)
+static void display_symbol(struct navi_port *port, navi_t obj, navi_env_t env)
 {
-	struct sexp_bytevec *vec = sexp_bytevec(sexp);
+	struct navi_bytevec *vec = navi_bytevec(obj);
 	for (size_t i = 0; i < vec->size; i++)
-		port_write_byte(vec->data[i], port, env);
+		navi_port_write_byte(vec->data[i], port, env);
 }
 
-void _display(struct sexp_port *port, sexp_t sexp, bool write, env_t env)
+void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t env)
 {
 	char buf[128];
-	switch (sexp_type(sexp)) {
-	case SEXP_VOID:
+	switch (navi_type(obj)) {
+	case NAVI_VOID:
 		break;
-	case SEXP_NIL:
-		port_write_c_string("()", port, env);
+	case NAVI_NIL:
+		navi_port_write_cstr("()", port, env);
 		break;
-	case SEXP_EOF:
-		port_write_c_string("#!eof", port, env);
+	case NAVI_EOF:
+		navi_port_write_cstr("#!eof", port, env);
 		break;
-	case SEXP_NUM:
-		snprintf(buf, 128, "%ld", sexp_num(sexp));
+	case NAVI_NUM:
+		snprintf(buf, 128, "%ld", navi_num(obj));
 		buf[127] = '\0';
-		port_write_c_string(buf, port, env);
+		navi_port_write_cstr(buf, port, env);
 		break;
-	case SEXP_BOOL:
-		port_write_c_string("#", port, env);
-		port_write_c_string(sexp_bool(sexp) ? "t" : "f", port, env);
+	case NAVI_BOOL:
+		navi_port_write_cstr("#", port, env);
+		navi_port_write_cstr(navi_bool(obj) ? "t" : "f", port, env);
 		break;
-	case SEXP_CHAR:
-		if (sexp_char(sexp) > 127) {
-			snprintf(buf, 128, "#\\x%lx", sexp_char(sexp));
+	case NAVI_CHAR:
+		if (navi_char(obj) > 127) {
+			snprintf(buf, 128, "#\\x%lx", navi_char(obj));
 			buf[127] = '\0';
-			port_write_c_string(buf, port, env);
+			navi_port_write_cstr(buf, port, env);
 		} else {
-			port_write_c_string("#\\", port, env);
-			port_write_char(sexp_char(sexp), port, env);
+			navi_port_write_cstr("#\\", port, env);
+			navi_port_write_char(navi_char(obj), port, env);
 		}
 		break;
-	case SEXP_VALUES:
-		port_write_c_string("#<values ", port, env);
-		display_vector(port, sexp, write, env);
-		port_write_c_string(">", port, env);
+	case NAVI_VALUES:
+		navi_port_write_cstr("#<values ", port, env);
+		display_vector(port, obj, write, env);
+		navi_port_write_cstr(">", port, env);
 		break;
-	case SEXP_PAIR:
-		port_write_c_string("(", port, env);
-		display_cdr(port, sexp, true, write, env);
+	case NAVI_PAIR:
+		navi_port_write_cstr("(", port, env);
+		display_cdr(port, obj, true, write, env);
 		break;
-	case SEXP_PORT:
-		port_write_c_string("#<port>", port, env);
+	case NAVI_PORT:
+		navi_port_write_cstr("#<port>", port, env);
 		break;
-	case SEXP_STRING:
-		if (write) port_write_c_string("\"", port, env);
-		port_write_c_string(sexp_string(sexp)->data, port, env);
-		if (write) port_write_c_string("\"", port, env);
+	case NAVI_STRING:
+		if (write) navi_port_write_cstr("\"", port, env);
+		navi_port_write_cstr(navi_string(obj)->data, port, env);
+		if (write) navi_port_write_cstr("\"", port, env);
 		break;
-	case SEXP_SYMBOL:
-		display_symbol(port, sexp, env);
+	case NAVI_SYMBOL:
+		display_symbol(port, obj, env);
 		break;
-	case SEXP_VECTOR:
-		display_vector(port, sexp, write, env);
+	case NAVI_VECTOR:
+		display_vector(port, obj, write, env);
 		break;
-	case SEXP_BYTEVEC:
-		display_bytevec(port, sexp, env);
+	case NAVI_BYTEVEC:
+		display_bytevec(port, obj, env);
 		break;
-	case SEXP_MACRO:
-		port_write_c_string("#<macro ", port, env);
-		port_write_c_string(sexp_fun(sexp)->name, port, env);
-		port_write_c_string(">", port, env);
+	case NAVI_MACRO:
+		navi_port_write_cstr("#<macro ", port, env);
+		navi_port_write_cstr(navi_fun(obj)->name, port, env);
+		navi_port_write_cstr(">", port, env);
 		break;
-	case SEXP_SPECIAL:
-		port_write_c_string("#<special form ", port, env);
-		port_write_c_string(sexp_fun(sexp)->name, port, env);
-		port_write_c_string(">", port, env);
+	case NAVI_SPECIAL:
+		navi_port_write_cstr("#<special form ", port, env);
+		navi_port_write_cstr(navi_fun(obj)->name, port, env);
+		navi_port_write_cstr(">", port, env);
 		break;
-	case SEXP_PROMISE:
-		port_write_c_string("#<promise>", port, env);
+	case NAVI_PROMISE:
+		navi_port_write_cstr("#<promise>", port, env);
 		break;
-	case SEXP_FUNCTION:
-		if (sexp_fun(sexp)->builtin) {
-			port_write_c_string("#<builtin-procedure ", port, env);
-			port_write_c_string(sexp_fun(sexp)->name, port, env);
-			port_write_c_string(">", port, env);
+	case NAVI_FUNCTION:
+		if (navi_fun(obj)->builtin) {
+			navi_port_write_cstr("#<builtin-procedure ", port, env);
+			navi_port_write_cstr(navi_fun(obj)->name, port, env);
+			navi_port_write_cstr(">", port, env);
 		} else {
-			port_write_c_string("#<interpreted-procedure ", port, env);
-			port_write_c_string(sexp_fun(sexp)->name, port, env);
-			port_write_c_string(">", port, env);
+			navi_port_write_cstr("#<interpreted-procedure ", port, env);
+			navi_port_write_cstr(navi_fun(obj)->name, port, env);
+			navi_port_write_cstr(">", port, env);
 		}
 		break;
-	case SEXP_CASELAMBDA:
-		port_write_c_string("#<case-lambda>", port, env);
+	case NAVI_CASELAMBDA:
+		navi_port_write_cstr("#<case-lambda>", port, env);
 		break;
-	case SEXP_ESCAPE:
-		port_write_c_string("#<escape continuation>", port, env);
+	case NAVI_ESCAPE:
+		navi_port_write_cstr("#<escape continuation>", port, env);
 		break;
-	case SEXP_ENVIRONMENT:
-		port_write_c_string("#<environment>", port, env);
+	case NAVI_ENVIRONMENT:
+		navi_port_write_cstr("#<environment>", port, env);
 		break;
-	case SEXP_BOUNCE:
-		port_write_c_string("#<bounce>", port, env);
+	case NAVI_BOUNCE:
+		navi_port_write_cstr("#<bounce>", port, env);
 		break;
 	}
 }

@@ -18,122 +18,122 @@
 
 #include "navi.h"
 
-_Noreturn void _error(env_t env, const char *msg, ...)
+_Noreturn void _navi_error(navi_env_t env, const char *msg, ...)
 {
 	va_list ap;
-	sexp_t list;
+	navi_t list;
 
 	va_start(ap, msg);
-	list = vlist(sexp_from_c_string(msg), ap);
+	list = navi_vlist(navi_cstr_to_string(msg), ap);
 	va_end(ap);
 
-	scm_raise(sexp_make_pair(list, sexp_make_nil()), env);
+	scm_raise(navi_make_pair(list, navi_make_nil()), env);
 }
 
 DEFUN(scm_procedurep, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_FUNCTION);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_FUNCTION);
 }
 
 DEFUN(scm_apply, args, env)
 {
-	sexp_t cons, last = (sexp_t) args;
+	navi_t cons, last = (navi_t) args;
 
-	sexp_list_for_each(cons, args) {
-		sexp_t fst = car(cons);
+	navi_list_for_each(cons, args) {
+		navi_t fst = navi_car(cons);
 		/* walk to the last argument */
-		if (sexp_type(cdr(cons)) != SEXP_NIL) {
+		if (navi_type(navi_cdr(cons)) != NAVI_NIL) {
 			last = cons;
 			continue;
 		}
 
-		type_check_list(fst, env);
+		navi_type_check_list(fst, env);
 
 		/* flatten arg list */
-		sexp_pair(last)->cdr = fst;
+		navi_pair(last)->cdr = fst;
 		break;
 	}
-	return trampoline(args, env);
+	return navi_eval(args, env);
 }
 
-sexp_t call_escape(sexp_t escape, sexp_t arg)
+navi_t navi_call_escape(navi_t escape, navi_t arg)
 {
-	struct sexp_escape *esc = sexp_escape(escape);
+	struct navi_escape *esc = navi_escape(escape);
 	esc->arg = arg;
 	longjmp(esc->state, 1);
 }
 
 DEFUN(scm_call_ec, args, env)
 {
-	struct sexp_escape *escape;
-	sexp_t cont, call, fun = car(args);
+	struct navi_escape *escape;
+	navi_t cont, call, fun = navi_car(args);
 
-	type_check_fun(fun, 1, env);
+	navi_type_check_fun(fun, 1, env);
 
-	cont = sexp_make_escape();
-	escape = sexp_escape(cont);
+	cont = navi_make_escape();
+	escape = navi_escape(cont);
 
 	if (setjmp(escape->state))
 		return escape->arg;
 
-	call = sexp_make_pair(fun, sexp_make_pair(cont, sexp_make_nil()));
-	return trampoline(call, env);
+	call = navi_make_pair(fun, navi_make_pair(cont, navi_make_nil()));
+	return navi_eval(call, env);
 }
 
 DEFUN(scm_values, args, env)
 {
-	sexp_t values = list_to_vector(values);
-	values.p->type = SEXP_VALUES;
+	navi_t values = navi_list_to_vector(values);
+	values.p->type = NAVI_VALUES;
 	return values;
 }
 
 DEFUN(scm_call_with_values, args, env)
 {
-	sexp_t values, call_args;
-	type_check_fun(car(args), 0, env);
-	type_check(cadr(args), SEXP_FUNCTION, env);
+	navi_t values, call_args;
+	navi_type_check_fun(navi_car(args), 0, env);
+	navi_type_check(navi_cadr(args), NAVI_FUNCTION, env);
 
-	values = trampoline(sexp_make_pair(car(args), sexp_make_nil()), env);
-	if (sexp_type(values) != SEXP_VALUES)
-		call_args = sexp_make_pair(values, sexp_make_nil());
+	values = navi_eval(navi_make_pair(navi_car(args), navi_make_nil()), env);
+	if (navi_type(values) != NAVI_VALUES)
+		call_args = navi_make_pair(values, navi_make_nil());
 	else
-		call_args = vector_to_list(values);
+		call_args = navi_vector_to_list(values);
 
-	return eval(sexp_make_pair(cadr(args), call_args), env);
+	return navi_eval(navi_make_pair(navi_cadr(args), call_args), env);
 }
 
 DEFUN(scm_with_exception_handler, args, env)
 {
-	type_check_fun(car(args),  1, env);
-	type_check_fun(cadr(args), 0, env);
+	navi_type_check_fun(navi_car(args),  1, env);
+	navi_type_check_fun(navi_cadr(args), 0, env);
 
-	struct sexp_function *thunk = sexp_fun(cadr(args));
-	env_t exn_env = env_new_scope(thunk->env);
-	scope_set(exn_env, sym_exn, car(args));
+	struct navi_function *thunk = navi_fun(navi_cadr(args));
+	navi_env_t exn_env = navi_env_new_scope(thunk->env);
+	navi_scope_set(exn_env, navi_sym_exn, navi_car(args));
 
 	if (thunk->builtin)
-		return thunk->fn(sexp_make_nil(), exn_env);
-	return eval_begin(thunk->body, exn_env);
+		return thunk->fn(navi_make_nil(), exn_env);
+	return scm_begin(thunk->body, exn_env);
 }
 
 DEFUN(scm_raise, args, env)
 {
-	sexp_t sexp;
-	struct sexp_function *fun;
+	navi_t expr;
+	struct navi_function *fun;
 
 	for (;;) {
-		sexp = env_lookup(env, sym_exn);
-		if (sexp_type(sexp) != SEXP_FUNCTION)
+		expr = navi_env_lookup(env, navi_sym_exn);
+		if (navi_type(expr) != NAVI_FUNCTION)
 			die("no exception handler installed");
 
 		/* set up environment and run handler */
-		fun = sexp_fun(sexp);
-		scope_unset(env, sym_exn);
+		fun = navi_fun(expr);
+		navi_scope_unset(env, navi_sym_exn);
 		if (fun->builtin) {
 			fun->fn(args, env);
 		} else {
-			scope_set(env, car(fun->args), car(args));
-			trampoline(sexp_make_pair(sym_begin, fun->body), env);
+			navi_scope_set(env, navi_car(fun->args), navi_car(args));
+			navi_eval(navi_make_pair(navi_sym_begin, fun->body), env);
 		}
 		/* handler returned: raise again */
 	}
@@ -141,79 +141,79 @@ DEFUN(scm_raise, args, env)
 
 DEFUN(scm_raise_continuable, args, env)
 {
-	sexp_t handler, result;
-	struct sexp_function *fun;
+	navi_t handler, result;
+	struct navi_function *fun;
 
-	handler = env_lookup(env, sym_exn);
-	if (sexp_type(handler) != SEXP_FUNCTION)
+	handler = navi_env_lookup(env, navi_sym_exn);
+	if (navi_type(handler) != NAVI_FUNCTION)
 		die("no exception handler installed");
 
-	fun = sexp_fun(handler);
-	scope_unset(env, sym_exn);
+	fun = navi_fun(handler);
+	navi_scope_unset(env, navi_sym_exn);
 	if (fun->builtin) {
 		result = fun->fn(args, env);
 	} else {
-		scope_set(env, car(fun->args), car(args));
-		result = trampoline(sexp_make_pair(sym_begin, fun->body), env);
+		navi_scope_set(env, navi_car(fun->args), navi_car(args));
+		result = navi_eval(navi_make_pair(navi_sym_begin, fun->body), env);
 	}
-	scope_set(env, sym_exn, handler);
+	navi_scope_set(env, navi_sym_exn, handler);
 	return result;
 }
 
 DEFUN(scm_error, args, env)
 {
-	type_check(car(args), SEXP_STRING, env);
-	scm_raise(sexp_make_pair(args, sexp_make_nil()), env);
+	navi_type_check(navi_car(args), NAVI_STRING, env);
+	scm_raise(navi_make_pair(args, navi_make_nil()), env);
 }
 
-static bool is_error_object(sexp_t object)
+static bool is_error_object(navi_t object)
 {
-	return sexp_type(object) == SEXP_PAIR && sexp_is_proper_list(object) &&
-		sexp_type(car(object)) == SEXP_STRING;
+	return navi_type(object) == NAVI_PAIR && navi_is_proper_list(object) &&
+		navi_type(navi_car(object)) == NAVI_STRING;
 }
 
-static sexp_t type_check_error(sexp_t object, env_t env)
+static navi_t navi_type_check_error(navi_t object, navi_env_t env)
 {
 	if (!is_error_object(object))
-		error(env, "type error");
+		navi_error(env, "type error");
 	return object;
 }
 
 DEFUN(scm_error_objectp, args, env)
 {
-	return sexp_make_bool(is_error_object(car(args)));
+	return navi_make_bool(is_error_object(navi_car(args)));
 }
 
 DEFUN(scm_error_object_message, args, env)
 {
-	type_check_error(car(args), env);
-	return caar(args);
+	navi_type_check_error(navi_car(args), env);
+	return navi_caar(args);
 }
 
 DEFUN(scm_error_object_irritants, args, env)
 {
-	type_check_error(car(args), env);
-	return cdar(args);
+	navi_type_check_error(navi_car(args), env);
+	return navi_cdar(args);
 }
 
 DEFUN(scm_read_errorp, args, env)
 {
-	if (!sexp_bool(scm_error_objectp(args, env)))
-		return sexp_make_bool(false);
-	if (list_length(car(args)) < 2)
-		return sexp_make_bool(false);
-	return sexp_make_bool(symbol_eq(cadr(car(args)), sym_read_error));
+	if (!navi_bool(scm_error_objectp(args, env)))
+		return navi_make_bool(false);
+	if (navi_list_length(navi_car(args)) < 2)
+		return navi_make_bool(false);
+	return navi_make_bool(navi_symbol_eq(navi_cadr(navi_car(args)), navi_sym_read_error));
 }
 
 struct map_apply_arg {
-	sexp_t fun;
-	env_t env;
+	navi_t fun;
+	navi_env_t env;
 };
 
-static sexp_t map_apply(sexp_t elm, void *data)
+static navi_t map_apply(navi_t elm, void *data)
 {
 	struct map_apply_arg *arg = data;
-	return  trampoline(sexp_make_pair(arg->fun, sexp_make_pair(elm, sexp_make_nil())),
+	return  navi_eval(navi_make_pair(arg->fun, navi_make_pair(elm, navi_make_nil())),
 			arg->env);
 }
 
@@ -221,13 +221,13 @@ DEFUN(scm_map, args, env)
 {
 	struct map_apply_arg arg;
 
-	type_check_fun(car(args), 1, env);
-	type_check_list(cadr(args), env);
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check_list(navi_cadr(args), env);
 
-	arg.fun = car(args);
+	arg.fun = navi_car(args);
 	arg.env = env;
 
-	return map(cadr(args), map_apply, &arg);
+	return navi_map(navi_cadr(args), map_apply, &arg);
 }
 
 /* FIXME: This is unsafe for UTF-8 (or any other variable-width encoding).
@@ -239,66 +239,66 @@ DEFUN(scm_map, args, env)
  *                (vector-map f (string->vector s))))
  */
 
-static sexp_t string_map_ip(sexp_t fun, sexp_t sexp, env_t env)
+static navi_t string_map_ip(navi_t fun, navi_t str, navi_env_t env)
 {
-	struct sexp_string *vec = string_cast(sexp, env);
+	struct navi_string *vec = navi_string_cast(str, env);
 
 	for (size_t i = 0; i < vec->size; i++) {
-		sexp_t call = list(fun, sexp_make_char(vec->data[i]), sexp_make_void());
-		vec->data[i] = char_cast(trampoline(call, env), env);
+		navi_t call = navi_list(fun, navi_make_char(vec->data[i]), navi_make_void());
+		vec->data[i] = navi_char_cast(navi_eval(call, env), env);
 	}
-	return sexp;
+	return str;
 }
 
 DEFUN(scm_string_map_ip, args, env)
 {
-	type_check_fun(car(args), 1, env);
-	type_check(cadr(args), SEXP_STRING, env);
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_STRING, env);
 
-	return string_map_ip(car(args), cadr(args), env);
+	return string_map_ip(navi_car(args), navi_cadr(args), env);
 }
 
 DEFUN(scm_string_map, args, env)
 {
-	type_check_fun(car(args), 1, env);
-	type_check(cadr(args), SEXP_STRING, env);
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_STRING, env);
 
-	return string_map_ip(car(args), string_copy(cadr(args)), env);
+	return string_map_ip(navi_car(args), navi_string_copy(navi_cadr(args)), env);
 }
 
-static sexp_t vector_map(sexp_t fun, sexp_t to, sexp_t from, env_t env)
+static navi_t vector_map(navi_t fun, navi_t to, navi_t from, navi_env_t env)
 {
-	struct sexp_vector *tov = vector_cast(to, SEXP_VECTOR, env);
-	struct sexp_vector *fromv = vector_cast(from, SEXP_VECTOR, env);
+	struct navi_vector *tov = navi_vector_cast(to, NAVI_VECTOR, env);
+	struct navi_vector *fromv = navi_vector_cast(from, NAVI_VECTOR, env);
 
 	for (size_t i = 0; i < tov->size; i++) {
-		sexp_t call = list(fun, fromv->data[i], sexp_make_void());
-		tov->data[i] = trampoline(call, env);
+		navi_t call = navi_list(fun, fromv->data[i], navi_make_void());
+		tov->data[i] = navi_eval(call, env);
 	}
 	return to;
 }
 
 DEFUN(scm_vector_map_ip, args, env)
 {
-	type_check_fun(car(args), 1, env);
-	type_check(cadr(args), SEXP_VECTOR, env);
-	return vector_map(car(args), cadr(args), cadr(args), env);
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
+	return vector_map(navi_car(args), navi_cadr(args), navi_cadr(args), env);
 }
 
 DEFUN(scm_vector_map, args, env)
 {
-	type_check_fun(car(args), 1, env);
-	type_check(cadr(args), SEXP_VECTOR, env);
-	return vector_map(car(args), sexp_make_vector(vector_length(cadr(args))),
-			cadr(args), env);
+	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
+	return vector_map(navi_car(args), navi_make_vector(navi_vector_length(navi_cadr(args))),
+			navi_cadr(args), env);
 }
 
 DEFUN(scm_promisep, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_PROMISE);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PROMISE);
 }
 
 DEFUN(scm_make_promise, args, env)
 {
-	return sexp_make_promise(car(args), env);
+	return navi_make_promise(navi_car(args), env);
 }

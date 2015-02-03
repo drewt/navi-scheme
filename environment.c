@@ -20,44 +20,46 @@
 
 #include "default_bindings.c"
 
-LIST_HEAD(active_environments);
+NAVI_LIST_HEAD(active_environments);
 
 /* FIXME: this is a REALLY bad hash function! */
-static unsigned long ptr_hash(sexp_t ptr)
+static unsigned long ptr_hash(navi_t ptr)
 {
 	return ptr.n;
 }
 
-static struct hlist_head *get_bucket(struct sexp_scope *scope,
+static struct navi_hlist_head *get_bucket(struct navi_scope *scope,
 		unsigned long hashcode)
 {
-	return &scope->bindings[hashcode % ENV_HT_SIZE];
+	return &scope->bindings[hashcode % NAVI_ENV_HT_SIZE];
 }
 
-static struct sexp_binding *make_binding(sexp_t symbol, sexp_t object)
+static struct navi_binding *make_binding(navi_t symbol, navi_t object)
 {
-	struct sexp_binding *binding = xmalloc(sizeof(struct sexp_binding));
+	struct navi_binding *binding = malloc(sizeof(struct navi_binding));
+	if (!binding)
+		return NULL;
 	binding->symbol = symbol;
 	binding->object = object;
 	return binding;
 }
 
-static struct sexp_binding *scope_lookup(struct sexp_scope *scope,
-		sexp_t symbol, unsigned long hashcode)
+static struct navi_binding *scope_lookup(struct navi_scope *scope,
+		navi_t symbol, unsigned long hashcode)
 {
-	struct sexp_binding *binding;
-	struct hlist_head *hd = get_bucket(scope, hashcode);
+	struct navi_binding *binding;
+	struct navi_hlist_head *hd = get_bucket(scope, hashcode);
 	
-	hlist_for_each_entry (binding, hd, chain) {
+	navi_hlist_for_each_entry (binding, hd, chain) {
 		if (binding->symbol.p == symbol.p)
 			return binding;
 	}
 	return NULL;
 }
 
-struct sexp_binding *env_binding(struct sexp_scope *env, sexp_t symbol)
+struct navi_binding *navi_env_binding(struct navi_scope *env, navi_t symbol)
 {
-	struct sexp_binding *binding;
+	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
 	while (env != NULL) {
@@ -69,135 +71,150 @@ struct sexp_binding *env_binding(struct sexp_scope *env, sexp_t symbol)
 	return NULL;
 }
 
-static inline struct sexp_scope *make_scope(void)
+static inline struct navi_scope *make_scope(void)
 {
-	struct sexp_scope *scope = xmalloc(sizeof(struct sexp_scope));
-	for (unsigned i = 0; i < ENV_HT_SIZE; i++)
-		INIT_HLIST_HEAD(&scope->bindings[i]);
-	list_add(&scope->chain, &active_environments);
+	struct navi_scope *scope = malloc(sizeof(struct navi_scope));
+	if (!scope)
+		return NULL;
+	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++)
+		NAVI_INIT_HLIST_HEAD(&scope->bindings[i]);
+	navi_clist_add(&scope->chain, &active_environments);
 	scope->refs = 1;
 	scope->next = NULL;
 	return scope;
 }
 
-struct sexp_scope *env_new_scope(struct sexp_scope *env)
+struct navi_scope *navi_env_new_scope(struct navi_scope *env)
 {
-	struct sexp_scope *scope = make_scope();
+	struct navi_scope *scope = make_scope();
+	if (!scope)
+		return NULL;
 	scope->next = env;
-	scope_ref(env);
-
+	navi_scope_ref(env);
 	return scope;
 }
 
-int env_set(struct sexp_scope *env, sexp_t symbol, sexp_t object)
+static int env_set(struct navi_scope *env, navi_t symbol, navi_t object)
 {
-	struct sexp_binding *binding;
-	struct hlist_head *head;
+	struct navi_binding *binding;
+	struct navi_hlist_head *head;
 
-	binding = env_binding(env, symbol);
-	if (binding != NULL) {
-		//sexp_free(binding->object);
+	binding = navi_env_binding(env, symbol);
+	if (binding) {
+		//navi_free(binding->object);
 		binding->object = object;
-		return 1;
+		return 0;
 	}
 
-	/* FIXME: hash() already computed in env_binding */
+	/* FIXME: hash() already computed in navi_env_binding */
 	head = get_bucket(env, ptr_hash(symbol));
 	binding = make_binding(symbol, object);
-	hlist_add_head(&binding->chain, head);
+	if (!binding)
+		return -1;
+	navi_hlist_add_head(&binding->chain, head);
 	return 0;
 }
 
-int scope_set(struct sexp_scope *env, sexp_t symbol, sexp_t object)
+static int _navi_scope_set(struct navi_scope *env, navi_t symbol, navi_t object)
 {
-	struct sexp_binding *binding;
+	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
 	if ((binding = scope_lookup(env, symbol, hashcode)) != NULL) {
 		binding->object = object;
-		return 1;
+		return 0;
 	}
 
 	binding = make_binding(symbol, object);
-	hlist_add_head(&binding->chain, get_bucket(env, hashcode));
+	if (!binding)
+		return -1;
+	navi_hlist_add_head(&binding->chain, get_bucket(env, hashcode));
 	return 0;
 }
 
-int scope_unset(struct sexp_scope *env, sexp_t symbol)
+/* XXX: assumes we're executing in env */
+void navi_scope_set(struct navi_scope *env, navi_t symbol, navi_t object)
 {
-	struct sexp_binding *binding;
+	if (_navi_scope_set(env, symbol, object) < 0)
+		navi_enomem(env);
+}
+
+int navi_scope_unset(struct navi_scope *env, navi_t symbol)
+{
+	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
 	if ((binding = scope_lookup(env, symbol, hashcode)) == NULL)
 		return 0;
 
-	hlist_del(&binding->chain);
+	navi_hlist_del(&binding->chain);
 	return 1;
 }
 
-struct sexp_scope *extend_environment(struct sexp_scope *env, sexp_t vars,
-		sexp_t args)
+/* XXX: assumes we're executing in env */
+struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_t vars,
+		navi_t args)
 {
-	sexp_t vcons, acons;
-	struct sexp_scope *new = env_new_scope(env);
+	navi_t vcons, acons;
+	struct navi_scope *new = navi_env_new_scope(env);
 
-	sexp_zipped_for_each(vcons, acons, vars, args) {
-		scope_set(new, car(vcons), car(acons));
+	navi_list_for_each_zipped(vcons, acons, vars, args) {
+		navi_scope_set(new, navi_car(vcons), navi_car(acons));
 	}
 	/* dotted tail */
-	if (!sexp_is_nil(vcons)) {
-		scope_set(new, vcons, acons);
+	if (!navi_is_nil(vcons)) {
+		navi_scope_set(new, vcons, acons);
 	}
 	return new;
 }
 
-struct sexp_scope *make_default_environment(void)
+struct navi_scope *navi_make_default_environment(void)
 {
-	sexp_t std_in, std_out, std_err;
-	struct sexp_scope *env = make_scope();
-
+	navi_t std_in, std_out, std_err;
+	struct navi_scope *env = make_scope();
+	if (!env)
+		return NULL;
 	for (unsigned i = 0; i < NR_DEFAULT_BINDINGS; i++) {
-		sexp_t symbol = sexp_make_symbol(default_bindings[i].ident);
-		sexp_t object = sexp_from_spec(&default_bindings[i]);
-		if (sexp_type(object) == SEXP_FUNCTION)
-			sexp_fun(object)->env = env;
+		navi_t symbol = navi_make_symbol(default_bindings[i].ident);
+		navi_t object = navi_from_spec(&default_bindings[i]);
+		if (navi_type(object) == NAVI_FUNCTION)
+			navi_fun(object)->env = env;
 		env_set(env, symbol, object);
 	}
 
-	std_in = sexp_make_file_input_port(stdin);
-	std_out = sexp_make_file_output_port(stdout);
-	std_err = sexp_make_file_output_port(stderr);
-	env_set(env, sym_current_input, std_in);
-	env_set(env, sym_current_output, std_out);
-	env_set(env, sym_current_error, std_err);
-
+	std_in = navi_make_file_input_port(stdin);
+	std_out = navi_make_file_output_port(stdout);
+	std_err = navi_make_file_output_port(stderr);
+	env_set(env, navi_sym_current_input, std_in);
+	env_set(env, navi_sym_current_output, std_out);
+	env_set(env, navi_sym_current_error, std_err);
 	return env;
 }
 
-void scope_free(struct sexp_scope *scope)
+void navi_scope_free(struct navi_scope *scope)
 {
-	list_del(&scope->chain);
+	navi_clist_del(&scope->chain);
 
-	for (unsigned i = 0; i < ENV_HT_SIZE; i++) {
-		struct sexp_binding *bind;
-		struct hlist_node *t;
-		hlist_for_each_entry_safe(bind, t, &scope->bindings[i], chain) {
-			hlist_del(&bind->chain);
+	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
+		struct navi_binding *bind;
+		struct navi_hlist_node *t;
+		navi_hlist_for_each_entry_safe(bind, t, &scope->bindings[i], chain) {
+			navi_hlist_del(&bind->chain);
 			free(bind);
 		}
 	}
 
 	if (scope->next != NULL)
-		scope_unref(scope->next);
+		navi_scope_unref(scope->next);
 }
 
 DEFUN(scm_env_count, args, env)
 {
 	unsigned i = 0;
-	struct list_head *it;
-	list_for_each(it, &active_environments) {
+	struct navi_clist_head *it;
+	navi_clist_for_each(it, &active_environments) {
 		i++;
 	}
 	printf("nr active environments = %u\n", i);
-	return sexp_unspecified();
+	return navi_unspecified();
 }

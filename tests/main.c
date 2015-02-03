@@ -25,7 +25,7 @@ int main(void)
 
 	/* initialize navi */
 	navi_init();
-	env = make_default_environment();
+	env = navi_make_default_environment();
 
 	/* initialize test suite */
 	s = suite_create("NAVI Core");

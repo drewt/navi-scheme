@@ -15,177 +15,170 @@
 
 #include "navi.h"
 
-void vector_fill(sexp_t vector, sexp_t fill)
+void navi_vector_fill(navi_t vector, navi_t fill)
 {
-	struct sexp_vector *vec = sexp_vector(vector);
+	struct navi_vector *vec = navi_vector(vector);
 
 	for (size_t i = 0; i < vec->size; i++)
 		vec->data[i] = fill;
 }
 
-sexp_t list_to_vector(sexp_t list)
+navi_t navi_list_to_vector(navi_t list)
 {
-	sexp_t cons, vec = sexp_make_vector(list_length(list));
+	navi_t cons, vec = navi_make_vector(navi_list_length(list));
 
 	unsigned i = 0;
-	struct sexp_vector *vector = sexp_vector(vec);
-	sexp_list_for_each(cons, list) {
-		vector->data[i++] = car(cons);
+	struct navi_vector *vector = navi_vector(vec);
+	navi_list_for_each(cons, list) {
+		vector->data[i++] = navi_car(cons);
 	}
 	return vec;
 }
 
-sexp_t vector_to_list(sexp_t sexp)
+navi_t navi_vector_to_list(navi_t obj)
 {
-	struct sexp_vector *vector;
-	struct sexp_pair head, *ptr = &head;
+	struct navi_vector *vector;
+	struct navi_pair head, *ptr = &head;
 
-	vector = sexp_vector(sexp);
+	vector = navi_vector(obj);
 	for (size_t i = 0; i < vector->size; i++) {
-		ptr->cdr = sexp_make_empty_pair();
+		ptr->cdr = navi_make_empty_pair();
 		ptr = &ptr->cdr.p->data->pair;
 		ptr->car = vector->data[i];
 	}
-	ptr->cdr = sexp_make_nil();
+	ptr->cdr = navi_make_nil();
 	return head.cdr;
 }
 
 DEFUN(scm_vectorp, args, env)
 {
-	return sexp_make_bool(sexp_type(car(args)) == SEXP_VECTOR);
+	return navi_make_bool(navi_type(navi_car(args)) == NAVI_VECTOR);
 }
 
 DEFUN(scm_make_vector, args, env)
 {
-	sexp_t sexp;
-	int nr_args = list_length(args);
+	navi_t vec;
+	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
-		error(env, "wrong number of arguments");
+		navi_error(env, "wrong number of arguments");
 
-	type_check(car(args), SEXP_NUM, env);
-	sexp = sexp_make_vector(sexp_num(car(args)));
-	vector_fill(sexp, (nr_args < 2) ? sexp_make_bool(false) : cadr(args));
-	return sexp;
+	navi_type_check(navi_car(args), NAVI_NUM, env);
+	vec = navi_make_vector(navi_num(navi_car(args)));
+	navi_vector_fill(vec, (nr_args < 2) ? navi_make_bool(false) : navi_cadr(args));
+	return vec;
 }
 
 DEFUN(scm_vector, args, env)
 {
-	return list_to_vector(args);
+	return navi_list_to_vector(args);
 }
 
 DEFUN(scm_vector_length, args, env)
 {
-	type_check(car(args), SEXP_VECTOR, env);
-	return sexp_make_num(sexp_vector(car(args))->size);
+	navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	return navi_make_num(navi_vector(navi_car(args))->size);
 }
 
 DEFUN(scm_vector_ref, args, env)
 {
-	type_check(car(args), SEXP_VECTOR, env);
-	type_check(cadr(args), SEXP_NUM, env);
+	navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	navi_type_check(navi_cadr(args), NAVI_NUM, env);
 
-	if (sexp_num(cadr(args)) >= (long) sexp_vector(car(args))->size)
-		error(env, "vector index out of bounds");
+	if (navi_num(navi_cadr(args)) >= (long) navi_vector(navi_car(args))->size)
+		navi_error(env, "vector index out of bounds");
 
-	return vector_ref(car(args), sexp_num(cadr(args)));
+	return navi_vector_ref(navi_car(args), navi_num(navi_cadr(args)));
 }
 
 DEFUN(scm_vector_set, args, env)
 {
-	type_check(car(args), SEXP_VECTOR, env);
-	type_check(cadr(args), SEXP_NUM, env);
+	navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	navi_type_check(navi_cadr(args), NAVI_NUM, env);
 
-	if (sexp_num(cadr(args)) >= (long) sexp_vector(car(args))->size)
-		error(env, "vector index out of bounds");
+	if (navi_num(navi_cadr(args)) >= (long) navi_vector(navi_car(args))->size)
+		navi_error(env, "vector index out of bounds");
 
-	sexp_vector(car(args))->data[sexp_num(cadr(args))] = caddr(args);
-	return sexp_unspecified();
+	navi_vector(navi_car(args))->data[navi_num(navi_cadr(args))] = navi_caddr(args);
+	return navi_unspecified();
 }
 
 DEFUN(scm_vector_to_list, args, env)
 {
-	type_check(car(args), SEXP_VECTOR, env);
-	return vector_to_list(car(args));
+	navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	return navi_vector_to_list(navi_car(args));
 }
 
 DEFUN(scm_list_to_vector, args, env)
 {
-	type_check_list(car(args), env);
-	return list_to_vector(car(args));
+	navi_type_check_list(navi_car(args), env);
+	return navi_list_to_vector(navi_car(args));
 }
 
-static sexp_t copy_to(sexp_t to, size_t at, sexp_t from, size_t start,
+static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 		size_t end)
 {
-	struct sexp_vector *tov = sexp_vector(to), *fromv = sexp_vector(from);
+	struct navi_vector *tov = navi_vector(to), *fromv = navi_vector(from);
 	for (size_t i = start; i < end; i++)
 		tov->data[at++] = fromv->data[i];
 	return to;
 }
 
-DEFUN(_scm_vector_fill, args, env)
-{
-	type_check(car(args), SEXP_VECTOR, env);
-	vector_fill(car(args), cadr(args));
-	return sexp_unspecified();
-}
-
 DEFUN(scm_vector_fill, args, env)
 {
-	sexp_t fill;
+	navi_t fill;
 	long end, start;
-	struct sexp_vector *vec;
-	int nr_args = list_length(args);
+	struct navi_vector *vec;
+	int nr_args = navi_list_length(args);
 
-	vec = vector_cast(car(args), SEXP_VECTOR, env);
-	fill = cadr(args);
-	start = (nr_args > 2) ? fixnum_cast(caddr(args), env) : 0;
-	end = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : (long) vec->size;
+	vec = navi_vector_cast(navi_car(args), NAVI_VECTOR, env);
+	fill = navi_cadr(args);
+	start = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : 0;
+	end = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end, env);
+	navi_check_copy(vec->size, start, end, env);
 
 	for (size_t i = start; i < (size_t) end; i++)
 		vec->data[i] = fill;
 
-	return sexp_unspecified();
+	return navi_unspecified();
 }
 
 DEFUN(scm_vector_copy, args, env)
 {
-	sexp_t from;
+	navi_t from;
 	long start, end;
-	struct sexp_vector *vec;
-	int nr_args = list_length(args);
+	struct navi_vector *vec;
+	int nr_args = navi_list_length(args);
 
-	from = type_check(car(args), SEXP_VECTOR, env);
-	vec = sexp_vector(from);
-	start = (nr_args > 1) ? fixnum_cast(cadr(args), env) : 0;
-	end = (nr_args > 2) ? fixnum_cast(caddr(args), env) : (long) vec->size;
+	from = navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	vec = navi_vector(from);
+	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
 
-	check_copy(vec->size, start, end, env);
+	navi_check_copy(vec->size, start, end, env);
 
-	return copy_to(sexp_make_vector(end-start), 0, from, start, end);
+	return copy_to(navi_make_vector(end-start), 0, from, start, end);
 }
 
 DEFUN(scm_vector_copy_to, args, env)
 {
-	sexp_t to, from;
+	navi_t to, from;
 	long at, start, end;
-	struct sexp_vector *fromv, *tov;
-	int nr_args = list_length(args);
+	struct navi_vector *fromv, *tov;
+	int nr_args = navi_list_length(args);
 
-	to = type_check(car(args), SEXP_VECTOR, env);
-	at = fixnum_cast(cadr(args), env);
-	from = type_check(caddr(args), SEXP_VECTOR, env);
-	tov = sexp_vector(to);
-	fromv = sexp_vector(from);
-	start = (nr_args > 3) ? fixnum_cast(cadddr(args), env) : 0;
-	end = (nr_args > 4) ? fixnum_cast(caddddr(args), env)
+	to = navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	at = navi_fixnum_cast(navi_cadr(args), env);
+	from = navi_type_check(navi_caddr(args), NAVI_VECTOR, env);
+	tov = navi_vector(to);
+	fromv = navi_vector(from);
+	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
+	end = (nr_args > 4) ? navi_fixnum_cast(navi_caddddr(args), env)
 		: (long) fromv->size;
 
-	check_copy_to(tov->size, at, fromv->size, start, end, env);
+	navi_check_copy_to(tov->size, at, fromv->size, start, end, env);
 
 	copy_to(to, at, from, start, end);
-	return sexp_unspecified();
+	return navi_unspecified();
 }

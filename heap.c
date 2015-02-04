@@ -19,6 +19,7 @@
 
 #define SYMTAB_SIZE 64
 
+/* A symbol is a bytevector, plus a pointer for the hash table bucket */
 struct navi_symbol {
 	struct navi_hlist_node chain;
 	struct navi_object object;
@@ -31,12 +32,14 @@ static NAVI_LIST_HEAD(heap);
 navi_t navi_sym_lambda;
 navi_t navi_sym_caselambda;
 navi_t navi_sym_define;
+navi_t navi_sym_defvals;
 navi_t navi_sym_defmacro;
 navi_t navi_sym_begin;
 navi_t navi_sym_let;
 navi_t navi_sym_seqlet;
 navi_t navi_sym_letrec;
 navi_t navi_sym_seqletrec;
+navi_t navi_sym_letvals;
 navi_t navi_sym_set;
 navi_t navi_sym_quote;
 navi_t navi_sym_quasiquote;
@@ -89,12 +92,14 @@ static void symbol_table_init(void)
 	intern(navi_sym_lambda,         "lambda");
 	intern(navi_sym_caselambda,     "case-lambda");
 	intern(navi_sym_define,         "define");
+	intern(navi_sym_defvals,        "define-values");
 	intern(navi_sym_defmacro,       "define-macro");
 	intern(navi_sym_begin,          "begin");
 	intern(navi_sym_let,            "let");
 	intern(navi_sym_seqlet,         "let*");
 	intern(navi_sym_letrec,         "letrec");
 	intern(navi_sym_seqletrec,      "letrec*");
+	intern(navi_sym_letvals,        "let-values");
 	intern(navi_sym_set,            "set!");
 	intern(navi_sym_quote,          "quote");
 	intern(navi_sym_quasiquote,     "quasiquote");
@@ -279,7 +284,7 @@ static inline unsigned count_pairs(navi_t list)
 	return i;
 }
 
-navi_t navi_make_function(navi_t args, navi_t body, char *name, navi_env_t env)
+navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env)
 {
 	struct navi_object *obj = make_object(NAVI_FUNCTION,
 			sizeof(struct navi_function));
@@ -340,6 +345,7 @@ navi_t navi_from_spec(struct navi_spec *spec)
 		obj = make_object(spec->type, sizeof(struct navi_function));
 		fun = (void*) obj->data;
 		memcpy(fun, &spec->fun, sizeof(struct navi_function));
+		fun->name = navi_make_symbol(spec->ident);
 		return (navi_t) obj;
 	case NAVI_VOID:
 	case NAVI_PORT:

@@ -30,13 +30,6 @@ _Noreturn void _navi_error(navi_env_t env, const char *msg, ...)
 	scm_raise(navi_make_pair(list, navi_make_nil()), env);
 }
 
-_Noreturn void navi_arity_error(navi_env_t env, const char *name)
-{
-	char buf[64];
-	snprintf(buf, 64, "wrong number of arguments to '%s'", name);
-	navi_error(env, buf);
-}
-
 DEFUN(scm_procedurep, args, env)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_FUNCTION);

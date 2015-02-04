@@ -21,7 +21,6 @@
 #include "symbols.h"
 
 _Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
-_Noreturn void navi_arity_error(navi_env_t env, const char *name);
 #define navi_error(env, msg, ...) \
 	_navi_error(env, msg, ##__VA_ARGS__, navi_make_void())
 #define navi_read_error(env, msg, ...) \
@@ -30,6 +29,8 @@ _Noreturn void navi_arity_error(navi_env_t env, const char *name);
 	navi_error(env, msg, navi_sym_file_error, ##__VA_ARGS__, navi_make_void())
 #define navi_enomem(env) \
 	navi_error(env, "not enough memory")
+#define navi_arity_error(env, name) \
+	navi_error(env, "wrong number of arguments", navi_make_apair("target", name))
 
 static inline navi_t navi_type_check(navi_t obj, enum navi_type type, navi_env_t env)
 {

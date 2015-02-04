@@ -20,12 +20,14 @@
 extern navi_t navi_sym_lambda;
 extern navi_t navi_sym_caselambda;
 extern navi_t navi_sym_define;
+extern navi_t navi_sym_defvals;
 extern navi_t navi_sym_defmacro;
 extern navi_t navi_sym_begin;
 extern navi_t navi_sym_let;
 extern navi_t navi_sym_seqlet;
 extern navi_t navi_sym_letrec;
 extern navi_t navi_sym_seqletrec;
+extern navi_t navi_sym_letvals;
 extern navi_t navi_sym_set;
 extern navi_t navi_sym_quote;
 extern navi_t navi_sym_quasiquote;

@@ -83,7 +83,8 @@ DEFSPECIAL(scm_lambda, lambda, env)
 	if (!lambda_valid(lambda))
 		navi_error(env, "invalid lambda list");
 
-	return navi_make_function(navi_car(lambda), navi_cdr(lambda), "?", env);
+	return navi_make_function(navi_car(lambda), navi_cdr(lambda),
+			navi_sym_lambda, env);
 }
 
 DEFSPECIAL(scm_caselambda, caselambda, env)
@@ -98,7 +99,8 @@ DEFSPECIAL(scm_caselambda, caselambda, env)
 	navi_list_for_each(cons, caselambda) {
 		if (!lambda_valid(navi_car(cons)))
 			navi_error(env, "invalid case-lambda list");
-		vec->data[i++] = navi_make_function(navi_caar(cons), navi_cdar(cons), "?", env);
+		vec->data[i++] = navi_make_function(navi_caar(cons),
+				navi_cdar(cons), navi_sym_caselambda, env);
 	}
 
 	return expr;
@@ -107,7 +109,7 @@ DEFSPECIAL(scm_caselambda, caselambda, env)
 static navi_t eval_defvar(navi_t sym, navi_t rest, navi_env_t env)
 {
 	if (navi_type(navi_cdr(rest)) != NAVI_NIL)
-		navi_arity_error(env, "define");
+		navi_arity_error(env, navi_sym_define);
 
 	navi_scope_set(env, sym, navi_eval(navi_car(rest), env));
 	return navi_unspecified();
@@ -121,7 +123,7 @@ static navi_t eval_defun(navi_t fundecl, navi_t rest, navi_env_t env)
 		navi_error(env, "invalid defun list");
 
 	name = navi_car(fundecl);
-	fun = navi_make_function(navi_cdr(fundecl), rest, navi_bytevec_to_cstr(name), env);
+	fun = navi_make_function(navi_cdr(fundecl), rest, name, env);
 	navi_scope_set(env, name, fun);
 	return navi_unspecified();
 }
@@ -141,20 +143,20 @@ DEFSPECIAL(scm_define, define, env)
 	navi_error(env, "invalid define list");
 }
 
-static void extend_with_values(navi_t vars, navi_t vals, navi_env_t env)
+static void extend_with_values(navi_t vars, navi_t vals, navi_t which, navi_env_t env)
 {
 	navi_t cons;
 	size_t i = 0;
 
 	if (navi_type(vals) != NAVI_VALUES) {
 		if (navi_list_length(vars) != 1)
-			navi_arity_error(env, "let-values/define-values");
+			navi_arity_error(env, which);
 		navi_scope_set(env, navi_car(vars), vals);
 		return;
 	}
 
 	if ((size_t)navi_list_length(vars) != navi_vector_length(vals))
-		navi_arity_error(env, "let-values/define-values");
+		navi_arity_error(env, which);
 
 	navi_list_for_each(cons, vars) {
 		navi_scope_set(env, navi_car(cons), navi_vector_ref(vals, i++));
@@ -166,7 +168,8 @@ DEFSPECIAL(scm_define_values, defvals, env)
 	if (navi_list_length(defvals) != 2)
 		navi_error(env, "invalid define-values list");
 
-	extend_with_values(navi_car(defvals), navi_eval(navi_cadr(defvals), env), env);
+	extend_with_values(navi_car(defvals), navi_eval(navi_cadr(defvals), env),
+			navi_sym_defvals, env);
 	return navi_unspecified();
 }
 
@@ -178,8 +181,7 @@ DEFSPECIAL(scm_defmacro, defmacro, env)
 		navi_error(env, "invalid define-macro list");
 
 	name = navi_caar(defmacro);
-	macro = navi_make_macro(navi_cdar(defmacro), navi_cdr(defmacro),
-			navi_bytevec_to_cstr(name), env);
+	macro = navi_make_macro(navi_cdar(defmacro), navi_cdr(defmacro), name, env);
 	navi_scope_set(env, name, macro);
 	return navi_unspecified();
 }
@@ -269,7 +271,7 @@ static navi_env_t letvals_extend_env(navi_t def_list, navi_env_t env)
 
 	navi_list_for_each(cons, def_list) {
 		navi_t vals = navi_eval(navi_cadar(cons), env);
-		extend_with_values(navi_caar(cons), vals, env);
+		extend_with_values(navi_caar(cons), vals, navi_sym_letvals, env);
 	}
 
 	return new;
@@ -329,7 +331,7 @@ DEFSPECIAL(scm_quote, quote, env)
 DEFSPECIAL(scm_unquote, unquote, env)
 {
 	if (navi_list_length(unquote) != 1)
-		navi_arity_error(env, "unquote");
+		navi_arity_error(env, navi_sym_unquote);
 	return navi_eval(navi_car(unquote), env);
 }
 
@@ -374,7 +376,7 @@ static navi_t eval_qq(navi_t expr, navi_env_t env)
 DEFSPECIAL(scm_quasiquote, quote, env)
 {
 	if (!navi_is_nil(navi_cdr(quote)))
-		navi_arity_error(env, "quasiquote");
+		navi_arity_error(env, navi_sym_quasiquote);
 	return eval_qq(navi_car(quote), env);	
 }
 
@@ -478,7 +480,7 @@ DEFSPECIAL(scm_if, sif, env)
 	int nr_args = navi_list_length(sif);
 
 	if (nr_args != 2 && nr_args != 3)
-		navi_arity_error(env, "if");
+		navi_arity_error(env, navi_sym_if);
 
 	test = navi_eval(navi_car(sif), env);
 	if (navi_is_true(test))
@@ -581,7 +583,7 @@ static navi_t caselambda_call(navi_t lambda, navi_t args, navi_env_t env)
 		if (fun->arity == nr_args || (fun->arity < nr_args && fun->variadic))
 			return apply(fun, args, env);
 	}
-	navi_arity_error(env, "caselambda");
+	navi_arity_error(env, navi_sym_caselambda);
 }
 
 static navi_t eval_call(navi_t call, navi_env_t env)

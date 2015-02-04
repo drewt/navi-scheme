@@ -100,7 +100,7 @@ DEFUN(scm_make_bytevector, args, env)
 	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
-		navi_arity_error(env, "bytevector");
+		navi_arity_error(env, navi_make_symbol("bytevector"));
 
 	navi_type_check(navi_car(args), NAVI_NUM, env);
 

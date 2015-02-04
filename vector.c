@@ -61,7 +61,7 @@ DEFUN(scm_make_vector, args, env)
 	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
-		navi_arity_error(env, "make-vector");
+		navi_arity_error(env, navi_make_symbol("make-vector"));
 
 	navi_type_check(navi_car(args), NAVI_NUM, env);
 	vec = navi_make_vector(navi_num(navi_car(args)));

@@ -86,7 +86,7 @@ struct navi_function {
 		navi_builtin_t fn;
 	};
 	navi_t args;
-	char *name;
+	navi_t name;
 	navi_env_t env;
 	unsigned short arity;
 	bool variadic;
@@ -354,7 +354,7 @@ navi_t navi_make_file_output_port(FILE *file);
 navi_t navi_make_vector(size_t size);
 navi_t navi_make_bytevec(size_t size);
 navi_t navi_make_string(size_t storage, size_t size, size_t length);
-navi_t navi_make_function(navi_t args, navi_t body, char *name, navi_env_t env);
+navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env);
 navi_t navi_make_escape(void);
 
 static inline navi_t navi_make_void(void)
@@ -394,7 +394,8 @@ static inline navi_t navi_make_uninterned(const char *str)
 	return sym;
 }
 
-static inline navi_t navi_make_macro(navi_t args, navi_t body, char *name, navi_env_t env)
+static inline navi_t navi_make_macro(navi_t args, navi_t body, navi_t name,
+		navi_env_t env)
 {
 	navi_t macro = navi_make_function(args, body, name, env);
 	macro.p->type = NAVI_MACRO;
@@ -404,7 +405,8 @@ static inline navi_t navi_make_macro(navi_t args, navi_t body, char *name, navi_
 static inline navi_t navi_make_promise(navi_t e, navi_env_t env)
 {
 	navi_t body = navi_make_pair(e, navi_make_nil());
-	navi_t promise = navi_make_function(navi_make_nil(), body, "", env);
+	navi_t promise = navi_make_function(navi_make_nil(), body,
+			navi_make_symbol("promise"), env);
 	promise.p->type = NAVI_PROMISE;
 	return promise;
 }

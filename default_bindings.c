@@ -26,7 +26,6 @@
 	.type = _type, \
 	.fun = { \
 		.fn       = _fn, \
-		.name     = scmname, \
 		.arity    = ary, \
 		.variadic = var, \
 		.builtin  = 1, \

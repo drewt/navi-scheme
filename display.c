@@ -144,12 +144,12 @@ void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t en
 		break;
 	case NAVI_MACRO:
 		navi_port_write_cstr("#<macro ", port, env);
-		navi_port_write_cstr(navi_fun(obj)->name, port, env);
+		display_symbol(port, navi_fun(obj)->name, env);
 		navi_port_write_cstr(">", port, env);
 		break;
 	case NAVI_SPECIAL:
 		navi_port_write_cstr("#<special form ", port, env);
-		navi_port_write_cstr(navi_fun(obj)->name, port, env);
+		display_symbol(port, navi_fun(obj)->name, env);
 		navi_port_write_cstr(">", port, env);
 		break;
 	case NAVI_PROMISE:
@@ -158,11 +158,11 @@ void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t en
 	case NAVI_FUNCTION:
 		if (navi_fun(obj)->builtin) {
 			navi_port_write_cstr("#<builtin-procedure ", port, env);
-			navi_port_write_cstr(navi_fun(obj)->name, port, env);
+			display_symbol(port, navi_fun(obj)->name, env);
 			navi_port_write_cstr(">", port, env);
 		} else {
 			navi_port_write_cstr("#<interpreted-procedure ", port, env);
-			navi_port_write_cstr(navi_fun(obj)->name, port, env);
+			display_symbol(port, navi_fun(obj)->name, env);
 			navi_port_write_cstr(">", port, env);
 		}
 		break;

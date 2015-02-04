@@ -80,9 +80,10 @@ static void display_bytevec(struct navi_port *port, navi_t obj, navi_env_t env)
 
 static void display_symbol(struct navi_port *port, navi_t obj, navi_env_t env)
 {
-	struct navi_bytevec *vec = navi_bytevec(obj);
-	for (size_t i = 0; i < vec->size; i++)
-		navi_port_write_byte(vec->data[i], port, env);
+	char *p;
+	struct navi_symbol *sym = navi_symbol(obj);
+	for (p = sym->data; *p != '\0'; p++)
+		navi_port_write_byte(*p, port, env);
 }
 
 void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t env)

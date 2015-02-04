@@ -110,6 +110,11 @@ struct navi_string {
 	char *data;
 };
 
+struct navi_symbol {
+	struct navi_hlist_node chain;
+	char data[];
+};
+
 struct navi_pair {
 	navi_t car;
 	navi_t cdr;
@@ -138,6 +143,7 @@ struct navi_object {
 		struct navi_vector vec;
 		struct navi_bytevec bvec;
 		struct navi_string str;
+		struct navi_symbol sym;
 		struct navi_pair pair;
 		struct navi_port port;
 	} data[];
@@ -247,6 +253,11 @@ static inline struct navi_string *navi_string(navi_t obj)
 	return &obj.p->data->str;
 }
 
+static inline struct navi_symbol *navi_symbol(navi_t obj)
+{
+	return &obj.p->data->sym;
+}
+
 static inline struct navi_function *navi_fun(navi_t obj)
 {
 	return &obj.p->data->fun;
@@ -270,6 +281,11 @@ static inline navi_env_t navi_env(navi_t obj)
 static inline struct navi_pair *navi_pair(navi_t obj)
 {
 	return &obj.p->data->pair;
+}
+
+static inline struct navi_object *navi_object(void *concrete)
+{
+	return container_of(concrete, struct navi_object, data);
 }
 
 static inline navi_t navi_car(navi_t obj)
@@ -385,13 +401,6 @@ static inline navi_t navi_make_bool(bool b)
 static inline navi_t navi_make_char(unsigned long c)
 {
 	return (navi_t) { .n = (c << NAVI_IMMEDIATE_TAG_BITS) | NAVI_CHAR_TAG };
-}
-
-static inline navi_t navi_make_uninterned(const char *str)
-{
-	navi_t sym = navi_cstr_to_bytevec(str);
-	sym.p->type = NAVI_SYMBOL;
-	return sym;
 }
 
 static inline navi_t navi_make_macro(navi_t args, navi_t body, navi_t name,

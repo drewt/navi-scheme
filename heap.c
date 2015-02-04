@@ -19,12 +19,6 @@
 
 #define SYMTAB_SIZE 64
 
-/* A symbol is a bytevector, plus a pointer for the hash table bucket */
-struct navi_symbol {
-	struct navi_hlist_node chain;
-	struct navi_object object;
-};
-
 extern struct navi_clist_head active_environments;
 static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
 static NAVI_LIST_HEAD(heap);
@@ -67,11 +61,6 @@ void navi_free(struct navi_object *obj)
 {
 	obj->type = NAVI_VOID;
 	free(obj);
-}
-
-static inline navi_t symbol_object(struct navi_symbol *sym)
-{
-	return (navi_t) &sym->object;
 }
 
 /* FIXME: this is a really bad hash function! */
@@ -135,30 +124,30 @@ static navi_t symbol_lookup(const char *str, unsigned long hashcode)
 	struct navi_hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
 
 	navi_hlist_for_each_entry(it, head, chain) {
-		if (navi_bytevec_equal(symbol_object(it), str))
-			return symbol_object(it);
+		if (!strcmp(it->data, str))
+			return (navi_t) navi_object(it);
 	}
 	return (navi_t) 0L;
 }
 
-/* Only called if symbol doesn't already exist */
-static navi_t new_symbol(const char *str, unsigned long hashcode)
+static struct navi_object *make_object(enum navi_type type, size_t size)
+{
+	struct navi_object *obj = navi_critical_malloc(sizeof(struct navi_object) + size);
+	navi_clist_add(&obj->chain, &heap);
+	obj->type = type;
+	return obj;
+}
+
+navi_t navi_make_uninterned(const char *str)
 {
 	size_t len = strlen(str);
-	struct navi_symbol *symbol;
-	
-	symbol = navi_critical_malloc(sizeof(struct navi_symbol) +
-			sizeof(struct navi_bytevec) + len + 1);
+	struct navi_object *object = make_object(NAVI_SYMBOL,
+			sizeof(struct navi_symbol) + len + 1);
+	struct navi_symbol *symbol = navi_symbol((navi_t)object);
 
-	for (size_t i = 0; i < len; i++)
-		symbol->object.data->bvec.data[i] = str[i];
-	symbol->object.data->bvec.data[len] = '\0';
-
-	symbol->object.data->bvec.size = len;
-	symbol->object.type = NAVI_SYMBOL;
-
-	navi_hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
-	return (navi_t) &symbol->object;
+	for (size_t i = 0; i < len+1; i++)
+		symbol->data[i] = str[i];
+	return (navi_t) object;
 }
 
 DEFUN(scm_gensym, args, env)
@@ -171,12 +160,13 @@ DEFUN(scm_gensym, args, env)
 	return navi_make_uninterned(buf);
 }
 
-static struct navi_object *make_object(enum navi_type type, size_t size)
+/* Only called if symbol doesn't already exist */
+static navi_t new_symbol(const char *str, unsigned long hashcode)
 {
-	struct navi_object *obj = navi_critical_malloc(sizeof(struct navi_object) + size);
-	navi_clist_add(&obj->chain, &heap);
-	obj->type = type;
-	return obj;
+	navi_t object = navi_make_uninterned(str);
+	struct navi_symbol *symbol = navi_symbol(object);
+	navi_hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
+	return object;
 }
 
 navi_t navi_make_symbol(const char *str)
@@ -468,6 +458,7 @@ static void gc_mark_env(struct navi_scope *env)
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
 		struct navi_binding *bind;
 		navi_hlist_for_each_entry(bind, &env->bindings[i], chain) {
+			gc_set_mark(bind->symbol);
 			if (navi_ptr_type(bind->object))
 				gc_mark_obj(bind->object);
 		}

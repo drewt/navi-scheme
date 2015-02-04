@@ -131,7 +131,7 @@ DEFUN(scm_raise, args, env)
 	for (;;) {
 		expr = navi_env_lookup(env, navi_sym_exn);
 		if (navi_type(expr) != NAVI_FUNCTION)
-			die("no exception handler installed");
+			navi_die("no exception handler installed");
 
 		/* set up environment and run handler */
 		fun = navi_fun(expr);
@@ -153,7 +153,7 @@ DEFUN(scm_raise_continuable, args, env)
 
 	handler = navi_env_lookup(env, navi_sym_exn);
 	if (navi_type(handler) != NAVI_FUNCTION)
-		die("no exception handler installed");
+		navi_die("no exception handler installed");
 
 	fun = navi_fun(handler);
 	navi_scope_unset(env, navi_sym_exn);

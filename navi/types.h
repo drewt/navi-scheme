@@ -21,7 +21,6 @@
 #include <stdio.h>
 
 #include "clist.h"
-#include "uchar.h"
 
 #define NAVI_ENV_HT_SIZE 64
 
@@ -122,7 +121,7 @@ struct navi_port {
 	void (*close_in)(struct navi_port*, navi_env_t);
 	void (*close_out)(struct navi_port*, navi_env_t);
 	unsigned long flags;
-	uchar buffer;
+	unsigned long buffer;
 	navi_t expr;
 	size_t pos;
 	void *specific;
@@ -165,6 +164,39 @@ struct navi_binding {
 
 /* C types }}} */
 
+#define navi_die(msg, ...) \
+	_navi_die("libnavi: critical error in " __FILE__ " (%d): " msg, \
+			__LINE__, ##__VA_ARGS__)
+static inline _Noreturn int _navi_die(const char *msg, ...)
+{
+	va_list ap;
+	va_start(ap, msg);
+	vfprintf(stderr, msg, ap);
+	va_end(ap);
+	putchar('\n');
+	exit(1);
+}
+
+static inline void *navi_critical_malloc(size_t size)
+{
+	void *r;
+	if (!(r = malloc(size)))
+		navi_die("not enough memory");
+	return r;
+}
+
+static inline void *navi_critical_realloc(void *p, size_t size)
+{
+	void *r;
+	if (!(r = realloc(p, size)))
+		navi_die("not enough memory");
+	return r;
+}
+
+void navi_init(void);
+
+/* Memory Management {{{ */
+void navi_free(struct navi_object *obj);
 void navi_scope_free(navi_env_t scope);
 
 static inline void navi_scope_unref(navi_env_t env)
@@ -177,7 +209,7 @@ static inline void navi_scope_ref(navi_env_t env)
 {
 	env->refs++;
 }
-
+/* Memory Management }}} */
 /* Accessors {{{ */
 
 static inline long navi_num(navi_t obj)
@@ -301,68 +333,8 @@ static inline navi_t navi_caddddr(navi_t obj)
 }
 
 /* Accessors }}} */
-
-static inline enum navi_type navi_immediate_type(navi_t obj)
-{
-	unsigned long tag = obj.n & NAVI_IMMEDIATE_TAG_MASK;
-	switch (tag) {
-	case NAVI_BOOL_TAG: return NAVI_BOOL;
-	case NAVI_CHAR_TAG: return NAVI_CHAR;
-	case NAVI_NIL_TAG:  return NAVI_NIL;
-	case NAVI_EOF_TAG:  return NAVI_EOF;
-	}
-	return -1;
-}
-
-static inline enum navi_type navi_type(navi_t obj)
-{
-	if (obj.n == 0)
-		return NAVI_VOID;
-	if (obj.n & 1)
-		return NAVI_NUM;
-	if (obj.n & 2)
-		return navi_immediate_type(obj);
-	return obj.p->type;
-}
-
-static inline bool navi_ptr_type(navi_t obj)
-{
-	return obj.n != 0 && (obj.n & 3) == 0;
-}
-
-static inline navi_t navi_last_cons(navi_t list)
-{
-	while (navi_type(navi_cdr(list)) == NAVI_PAIR)
-		list = navi_cdr(list);
-	return list;
-}
-
-navi_t navi_char_upcase(navi_t ch);
-navi_t navi_char_downcase(navi_t ch);
-
-navi_t navi_port_read_byte(struct navi_port *port, navi_env_t env);
-navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env);
-navi_t navi_port_read_char(struct navi_port *port, navi_env_t env);
-navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env);
-void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env);
-void navi_port_write_char(uchar ch, struct navi_port *port, navi_env_t env);
-void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env);
-
-/* conversion */
-navi_t navi_list_to_vector(navi_t list);
-navi_t navi_vector_to_list(navi_t vector);
-navi_t navi_list_to_bytevec(navi_t list, navi_env_t env);
-navi_t navi_bytevec_to_list(navi_t vec);
-char *navi_string_to_cstr(navi_t string);
-char *navi_bytevec_to_cstr(navi_t vec);
-navi_t navi_string_to_bytevec(navi_t string);
-navi_t navi_bytevec_to_string(navi_t bytevec);
-
-void navi_init(void);
-void navi_free(struct navi_object *obj);
-
 /* Constructors {{{ */
-
+navi_t navi_from_spec(struct navi_spec *spec);
 navi_t navi_cstr_to_string(const char *str);
 navi_t navi_cstr_to_bytevec(const char *str);
 navi_t navi_make_symbol(const char *sym);
@@ -457,46 +429,57 @@ static inline navi_t navi_make_bounce(navi_t object, navi_t env)
 	return ret;
 }
 
-/* Constructors }}} */
-
 static inline navi_t navi_unspecified(void)
 {
 	return navi_make_void();
 }
 
-static inline navi_t navi_vector_ref(navi_t vec, size_t i)
+/* Constructors }}} */
+/* Environments/Evaluation {{{ */
+struct navi_binding *navi_env_binding(navi_env_t env, navi_t symbol);
+navi_env_t navi_env_new_scope(navi_env_t env);
+void navi_scope_set(navi_env_t env, navi_t symbol, navi_t object);
+int navi_scope_unset(navi_env_t env, navi_t symbol);
+navi_env_t navi_extend_environment(navi_env_t env, navi_t vars, navi_t args);
+navi_env_t navi_make_default_environment(void);
+navi_t navi_capture_env(navi_env_t env);
+
+static inline navi_t navi_env_lookup(navi_env_t env, navi_t symbol)
 {
-	return navi_vector(vec)->data[i];
+	struct navi_binding *binding = navi_env_binding(env, symbol);
+	return binding == NULL ? navi_make_void() : binding->object;
 }
 
-static inline size_t navi_vector_length(navi_t vec)
+navi_t navi_eval(navi_t expr, navi_env_t env);
+navi_t navi_call_escape(navi_t escape, navi_t arg);
+/* Environments/Evaluation }}} */
+/* Types {{{ */
+static inline enum navi_type navi_immediate_type(navi_t obj)
 {
-	return vec.p->data->vec.size;
+	unsigned long tag = obj.n & NAVI_IMMEDIATE_TAG_MASK;
+	switch (tag) {
+	case NAVI_BOOL_TAG: return NAVI_BOOL;
+	case NAVI_CHAR_TAG: return NAVI_CHAR;
+	case NAVI_NIL_TAG:  return NAVI_NIL;
+	case NAVI_EOF_TAG:  return NAVI_EOF;
+	}
+	return -1;
 }
 
-static inline navi_t navi_bytevec_ref(navi_t vec, size_t i)
+static inline enum navi_type navi_type(navi_t obj)
 {
-	return navi_make_num(navi_bytevec(vec)->data[i]);
+	if (obj.n == 0)
+		return NAVI_VOID;
+	if (obj.n & 1)
+		return NAVI_NUM;
+	if (obj.n & 2)
+		return navi_immediate_type(obj);
+	return obj.p->type;
 }
 
-static inline bool navi_bytevec_equal(navi_t obj, const char *cstr)
+static inline bool navi_ptr_type(navi_t obj)
 {
-	struct navi_bytevec *vec = navi_bytevec(obj);
-	for (size_t i = 0; i < vec->size; i++)
-		if (vec->data[i] != (unsigned char) cstr[i])
-			return false;
-	return true;
-}
-
-static inline bool navi_string_equal(navi_t a, navi_t b)
-{
-	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
-	if (sa->size != sb->size || sa->length != sb->length)
-		return false;
-	for (size_t i = 0; i < sa->size; i++)
-		if (sa->data[i] != sb->data[i])
-			return false;
-	return true;
+	return obj.n != 0 && (obj.n & 3) == 0;
 }
 
 static inline const char *navi_strtype(enum navi_type type)
@@ -532,34 +515,143 @@ static inline navi_t navi_typesym(enum navi_type type)
 	return navi_make_symbol(navi_strtype(type));
 }
 
-/* type predicates */
-
-#define TYPE_PREDICATE(name, type) \
+#define NAVI_TYPE_PREDICATE(name, type) \
 	static inline bool name(navi_t obj) \
 	{ \
 		return navi_type(obj) == type; \
 	}
 
-TYPE_PREDICATE(navi_is_void, NAVI_VOID)
-TYPE_PREDICATE(navi_is_nil,  NAVI_NIL)
-TYPE_PREDICATE(navi_is_eof,  NAVI_EOF)
-TYPE_PREDICATE(navi_is_num,  NAVI_NUM)
-TYPE_PREDICATE(navi_is_bool, NAVI_BOOL)
-TYPE_PREDICATE(navi_is_char, NAVI_CHAR)
-TYPE_PREDICATE(navi_is_values, NAVI_VALUES)
-TYPE_PREDICATE(navi_is_pair, NAVI_PAIR)
-TYPE_PREDICATE(navi_is_string, NAVI_STRING)
-TYPE_PREDICATE(navi_is_symbol, NAVI_SYMBOL)
-TYPE_PREDICATE(navi_is_vector, NAVI_VECTOR)
-TYPE_PREDICATE(navi_is_bytevec, NAVI_BYTEVEC)
-TYPE_PREDICATE(navi_is_macro, NAVI_MACRO)
-TYPE_PREDICATE(navi_is_function, NAVI_FUNCTION)
-TYPE_PREDICATE(navi_is_caselambda, NAVI_CASELAMBDA)
-TYPE_PREDICATE(navi_is_escape, NAVI_ESCAPE)
-TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
-TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
-#undef TYPE_PREDICATE
+NAVI_TYPE_PREDICATE(navi_is_void, NAVI_VOID)
+NAVI_TYPE_PREDICATE(navi_is_nil,  NAVI_NIL)
+NAVI_TYPE_PREDICATE(navi_is_eof,  NAVI_EOF)
+NAVI_TYPE_PREDICATE(navi_is_num,  NAVI_NUM)
+NAVI_TYPE_PREDICATE(navi_is_bool, NAVI_BOOL)
+NAVI_TYPE_PREDICATE(navi_is_char, NAVI_CHAR)
+NAVI_TYPE_PREDICATE(navi_is_values, NAVI_VALUES)
+NAVI_TYPE_PREDICATE(navi_is_pair, NAVI_PAIR)
+NAVI_TYPE_PREDICATE(navi_is_string, NAVI_STRING)
+NAVI_TYPE_PREDICATE(navi_is_symbol, NAVI_SYMBOL)
+NAVI_TYPE_PREDICATE(navi_is_vector, NAVI_VECTOR)
+NAVI_TYPE_PREDICATE(navi_is_bytevec, NAVI_BYTEVEC)
+NAVI_TYPE_PREDICATE(navi_is_macro, NAVI_MACRO)
+NAVI_TYPE_PREDICATE(navi_is_function, NAVI_FUNCTION)
+NAVI_TYPE_PREDICATE(navi_is_caselambda, NAVI_CASELAMBDA)
+NAVI_TYPE_PREDICATE(navi_is_escape, NAVI_ESCAPE)
+NAVI_TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
+NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
+#undef NAVI_TYPE_PREDICATE
 
 bool navi_is_proper_list(navi_t list);
+/* Types }}} */
+/* Lists {{{ */
+navi_t navi_vlist(navi_t first, va_list ap);
+navi_t navi_list(navi_t first, ...);
+navi_t navi_map(navi_t list, navi_leaf_t fn, void *data);
+
+static inline navi_t navi_last_cons(navi_t list)
+{
+	while (navi_type(navi_cdr(list)) == NAVI_PAIR)
+		list = navi_cdr(list);
+	return list;
+}
+
+static inline bool navi_is_last_pair(navi_t pair)
+{
+	return navi_type(navi_cdr(pair)) == NAVI_NIL;
+}
+
+static inline int navi_list_length(navi_t list)
+{
+	int i;
+
+	for (i = 0; navi_type(list) == NAVI_PAIR; i++)
+		list = navi_cdr(list);
+
+	if (navi_type(list) != NAVI_NIL)
+		navi_die("navi_list_length: not a proper list");
+
+	return i;
+}
+/* Lists }}} */
+/* Characters {{{ */
+navi_t navi_char_upcase(navi_t ch);
+navi_t navi_char_downcase(navi_t ch);
+/* Characters }}} */
+/* Ports {{{ */
+navi_t navi_read(struct navi_port *port, navi_env_t env);
+#define navi_write(expr, env) scm_write(navi_make_pair(expr, navi_make_nil()), env)
+#define navi_display(expr, env) scm_display(navi_make_pair(expr, navi_make_nil()), env)
+void _navi_display(struct navi_port *port, navi_t expr, bool write, navi_env_t env);
+navi_t navi_port_read_byte(struct navi_port *port, navi_env_t env);
+navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env);
+navi_t navi_port_read_char(struct navi_port *port, navi_env_t env);
+navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env);
+void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env);
+void navi_port_write_char(unsigned long ch, struct navi_port *port, navi_env_t env);
+void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env);
+/* Ports }}} */
+/* Strings {{{ */
+navi_t navi_string_copy(navi_t str);
+
+static inline bool navi_string_equal(navi_t a, navi_t b)
+{
+	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
+	if (sa->size != sb->size || sa->length != sb->length)
+		return false;
+	for (size_t i = 0; i < sa->size; i++)
+		if (sa->data[i] != sb->data[i])
+			return false;
+	return true;
+}
+/* Strings }}} */
+/* Vectors {{{ */
+static inline navi_t navi_vector_ref(navi_t vec, size_t i)
+{
+	return navi_vector(vec)->data[i];
+}
+
+static inline size_t navi_vector_length(navi_t vec)
+{
+	return vec.p->data->vec.size;
+}
+/* Vectors }}} */
+/* Bytevectors {{{ */
+static inline navi_t navi_bytevec_ref(navi_t vec, size_t i)
+{
+	return navi_make_num(navi_bytevec(vec)->data[i]);
+}
+
+static inline bool navi_bytevec_equal(navi_t obj, const char *cstr)
+{
+	struct navi_bytevec *vec = navi_bytevec(obj);
+	for (size_t i = 0; i < vec->size; i++)
+		if (vec->data[i] != (unsigned char) cstr[i])
+			return false;
+	return true;
+}
+/* Bytevectors }}} */
+/* Conversion {{{ */
+navi_t navi_list_to_vector(navi_t list);
+navi_t navi_vector_to_list(navi_t vector);
+navi_t navi_list_to_bytevec(navi_t list, navi_env_t env);
+navi_t navi_bytevec_to_list(navi_t vec);
+char *navi_string_to_cstr(navi_t string);
+char *navi_bytevec_to_cstr(navi_t vec);
+navi_t navi_string_to_bytevec(navi_t string);
+navi_t navi_bytevec_to_string(navi_t bytevec);
+/* Conversion }}} */
+/* Misc {{{ */
+bool navi_eqvp(navi_t fst, navi_t snd);
+
+static inline bool navi_is_true(navi_t expr)
+{
+	return navi_type(expr) != NAVI_BOOL || navi_bool(expr);
+}
+
+static inline bool navi_symbol_eq(navi_t expr, navi_t symbol)
+{
+	return navi_is_symbol(expr) && expr.p == symbol.p;
+}
+/* Misc }}} */
 
 #endif

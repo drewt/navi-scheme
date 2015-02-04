@@ -14,6 +14,7 @@
  */
 
 #include "navi.h"
+#include "navi/uchar.h"
 
 static void bytevec_fill(navi_t vector, unsigned char fill)
 {
@@ -80,7 +81,7 @@ navi_t navi_bytevec_to_string(navi_t bytevec)
 char *navi_bytevec_to_cstr(navi_t obj)
 {
 	struct navi_bytevec *vec = navi_bytevec(obj);
-	char *cstr = xmalloc(vec->size + 1);
+	char *cstr = navi_critical_malloc(vec->size + 1);
 
 	for (size_t i = 0; i < vec->size; i++)
 		cstr[i] = vec->data[i];

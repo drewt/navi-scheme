@@ -14,6 +14,7 @@
  */
 
 #include "navi.h"
+#include "navi/uchar.h"
 
 #define STRING_INIT_SIZE 64
 #define STRING_STEP_SIZE 64
@@ -84,7 +85,7 @@ static void string_write(unsigned char ch, struct navi_port *port, navi_env_t en
 	struct navi_string *str = navi_string(port->expr);
 
 	if (str->size + 1 >= str->storage) {
-		str->data = xrealloc(str->data, str->storage + STRING_STEP_SIZE);
+		str->data = navi_critical_realloc(str->data, str->storage + STRING_STEP_SIZE);
 		str->storage += STRING_STEP_SIZE;
 	}
 

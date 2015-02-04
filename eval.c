@@ -189,7 +189,7 @@ DEFSPECIAL(scm_begin, begin, env)
 	navi_t cons, result;
 
 	navi_list_for_each(cons, begin) {
-		if (navi_last_pair(cons))
+		if (navi_is_last_pair(cons))
 			return eval_tail(navi_car(cons), env);
 		result = navi_eval(navi_car(cons), env);
 	}
@@ -493,7 +493,7 @@ DEFSPECIAL(scm_and, and, env)
 	navi_t cons;
 
 	navi_list_for_each(cons, and) {
-		if (navi_last_pair(cons))
+		if (navi_is_last_pair(cons))
 			return eval_tail(navi_car(cons), env);
 		if (!navi_is_true(navi_eval(navi_car(cons), env)))
 			return navi_make_bool(false);
@@ -506,7 +506,7 @@ DEFSPECIAL(scm_or, or, env)
 	navi_t cons;
 
 	navi_list_for_each(cons, or) {
-		if (navi_last_pair(cons))
+		if (navi_is_last_pair(cons))
 			return eval_tail(navi_car(cons), env);
 		if (navi_is_true(navi_eval(navi_car(cons), env)))
 			return navi_make_bool(true);

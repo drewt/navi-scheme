@@ -17,6 +17,7 @@
 #include <ctype.h>
 
 #include "navi.h"
+#include "navi/uchar.h"
 
 static navi_t list_to_string(navi_t list, navi_env_t env)
 {
@@ -128,7 +129,7 @@ DEFUN(scm_string_set, args, env)
 	k = navi_num(navi_cadr(args));
 
 	if (k < 0 || (size_t) k >= str->size)
-		die("string index out of bounds");
+		navi_die("string index out of bounds");
 
 	// FIXME: UTF-8
 	str->data[k] = navi_char(navi_caddr(args));

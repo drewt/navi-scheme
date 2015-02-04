@@ -24,7 +24,8 @@
 
 #include "navi/types.h"
 #include "navi/lib.h"
-
-#include "navi/internal.h"
+#include "navi/macros.h"
+#include "navi/symbols.h"
+#include "navi/error.h"
 
 #endif

@@ -261,7 +261,7 @@ static DEFUN(scm_toplevel_exn, args, env)
 
 	cont = navi_env_lookup(env, navi_sym_repl);
 	if (navi_type(cont) != NAVI_ESCAPE)
-		die("#repl not bound to continuation");
+		navi_die("#repl not bound to continuation");
 
 	navi_scope_set(env, navi_sym_exn, navi_from_spec(&default_bindings[0]));
 	longjmp(navi_escape(cont)->state, 1);

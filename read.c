@@ -19,6 +19,7 @@
 #include <ctype.h>
 
 #include "navi.h"
+#include "navi/uchar.h"
 
 /*
  * WARNING: What follows is a hand-rolled parser, and not a very good one.
@@ -209,7 +210,7 @@ static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t), nav
 
 		if (pos + u_char_size(c) >= buf_len) {
 			buf_len += STR_BUF_STEP;
-			str = xrealloc(str, buf_len);
+			str = navi_critical_realloc(str, buf_len);
 		}
 		if (c > 0xFF)
 			u_set_char_raw(str, &pos, c);
@@ -260,7 +261,7 @@ static navi_t read_string(struct navi_port *port, navi_env_t env)
 			c = read_string_escape(port, env);
 		if (pos + u_char_size(c) >= buf_len) {
 			buf_len += STR_BUF_STEP;
-			str = xrealloc(str, buf_len);
+			str = navi_critical_realloc(str, buf_len);
 		}
 		if (c > 0xFF)
 			u_set_char_raw(str, &pos, c);

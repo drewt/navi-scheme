@@ -142,7 +142,7 @@ static navi_t new_symbol(const char *str, unsigned long hashcode)
 	size_t len = strlen(str);
 	struct navi_symbol *symbol;
 	
-	symbol = xmalloc(sizeof(struct navi_symbol) +
+	symbol = navi_critical_malloc(sizeof(struct navi_symbol) +
 			sizeof(struct navi_bytevec) + len + 1);
 
 	for (size_t i = 0; i < len; i++)
@@ -168,7 +168,7 @@ DEFUN(scm_gensym, args, env)
 
 static struct navi_object *make_object(enum navi_type type, size_t size)
 {
-	struct navi_object *obj = xmalloc(sizeof(struct navi_object) + size);
+	struct navi_object *obj = navi_critical_malloc(sizeof(struct navi_object) + size);
 	navi_clist_add(&obj->chain, &heap);
 	obj->type = type;
 	return obj;
@@ -214,7 +214,7 @@ navi_t navi_cstr_to_bytevec(const char *str)
 navi_t navi_make_string(size_t storage, size_t size, size_t length)
 {
 	struct navi_object *str = make_object(NAVI_STRING, sizeof(struct navi_string));
-	str->data->str.data = xmalloc(storage + 1);
+	str->data->str.data = navi_critical_malloc(storage + 1);
 	str->data->str.data[storage] = '\0';
 	str->data->str.data[size] = '\0';
 	str->data->str.storage = storage;
@@ -351,7 +351,7 @@ navi_t navi_from_spec(struct navi_spec *spec)
 	case NAVI_BOUNCE:
 		break;
 	}
-	die("navi_from_spec: unknown or unsupported type");
+	navi_die("navi_from_spec: unknown or unsupported type");
 }
 
 bool navi_eqvp(navi_t fst, navi_t snd)
@@ -388,7 +388,7 @@ bool navi_eqvp(navi_t fst, navi_t snd)
 	case NAVI_STRING:
 		return navi_string_equal(fst, snd);
 	}
-	die("navi_eqvp: unknown type");
+	navi_die("navi_eqvp: unknown type");
 }
 
 DEFUN(scm_eqvp, args, env)

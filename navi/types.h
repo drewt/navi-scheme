@@ -371,6 +371,7 @@ navi_t navi_make_vector(size_t size);
 navi_t navi_make_bytevec(size_t size);
 navi_t navi_make_string(size_t storage, size_t size, size_t length);
 navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env);
+navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env);
 navi_t navi_make_escape(void);
 
 static inline navi_t navi_make_void(void)
@@ -663,6 +664,7 @@ static inline bool navi_symbol_eq(navi_t expr, navi_t symbol)
 {
 	return navi_is_symbol(expr) && expr.p == symbol.p;
 }
+
 /* Misc }}} */
 
 #endif

@@ -23,32 +23,13 @@ extern struct navi_clist_head active_environments;
 static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
 static NAVI_LIST_HEAD(heap);
 
-navi_t navi_sym_lambda;
-navi_t navi_sym_caselambda;
-navi_t navi_sym_define;
-navi_t navi_sym_defvals;
-navi_t navi_sym_defmacro;
 navi_t navi_sym_begin;
-navi_t navi_sym_let;
-navi_t navi_sym_seqlet;
-navi_t navi_sym_letrec;
-navi_t navi_sym_seqletrec;
-navi_t navi_sym_letvals;
-navi_t navi_sym_set;
 navi_t navi_sym_quote;
 navi_t navi_sym_quasiquote;
 navi_t navi_sym_unquote;
 navi_t navi_sym_splice;
-navi_t navi_sym_guard;
-navi_t navi_sym_case;
-navi_t navi_sym_cond;
-navi_t navi_sym_if;
-navi_t navi_sym_and;
-navi_t navi_sym_or;
 navi_t navi_sym_else;
 navi_t navi_sym_eq_lt;
-navi_t navi_sym_thunk;
-navi_t navi_sym_question;
 navi_t navi_sym_exn;
 navi_t navi_sym_current_input;
 navi_t navi_sym_current_output;
@@ -78,31 +59,13 @@ static void symbol_table_init(void)
 		NAVI_INIT_HLIST_HEAD(&symbol_table[i]);
 
 	#define intern(cname, name) cname = navi_make_symbol(name)
-	intern(navi_sym_lambda,         "lambda");
-	intern(navi_sym_caselambda,     "case-lambda");
-	intern(navi_sym_define,         "define");
-	intern(navi_sym_defvals,        "define-values");
-	intern(navi_sym_defmacro,       "define-macro");
 	intern(navi_sym_begin,          "begin");
-	intern(navi_sym_let,            "let");
-	intern(navi_sym_seqlet,         "let*");
-	intern(navi_sym_letrec,         "letrec");
-	intern(navi_sym_seqletrec,      "letrec*");
-	intern(navi_sym_letvals,        "let-values");
-	intern(navi_sym_set,            "set!");
 	intern(navi_sym_quote,          "quote");
 	intern(navi_sym_quasiquote,     "quasiquote");
 	intern(navi_sym_unquote,        "unquote");
 	intern(navi_sym_splice,         "unquote-splice");
-	intern(navi_sym_case,           "case");
-	intern(navi_sym_cond,           "cond");
-	intern(navi_sym_if,             "if");
-	intern(navi_sym_and,            "and");
-	intern(navi_sym_or,             "or");
 	intern(navi_sym_else,           "else");
 	intern(navi_sym_eq_lt,          "=>");
-	intern(navi_sym_thunk,          "#thunk");
-	intern(navi_sym_question,       "?");
 	intern(navi_sym_exn,            "#exn");
 	intern(navi_sym_current_input,  "#current-input-port");
 	intern(navi_sym_current_output, "#current-output-port");
@@ -290,6 +253,15 @@ navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env)
 	return (navi_t) obj;
 }
 
+navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env)
+{
+	char buf[64];
+	static unsigned long count = 0;
+	snprintf(buf, 64, "lam%lu", count++);
+	buf[63] = '\0';
+	return navi_make_function(args, body, navi_make_uninterned(buf), env);
+}
+
 navi_t navi_make_escape(void)
 {
 	return (navi_t) make_object(NAVI_ESCAPE, sizeof(struct navi_escape));
@@ -402,6 +374,8 @@ static void gc_mark_obj(navi_t obj)
 	struct navi_vector *vec;
 	struct navi_function *fun;
 
+	if (!navi_ptr_type(obj))
+		return;
 	switch (navi_type(obj)) {
 	case NAVI_VOID:
 	case NAVI_NIL:
@@ -442,6 +416,7 @@ static void gc_mark_obj(navi_t obj)
 		if (!fun->builtin)
 			gc_mark_obj(fun->body);
 		gc_mark_obj(fun->args);
+		gc_set_mark(fun->name);
 		break;
 	case NAVI_ESCAPE:
 		gc_set_mark(obj);
@@ -459,8 +434,7 @@ static void gc_mark_env(struct navi_scope *env)
 		struct navi_binding *bind;
 		navi_hlist_for_each_entry(bind, &env->bindings[i], chain) {
 			gc_set_mark(bind->symbol);
-			if (navi_ptr_type(bind->object))
-				gc_mark_obj(bind->object);
+			gc_mark_obj(bind->object);
 		}
 	}
 }

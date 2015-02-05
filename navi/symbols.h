@@ -17,30 +17,13 @@
 #define _NAVI_SYMBOLS_H
 
 /* automatically interned symbols */
-extern navi_t navi_sym_lambda;
-extern navi_t navi_sym_caselambda;
-extern navi_t navi_sym_define;
-extern navi_t navi_sym_defvals;
-extern navi_t navi_sym_defmacro;
 extern navi_t navi_sym_begin;
-extern navi_t navi_sym_let;
-extern navi_t navi_sym_seqlet;
-extern navi_t navi_sym_letrec;
-extern navi_t navi_sym_seqletrec;
-extern navi_t navi_sym_letvals;
-extern navi_t navi_sym_set;
 extern navi_t navi_sym_quote;
 extern navi_t navi_sym_quasiquote;
 extern navi_t navi_sym_unquote;
 extern navi_t navi_sym_splice;
-extern navi_t navi_sym_case;
-extern navi_t navi_sym_cond;
-extern navi_t navi_sym_if;
-extern navi_t navi_sym_and;
-extern navi_t navi_sym_or;
 extern navi_t navi_sym_else;
 extern navi_t navi_sym_eq_lt;
-extern navi_t navi_sym_question;
 extern navi_t navi_sym_exn;
 extern navi_t navi_sym_current_input;
 extern navi_t navi_sym_current_output;

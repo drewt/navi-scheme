@@ -142,7 +142,6 @@ navi_t navi_make_symbol(const char *str)
 	return new_symbol(str, hashcode);
 }
 
-/* FIXME: unicode? */
 navi_t navi_cstr_to_string(const char *str)
 {
 	size_t len = strlen(str);
@@ -179,6 +178,18 @@ navi_t navi_make_string(size_t storage, size_t size, size_t length)
 	str->data->str.size = size;
 	str->data->str.length = length;
 	return (navi_t) str;
+}
+
+void navi_string_grow_storage(struct navi_string *str, long need)
+{
+	long free_space = str->storage - str->size;
+	if (free_space > need)
+		return;
+	need -= free_space;
+	// TODO: align?
+	str->data = navi_critical_realloc(str->data, str->storage + need + 1);
+	str->storage += need;
+	str->data[str->storage] = '\0';
 }
 
 navi_t navi_make_pair(navi_t car, navi_t cdr)

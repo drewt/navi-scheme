@@ -116,6 +116,33 @@ DEFUN(scm_string_ref, args, env)
 	return navi_make_char(u_get_char(str->data, &i));
 }
 
+void navi_string_set(struct navi_string *str, long k, unsigned long ch)
+{
+	unsigned long old_ch;
+	int old_size, need;
+	size_t i = 0;
+	int new_size = u_char_size(ch);
+
+	u_skip_chars(str->data, k, &i);
+	old_ch = u_get_char(str->data+i, NULL);
+	old_size = u_char_size(old_ch);
+	need = new_size - old_size;
+	if (need > 0) {
+		navi_string_grow_storage(str, need);
+		// shift right
+		for (size_t j = str->size-1; j > i; j--)
+			str->data[j+need] = str->data[j];
+	}
+	if (need < 0) {
+		// shift left
+		for (size_t j = i+old_size-1; j < str->size; j++)
+			str->data[j+need] = str->data[j];
+	}
+	u_set_char(str->data, &i, ch);
+	str->size += need;
+	str->data[str->size] = '\0';
+}
+
 DEFUN(scm_string_set, args, env)
 {
 	long k;
@@ -129,10 +156,9 @@ DEFUN(scm_string_set, args, env)
 	k = navi_num(navi_cadr(args));
 
 	if (k < 0 || (size_t) k >= str->size)
-		navi_die("string index out of bounds");
+		navi_error(env, "string index out of bounds");
 
-	// FIXME: UTF-8
-	str->data[k] = navi_char(navi_caddr(args));
+	navi_string_set(str, k, navi_char(navi_caddr(args)));
 	return navi_unspecified();
 }
 

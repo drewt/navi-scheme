@@ -370,6 +370,7 @@ navi_t navi_make_file_output_port(FILE *file);
 navi_t navi_make_vector(size_t size);
 navi_t navi_make_bytevec(size_t size);
 navi_t navi_make_string(size_t storage, size_t size, size_t length);
+void navi_string_grow_storage(struct navi_string *str, long need);
 navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env);
 navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env);
 navi_t navi_make_escape(void);

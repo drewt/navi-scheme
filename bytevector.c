@@ -37,58 +37,6 @@ navi_t navi_list_to_bytevec(navi_t list, navi_env_t env)
 	return vec;
 }
 
-navi_t navi_bytevec_to_list(navi_t obj)
-{
-	struct navi_bytevec *vector;
-	struct navi_pair head, *ptr = &head;
-
-	vector = navi_bytevec(obj);
-	for (size_t i = 0; i < vector->size; i++) {
-		ptr->cdr = navi_make_empty_pair();
-		ptr = &ptr->cdr.p->data->pair;
-		ptr->car = navi_make_char(vector->data[i]);
-	}
-	ptr->cdr = navi_make_nil();
-	return head.cdr;
-}
-
-/* FIXME: assumes ASCII */
-navi_t navi_string_to_bytevec(navi_t string)
-{
-	struct navi_vector *svec = navi_vector(string);
-	navi_t obj = navi_make_bytevec(svec->size);
-	struct navi_bytevec *bvec = navi_bytevec(obj);
-
-	for (size_t i = 0; i < svec->size; i++)
-		bvec->data[i] = navi_char(svec->data[i]);
-
-	return obj;
-}
-
-/* FIXME: assumes ASCII */
-navi_t navi_bytevec_to_string(navi_t bytevec)
-{
-	struct navi_bytevec *bvec = navi_bytevec(bytevec);
-	navi_t obj = navi_make_string(bvec->size, bvec->size, bvec->size);
-	struct navi_vector *svec = navi_vector(obj);
-
-	for (size_t i = 0; i < bvec->size; i++)
-		svec->data[i] = navi_make_char(bvec->data[i]);
-
-	return obj;
-}
-
-char *navi_bytevec_to_cstr(navi_t obj)
-{
-	struct navi_bytevec *vec = navi_bytevec(obj);
-	char *cstr = navi_critical_malloc(vec->size + 1);
-
-	for (size_t i = 0; i < vec->size; i++)
-		cstr[i] = vec->data[i];
-	cstr[vec->size] = '\0';
-	return cstr;
-}
-
 DEFUN(scm_bytevectorp, args, env)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BYTEVEC);

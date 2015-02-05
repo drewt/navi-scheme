@@ -647,11 +647,7 @@ static inline bool navi_bytevec_equal(navi_t obj, const char *cstr)
 navi_t navi_list_to_vector(navi_t list);
 navi_t navi_vector_to_list(navi_t vector);
 navi_t navi_list_to_bytevec(navi_t list, navi_env_t env);
-navi_t navi_bytevec_to_list(navi_t vec);
 char *navi_string_to_cstr(navi_t string);
-char *navi_bytevec_to_cstr(navi_t vec);
-navi_t navi_string_to_bytevec(navi_t string);
-navi_t navi_bytevec_to_string(navi_t bytevec);
 /* Conversion }}} */
 /* Misc {{{ */
 bool navi_eqvp(navi_t fst, navi_t snd);

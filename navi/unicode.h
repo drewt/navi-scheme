@@ -20,6 +20,7 @@
 #include <unicode/uchar.h>
 #include <unicode/utf8.h>
 #include <unicode/ucol.h>
+#include <unicode/ucasemap.h>
 
 /*
  * Wrappers for ICU macros.  The idea is here is to consolidate error checking

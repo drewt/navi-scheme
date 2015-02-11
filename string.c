@@ -14,7 +14,6 @@
  */
 
 #include "navi.h"
-#include "compiler.h"
 #include "navi/unicode.h"
 
 static navi_t list_to_string(navi_t list, navi_env_t env)
@@ -250,6 +249,41 @@ STRING_COMPARE(scm_string_ci_gt,  >,  true);
 STRING_COMPARE(scm_string_ci_eq,  ==, true);
 STRING_COMPARE(scm_string_ci_lte, <=, true);
 STRING_COMPARE(scm_string_ci_gte, >=, true);
+
+static int32_t count_length(struct navi_string *str)
+{
+	int32_t count = 0;
+	for (int32_t i = 0; i < str->size; count++) {
+		UChar32 ch;
+		u8_next(str->data, i, str->size, ch);
+	}
+	return count;
+}
+
+#define STRING_CASEMAP(name, fun) \
+	DEFUN(name, args, env) \
+	{ \
+		struct navi_string *src = navi_string_cast(navi_car(args), env); \
+		navi_t dst_obj = navi_make_string(src->size, src->size, src->length); \
+		struct navi_string *dst = navi_string(dst_obj); \
+		UErrorCode error = U_ZERO_ERROR; \
+		UCaseMap *map = ucasemap_open(NULL, 0, &error); \
+		assert(!error); \
+		do { \
+			error = U_ZERO_ERROR; \
+			navi_string_grow_storage(dst, dst->size - dst->capacity); \
+			dst->size = fun(map, (char*)dst->data, dst->capacity, \
+					(char*)src->data, src->size, &error); \
+		} while (dst->size > dst->capacity); \
+		assert(U_SUCCESS(error)); \
+		dst->length = count_length(dst); \
+		ucasemap_close(map); \
+		return dst_obj; \
+	}
+
+STRING_CASEMAP(scm_string_upcase,   ucasemap_utf8ToUpper);
+STRING_CASEMAP(scm_string_downcase, ucasemap_utf8ToLower);
+STRING_CASEMAP(scm_string_foldcase, ucasemap_utf8FoldCase);
 
 DEFUN(scm_substring, args, env)
 {

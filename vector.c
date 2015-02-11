@@ -183,7 +183,7 @@ DEFUN(scm_vector_copy_to, args, env)
 	return navi_unspecified();
 }
 
-static navi_t vector_map(navi_t fun, navi_t to, navi_t from, navi_env_t env)
+navi_t navi_vector_map(navi_t fun, navi_t to, navi_t from, navi_env_t env)
 {
 	struct navi_vector *tov = navi_vector_cast(to, NAVI_VECTOR, env);
 	struct navi_vector *fromv = navi_vector_cast(from, NAVI_VECTOR, env);
@@ -199,13 +199,14 @@ DEFUN(scm_vector_map_ip, args, env)
 {
 	navi_type_check_fun(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
-	return vector_map(navi_car(args), navi_cadr(args), navi_cadr(args), env);
+	return navi_vector_map(navi_car(args), navi_cadr(args), navi_cadr(args), env);
 }
 
 DEFUN(scm_vector_map, args, env)
 {
 	navi_type_check_fun(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
-	return vector_map(navi_car(args), navi_make_vector(navi_vector_length(navi_cadr(args))),
+	return navi_vector_map(navi_car(args),
+			navi_make_vector(navi_vector_length(navi_cadr(args))),
 			navi_cadr(args), env);
 }

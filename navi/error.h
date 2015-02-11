@@ -85,10 +85,9 @@ static inline struct navi_string *navi_string_cast(navi_t str, navi_env_t env)
 	return navi_string(navi_type_check(str, NAVI_STRING, env));
 }
 
-static inline struct navi_bytevec *navi_bytevec_cast(navi_t vec,
-		enum navi_type type, navi_env_t env)
+static inline struct navi_bytevec *navi_bytevec_cast(navi_t vec, navi_env_t env)
 {
-	return navi_bytevec(navi_type_check(vec, type, env));
+	return navi_bytevec(navi_type_check(vec, NAVI_BYTEVEC, env));
 }
 
 static inline struct navi_vector *navi_vector_cast(navi_t vec,

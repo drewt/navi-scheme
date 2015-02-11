@@ -13,11 +13,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include <string.h>
-#include <ctype.h>
-
 #include "navi.h"
-#include "navi/uchar.h"
+#include "compiler.h"
+#include "navi/unicode.h"
 
 static navi_t list_to_string(navi_t list, navi_env_t env)
 {
@@ -26,16 +24,16 @@ static navi_t list_to_string(navi_t list, navi_env_t env)
 
 	navi_list_for_each(cons, list) {
 		navi_type_check(navi_car(cons), NAVI_CHAR, env);
-		size += u_char_size(navi_char(navi_car(cons)));
+		size += u8_length(navi_char(navi_car(cons)));
 		length++;
 	}
 
-	size_t i = 0;
+	int32_t i = 0;
 	navi_t expr = navi_make_string(size, size, length);
 	struct navi_string *str = navi_string(expr);
 
 	navi_list_for_each(cons, list) {
-		u_set_char((char*)str->data, &i, navi_char(navi_car(cons)));
+		u8_append(str->data, i, str->capacity, navi_char(navi_car(cons)));
 	}
 	return expr;
 }
@@ -43,28 +41,74 @@ static navi_t list_to_string(navi_t list, navi_env_t env)
 static navi_t string_to_list(navi_t expr)
 {
 	struct navi_pair head, *ptr;
-	struct navi_string *string = navi_string (expr);
+	struct navi_string *str = navi_string(expr);
 
 	ptr = &head;
-	for (size_t i = 0; i < string->size;) {
+	for (int32_t i = 0; i < str->size;) {
+		UChar32 ch;
+		u8_next(str->data, i, str->size, ch);
 		ptr->cdr = navi_make_empty_pair();
 		ptr = navi_pair(ptr->cdr);
-		ptr->car = navi_make_char(u_get_char(string->data, &i));
+		ptr->car = navi_make_char(ch);
 	}
 	ptr->cdr = navi_make_nil();
 	return head.cdr;
 }
 
-char *navi_string_to_cstr(navi_t expr)
+static navi_t string_to_vector(navi_t str_obj)
 {
-	struct navi_string *string = navi_string(expr);
-	char *cstr = malloc(string->size + 1);
-	if (!cstr)
-		return NULL;
-	for (size_t i = 0; i < string->size; i++)
-		cstr[i] = string->data[i];
-	cstr[string->size] = '\0';
-	return cstr;
+	struct navi_string *str = navi_string(str_obj);
+	navi_t vec_obj = navi_make_vector(str->length);
+	struct navi_vector *vec = navi_vector(vec_obj);
+	int32_t si;
+	size_t vi;
+
+	for (si = 0, vi = 0; si < str->size; vi++) {
+		UChar32 ch;
+		assert(vi < vec->size);
+		u8_next(str->data, si, str->size, ch);
+		vec->data[vi] = navi_make_char(ch);
+	}
+	assert(vi == vec->size);
+	return vec_obj;
+}
+
+static int32_t u32_size(struct navi_vector *vec)
+{
+	size_t size = 0;
+	for (size_t i = 0; i < vec->size; i++) {
+		assert(navi_type(vec->data[i]) == NAVI_CHAR);
+		size += u8_length(navi_char(vec->data[i]));
+	}
+	return size;
+}
+
+static void vector_to_string_ip(struct navi_string *str,
+		struct navi_vector *vec)
+{
+	size_t vi;
+	int32_t si;
+
+	for (si = 0, vi = 0; vi < vec->size; vi++) {
+		u8_append(str->data, si, str->capacity, navi_char(vec->data[vi]));
+	}
+	str->size = si;
+	str->data[si] = '\0';
+}
+
+static navi_t vector_to_string(navi_t vec_obj)
+{
+	int32_t size;
+	navi_t str_obj;
+	struct navi_string *str;
+	struct navi_vector *vec = navi_vector(vec_obj);
+
+	size = u32_size(vec);
+	str_obj = navi_make_string(size, size, vec->size);
+	str = navi_string(str_obj);
+
+	vector_to_string_ip(str, vec);
+	return str_obj;
 }
 
 DEFUN(scm_stringp, args, env)
@@ -74,26 +118,21 @@ DEFUN(scm_stringp, args, env)
 
 DEFUN(scm_make_string, args, env)
 {
-	uchar ch = ' ';
+	UChar32 ch = ' ';
 	int nr_args = navi_list_length(args);
-
-	long length = navi_fixnum_cast(navi_car(args), env);
-
+	int32_t length = navi_fixnum_cast(navi_car(args), env);
 	if (length < 0)
 		navi_error(env, "invalid length");
 	if (nr_args > 1)
 		ch = navi_char_cast(navi_cadr(args), env);
 
-	/* FIXME: invalid codepoint? */
-	size_t size = length * u_char_size(ch);
-	navi_t expr = navi_make_string(size, size, length);
-
-	size_t j = 0;
-	struct navi_string *string = navi_string(expr);
-	for (size_t i = 0; i < (size_t) length; i++)
-		u_set_char_raw((char*)string->data, &j, ch);
-
-	return expr;
+	int32_t size = length * u8_length(ch);
+	navi_t obj = navi_make_string(size, size, length);
+	struct navi_string *str = navi_string(obj);
+	for (int32_t i = 0; i < size;) {
+		u8_append(str->data, i, size, ch);
+	}
+	return obj;
 }
 
 DEFUN(scm_string, args, env)
@@ -108,44 +147,54 @@ DEFUN(scm_string_length, args, env)
 
 DEFUN(scm_string_ref, args, env)
 {
-	size_t i = 0;
+	UChar32 ch;
 	struct navi_string *str = navi_string_cast(navi_car(args), env);
-	long k = navi_type_check_range(navi_cadr(args), 0, str->length, env);
+	int32_t k = navi_type_check_range(navi_cadr(args), 0, str->length, env);
 
-	u_skip_chars(str->data, k, &i);
-	return navi_make_char(u_get_char(str->data, &i));
+	u8_get(str->data, 0, k, str->size, ch);
+	return navi_make_char(ch);
 }
 
-void navi_string_set(struct navi_string *str, long k, unsigned long ch)
+/*
+ * Shift @str by @diff bytes, starting at @pos.  If @diff is negative, the
+ * string is shifted left, with bytes disappearing beyond @pos.  Otherwise it's
+ * shifted to the right.  This function is not UTF-8-aware; it is assumed that
+ * @pos and @diff make sense for the task at hand.
+ */
+static void string_shift(struct navi_string *str, int32_t pos, int diff)
 {
-	unsigned long old_ch;
-	int old_size, need;
-	size_t i = 0;
-	int new_size = u_char_size(ch);
-
-	u_skip_chars(str->data, k, &i);
-	old_ch = u_get_char(str->data+i, NULL);
-	old_size = u_char_size(old_ch);
-	need = new_size - old_size;
-	if (need > 0) {
-		navi_string_grow_storage(str, need);
+	if (diff > 0) {
+		navi_string_grow_storage(str, diff);
 		// shift right
-		for (size_t j = str->size-1; j > i; j--)
-			str->data[j+need] = str->data[j];
+		for (int32_t i = str->size-1; i > pos; i--)
+			str->data[i+diff] = str->data[i];
 	}
-	if (need < 0) {
+	else if (diff < 0) {
 		// shift left
-		for (size_t j = i+old_size-1; j < str->size; j++)
-			str->data[j+need] = str->data[j];
+		for (int32_t i = pos+1; i < str->size-1; i++)
+			str->data[i] = str->data[i-diff];
 	}
-	u_set_char(str->data, &i, ch);
-	str->size += need;
+}
+
+void navi_string_set(struct navi_string *str, long k, UChar32 new_ch)
+{
+	int diff;
+	UChar32 old_ch;
+	int32_t i = 0;
+
+	u8_fwd_n(str->data, i, str->size, k);
+	u8_get(str->data, 0, i, str->size, old_ch);
+
+	diff = u8_length(new_ch) - u8_length(old_ch);
+	string_shift(str, i, diff);
+	u8_append(str->data, i, str->size+diff, new_ch);
+	str->size += diff;
 	str->data[str->size] = '\0';
 }
 
 DEFUN(scm_string_set, args, env)
 {
-	long k;
+	int32_t k;
 	struct navi_string *str;
 
 	navi_type_check(navi_car(args),   NAVI_STRING, env);
@@ -155,66 +204,52 @@ DEFUN(scm_string_set, args, env)
 	str = navi_string(navi_car(args));
 	k = navi_num(navi_cadr(args));
 
-	if (k < 0 || (size_t) k >= str->size)
+	if (k < 0 || k >= str->size)
 		navi_error(env, "string index out of bounds");
 
 	navi_string_set(str, k, navi_char(navi_caddr(args)));
 	return navi_unspecified();
 }
 
-#define BINARY_PREDICATE(cname, op) \
+static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
+{
+	int result;
+	UErrorCode error = U_ZERO_ERROR;
+	UCollator *coll = ucol_open(NULL, &error); // FIXME: use system locale
+	assert(U_SUCCESS(error));
+	if (ci)
+		ucol_setStrength(coll, UCOL_SECONDARY);
+	result = ucol_strcollUTF8(coll, (char*)a->data, a->size, (char*)b->data,
+			b->size, &error);
+	assert(U_SUCCESS(error));
+	ucol_close(coll);
+	return result;
+}
+
+#define STRING_COMPARE(cname, op, ci) \
 	DEFUN(cname, args, env) \
 	{ \
+		navi_t cons; \
 		struct navi_string *fst, *snd; \
-		\
-		navi_type_check(navi_car(args),  NAVI_STRING, env); \
-		navi_type_check(navi_cadr(args), NAVI_STRING, env); \
-		\
-		fst = navi_string(navi_car(args)); \
-		snd = navi_string(navi_cadr(args)); \
-		\
-		if (fst->size != snd->size) \
-			return navi_make_bool(false); \
-		\
-		for (size_t i = 0; i < fst->size; i++) { \
-			if (!(fst->data[i] op snd->data[i])) \
+		fst = navi_string_cast(navi_car(args), env); \
+		navi_list_for_each(cons, navi_cdr(args)) { \
+			snd = navi_string_cast(navi_car(cons), env); \
+			if (!(navi_strcoll(fst, snd, ci) op 0)) \
 				return navi_make_bool(false); \
 		} \
 		return navi_make_bool(true); \
 	}
 
-#define BINARY_CI_PREDICATE(cname, op) \
-	DEFUN(cname, args, env) \
-	{ \
-		struct navi_string *fst, *snd; \
-		\
-		navi_type_check(navi_car(args),  NAVI_STRING, env); \
-		navi_type_check(navi_cadr(args), NAVI_STRING, env); \
-		\
-		fst = navi_string(navi_car(args)); \
-		snd = navi_string(navi_cadr(args)); \
-		\
-		if (fst->size != snd->size) \
-			return navi_make_bool(false); \
-		\
-		for (size_t i = 0; i < fst->size; i++) { \
-			if (!(tolower(fst->data[i]) op tolower(snd->data[i]))) \
-				return navi_make_bool(false); \
-		} \
-		return navi_make_bool(true); \
-	}
-
-BINARY_PREDICATE(scm_string_lt,  <)
-BINARY_PREDICATE(scm_string_gt,  >)
-BINARY_PREDICATE(scm_string_eq,  ==)
-BINARY_PREDICATE(scm_string_lte, <=)
-BINARY_PREDICATE(scm_string_gte, >=)
-
-BINARY_CI_PREDICATE(scm_string_ci_lt,  <)
-BINARY_CI_PREDICATE(scm_string_ci_gt,  >)
-BINARY_CI_PREDICATE(scm_string_ci_eq,  ==)
-BINARY_CI_PREDICATE(scm_string_ci_lte, <=)
-BINARY_CI_PREDICATE(scm_string_ci_gte, >=)
+STRING_COMPARE(scm_string_lt,     <,  false);
+STRING_COMPARE(scm_string_gt,     >,  false);
+STRING_COMPARE(scm_string_eq,     ==, false);
+STRING_COMPARE(scm_string_lte,    <=, false);
+STRING_COMPARE(scm_string_gte,    >=, false);
+STRING_COMPARE(scm_string_ci_lt,  <,  true);
+STRING_COMPARE(scm_string_ci_gt,  >,  true);
+STRING_COMPARE(scm_string_ci_eq,  ==, true);
+STRING_COMPARE(scm_string_ci_lte, <=, true);
+STRING_COMPARE(scm_string_ci_gte, >=, true);
 
 DEFUN(scm_substring, args, env)
 {
@@ -223,28 +258,28 @@ DEFUN(scm_substring, args, env)
 
 DEFUN(scm_string_append, args, env)
 {
-	navi_t cons, expr;
+	navi_t cons, obj;
 	struct navi_string *str;
-	size_t i = 0, size = 0, length = 0;
+	int32_t i = 0, size = 0, length = 0;
 
-	/* count combined size/length */
+	// count combined size/length
 	navi_list_for_each(cons, args) {
-		struct navi_string *s = navi_string_cast(navi_car(cons), env);
-		size += s->size;
-		length += s->length;
+		str = navi_string_cast(navi_car(cons), env);
+		size += str->size;
+		length += str->length;
 	}
 
-	/* allocate */
-	expr = navi_make_string(size, size, length);
-	str = navi_string(expr);
+	// allocate
+	obj = navi_make_string(size, size, length);
+	str = navi_string(obj);
 
-	/* copy */
+	// copy
 	navi_list_for_each(cons, args) {
 		struct navi_string *other = navi_string(navi_car(cons));
-		for (size_t j = 0; j < other->size; j++)
+		for (int32_t j = 0; j < other->size; j++)
 			str->data[i++] = other->data[j];
 	}
-	return expr;
+	return obj;
 }
 
 DEFUN(scm_string_to_list, args, env)
@@ -257,110 +292,141 @@ DEFUN(scm_list_to_string, args, env)
 	return list_to_string(navi_type_check_list(navi_car(args), env), env);
 }
 
-static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
-		size_t end)
+static navi_t copy_to(navi_t to, int32_t at, navi_t from, int32_t start,
+		int32_t end)
 {
+	UChar32 ch;
+	int32_t k, j, to_i = 0, from_i = 0;
+	int32_t to_size = 0, from_size = 0;
 	struct navi_string *tos = navi_string(to), *froms = navi_string(from);
-	for (size_t i = start; i < end; i++)
-		tos->data[at++] = froms->data[i];
+
+	u8_fwd_n(tos->data, to_i, tos->size, at);
+	u8_fwd_n(froms->data, from_i, froms->size, start);
+
+	// count size of to area
+	for (j = to_i, k = 0; k < end - start; k++) {
+		u8_next(tos->data, j, tos->size, ch);
+		to_size += u8_length(ch);
+	}
+	// count size of from area
+	for (j = from_i, k = 0; k < end - start; k++) {
+		u8_next(froms->data, j, froms->size, ch);
+		from_size += u8_length(ch);
+	}
+	// adjust target string
+	string_shift(tos, to_i, from_size - to_size);
+	memcpy(tos->data+to_i, froms->data+from_i, from_size);
+	tos->size += from_size - to_size;
+	tos->data[tos->size] = '\0';
 	return to;
 }
 
 DEFUN(scm_string_fill, args, env)
 {
-	navi_t ch;
-	long end, start;
+	UChar32 ch;
+	int32_t start, end, k, j, i = 0;
+	int32_t new_size, old_size;
 	struct navi_string *str;
 	int nr_args = navi_list_length(args);
 
 	str = navi_string_cast(navi_car(args), env);
-	ch = navi_type_check(navi_cadr(args), NAVI_CHAR, env);
+	ch = navi_char_cast(navi_cadr(args), env);
 	start = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : 0;
-	end = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : (long) str->size;
+	end = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : str->size;
+	navi_check_copy(str->length, start, end, env);
 
-	navi_check_copy(str->size, start, end, env);
+	// determine old_size/new_size
+	u8_fwd_n(str->data, i, str->size, start);
+	for (k = 0, j = i; k < end - start; k++) {
+		UChar32 old_ch;
+		u8_next(str->data, j, str->size, old_ch);
+	}
+	old_size = j - i;
+	new_size = u8_length(ch) * (end - start);
 
-	for (size_t i = start; i < (size_t) end; i++)
-		str->data[i] = navi_char(ch);
-
+	string_shift(str, i, new_size - old_size);
+	for (k = 0; k < end - start; k++) {
+		u8_append(str->data, i, str->capacity, ch);
+	}
+	str->size += new_size - old_size;
+	str->data[str->size] = '\0';
 	return navi_unspecified();
 }
 
-navi_t navi_string_copy(navi_t string)
+navi_t navi_strdup(navi_t from_obj)
 {
-	struct navi_string *from_str = navi_string(string);
-	navi_t to = navi_make_string(from_str->size, from_str->size, from_str->size);
-	struct navi_string *to_str = navi_string(to);
-
-	for (size_t i = 0; i < from_str->size; i++)
-		to_str->data[i] = from_str->data[i];
-
-	return to;
+	struct navi_string *from = navi_string(from_obj);
+	navi_t to_obj = navi_make_string(from->size, from->size, from->length);
+	struct navi_string *to = navi_string(to_obj);
+	memcpy(to->data, from->data, from->size);
+	return to_obj;
 }
 
 DEFUN(scm_string_copy, args, env)
 {
-	navi_t from;
+	navi_t from, to;
 	long start, end;
-	struct navi_string *str;
 	int nr_args = navi_list_length(args);
 
 	from = navi_type_check(navi_car(args), NAVI_STRING, env);
-	str = navi_string(from);
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
-	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) str->size;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env)
+			: navi_string(from)->size;
+	navi_check_copy(navi_string(from)->length, start, end, env);
 
-	navi_check_copy(str->size, start, end, env);
-
-	return copy_to(navi_make_string(end - start, end - start, end - start), 0,
-			from, start, end);
+	to = navi_make_string(end - start, end - start, end - start);
+	return copy_to(to, 0, from, start, end);
 }
 
 DEFUN(scm_string_copy_to, args, env)
 {
 	navi_t to, from;
 	long at, start, end;
-	struct navi_string *from_str, *to_str;
 	int nr_args = navi_list_length(args);
 
 	to = navi_type_check(navi_car(args), NAVI_STRING, env);
 	at = navi_fixnum_cast(navi_cadr(args), env);
 	from = navi_type_check(navi_caddr(args), NAVI_STRING, env);
-	to_str = navi_string(to);
-	from_str = navi_string(from);
 	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
 	end = (nr_args > 4) ? navi_fixnum_cast(navi_caddddr(args), env)
-		: (long) from_str->size;
-
-	navi_check_copy_to(to_str->size, at, from_str->size, start, end, env);
+			: navi_string(from)->size;
+	navi_check_copy_to(navi_string(to)->length, at,
+			navi_string(from)->length, start, end, env);
 
 	copy_to(to, at, from, start, end);
 	return navi_unspecified();
 }
 
-static navi_t string_map_ip(navi_t fun, navi_t str, navi_env_t env)
+static navi_t string_map(navi_t fun, navi_t str, navi_env_t env)
 {
-	struct navi_string *vec = navi_string_cast(str, env);
-
-	for (size_t i = 0; i < vec->size; i++) {
-		navi_t call = navi_list(fun, navi_make_char(vec->data[i]), navi_make_void());
-		vec->data[i] = navi_char_cast(navi_eval(call, env), env);
-	}
-	return str;
+	navi_t u32_in = string_to_vector(str);
+	navi_t u32_out = navi_make_vector(navi_vector(u32_in)->size);
+	return navi_vector_map(fun, u32_out, u32_in, env);
 }
 
 DEFUN(scm_string_map_ip, args, env)
 {
+	int32_t size;
+	navi_t vec_obj;
+	struct navi_vector *vec;
+	struct navi_string *str;
 	navi_type_check_fun(navi_car(args), 1, env);
-	navi_type_check(navi_cadr(args), NAVI_STRING, env);
+	str = navi_string_cast(navi_cadr(args), env);
 
-	return string_map_ip(navi_car(args), navi_cadr(args), env);
+	vec_obj = string_map(navi_car(args), navi_cadr(args), env);
+	vec = navi_vector(vec_obj);
+	size = u32_size(vec);
+
+	if (size > str->capacity)
+		navi_string_grow_storage(str, size - str->capacity);
+
+	vector_to_string_ip(str, vec);
+	return navi_cadr(args);
 }
 
 DEFUN(scm_string_map, args, env)
 {
 	navi_type_check_fun(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_STRING, env);
-
-	return string_map_ip(navi_car(args), navi_string_copy(navi_cadr(args)), env);
+	return vector_to_string(string_map(navi_car(args), navi_cadr(args), env));
 }

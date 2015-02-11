@@ -131,7 +131,7 @@ void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t en
 		break;
 	case NAVI_STRING:
 		if (write) navi_port_write_cstr("\"", port, env);
-		navi_port_write_cstr(navi_string(obj)->data, port, env);
+		navi_port_write_cstr((char*)navi_string(obj)->data, port, env);
 		if (write) navi_port_write_cstr("\"", port, env);
 		break;
 	case NAVI_SYMBOL:

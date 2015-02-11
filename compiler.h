@@ -27,15 +27,19 @@
 #endif
 
 /* Optimization: Condition @x is likely */
-#define likely(x)	__builtin_expect(!!(x), 1)
-
+#define likely(x) __builtin_expect(!!(x), 1)
 /* Optimization: Condition @x is unlikely */
-#define unlikely(x)	__builtin_expect(!!(x), 0)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
+#define __used   __attribute__((used))
+#define __unused __attribute__((unused))
 #else
 
-#define likely(x)	(x)
-#define unlikely(x)	(x)
+#define likely(x) (x)
+#define unlikely(x) (x)
+
+#define __used
+#define __unused
 
 #endif /* defined(__GNUC__) */
 #endif /* _COMPILER_H */

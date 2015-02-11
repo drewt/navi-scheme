@@ -1,14 +1,14 @@
 CC        = gcc
 CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-empty-body -g -O2
-ALLCFLAGS = $(CFLAGS) -std=gnu11 -D NAVI_COMPILE
+ALLCFLAGS = $(CFLAGS) -std=gnu11 -D NAVI_COMPILE -include assert.h
 AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)
-LDFLAGS   =
+LDFLAGS   = `pkg-config --libs icu-uc icu-i18n`
 
 libobjects = arithmetic.o bytevector.o char.o control_features.o display.o \
 	     environment.o eval.o heap.o list.o port.o read.o string.o \
-	     vector.o uchar.o
+	     vector.o
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o tests/main.o
 objects = $(libobjects) $(testobjects) repl.o
 target  = navii

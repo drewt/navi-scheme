@@ -19,7 +19,8 @@
 #include <ctype.h>
 
 #include "navi.h"
-#include "navi/uchar.h"
+#include "compiler.h"
+#include "navi/unicode.h"
 
 /*
  * WARNING: What follows is a hand-rolled parser, and not a very good one.
@@ -197,34 +198,36 @@ static navi_t read_binary(struct navi_port *port, navi_env_t env)
 	return navi_make_num(read_num(port, 2, isbdigit, decimal_value, env));
 }
 
-static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t), navi_env_t env)
+static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t),
+		navi_env_t env)
 {
-	uchar c;
-	size_t pos = 0;
-	size_t buf_len = STR_BUF_LEN;
-	char *str = malloc(buf_len);
+	UChar c;
+	int32_t pos = 0;
+	int32_t buf_len = STR_BUF_LEN;
+	unsigned char *str = malloc(buf_len);
 	if (!str)
 		navi_enomem(env);
 	while (!ctype((c = peek_char(port, env)), env)) {
 		read_char(port, env);
 
-		if (pos + u_char_size(c) >= buf_len) {
+		if (pos + u8_length(c) >= buf_len) {
 			buf_len += STR_BUF_STEP;
 			str = navi_critical_realloc(str, buf_len);
 		}
-		if (c > 0xFF)
-			u_set_char_raw(str, &pos, c);
-		else
+		if (c > 0xFF) {
+			u8_append(str, pos, buf_len, c);
+		} else {
 			str[pos++] = c;
+		}
 	}
 
 	str[pos] = '\0';
-	return str;
+	return (char*) str;
 }
 
-static unsigned long read_string_escape(struct navi_port *port, navi_env_t env)
+static UChar32 read_string_escape(struct navi_port *port, navi_env_t env)
 {
-	unsigned long c = iread_char(port, env);
+	UChar32 c = iread_char(port, env);
 	switch (c) {
 	case 'a': return 0x7;
 	case 'b': return 0x8;
@@ -249,30 +252,24 @@ static unsigned long read_string_escape(struct navi_port *port, navi_env_t env)
 
 static navi_t read_string(struct navi_port *port, navi_env_t env)
 {
-	navi_t r;
-	unsigned long c;
-	size_t pos = 0;
-	size_t buf_len = STR_BUF_LEN;
-	char *str = malloc(buf_len);
-	if (!str)
-		navi_enomem(env);
+	UChar32 c;
+	int32_t pos = 0, length = 0;
+	int32_t buf_len = STR_BUF_LEN;
+	navi_t obj = navi_make_string(buf_len, 0, 0);
+	struct navi_string *str = navi_string(obj);
+
 	while ((c = iread_char(port, env)) != '"') {
 		if (c == '\\')
 			c = read_string_escape(port, env);
-		if (pos + u_char_size(c) >= buf_len) {
-			buf_len += STR_BUF_STEP;
-			str = navi_critical_realloc(str, buf_len);
-		}
-		if (c > 0xFF)
-			u_set_char_raw(str, &pos, c);
-		else
-			str[pos++] = c;
+		if (pos + u8_length(c) >= str->capacity)
+			navi_string_grow_storage(str, STR_BUF_STEP);
+		u8_append(str->data, pos, str->capacity, c);
+		length++;
 	}
-
-	str[pos] = '\0';
-	r = navi_cstr_to_string(str);
-	free(str);
-	return r;
+	str->data[pos] = '\0';
+	str->size = pos;
+	str->length = length;
+	return obj;
 }
 
 static inline navi_t read_symbol(struct navi_port *port, int (*stop)(int,navi_env_t),
@@ -316,14 +313,14 @@ static navi_t read_character(struct navi_port *port, navi_env_t env)
 		str[i] = handle_case(str[i]);
 
 	if (str[0] == 'x') {
-		uchar ch = 0;
+		UChar32 ch = 0;
 		for (int i = 1; str[i] != '\0'; i++) {
 			if (!isxdigit(str[i]))
 				break;
 			ch *= 16;
 			ch += hex_value(str[i], env);
 		}
-		if (!u_is_unicode(ch))
+		if (!u_isdefined(ch))
 			navi_read_error(env, "invalid unicode literal",
 					navi_make_apair("value", navi_make_num(ch)));
 		ret = navi_make_char(ch);

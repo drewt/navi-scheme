@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "clist.h"
 
@@ -104,10 +105,10 @@ struct navi_bytevec {
 };
 
 struct navi_string {
-	size_t storage;
-	size_t size;
-	size_t length;
-	char *data;
+	int32_t size;     // the number of bytes used by the string
+	int32_t length;   // the number of code points encoded by the string
+	int32_t capacity; // the available capacity (in bytes) of the string
+	unsigned char *data;       // the UTF-8 encoded string data
 };
 
 struct navi_symbol {
@@ -122,13 +123,15 @@ struct navi_pair {
 
 struct navi_port {
 	int (*read_u8)(struct navi_port*, navi_env_t);
-	void (*write_u8)(unsigned char, struct navi_port*, navi_env_t);
+	void (*write_u8)(uint8_t, struct navi_port*, navi_env_t);
+	int32_t (*read_char)(struct navi_port*, navi_env_t);
+	void (*write_char)(int32_t, struct navi_port*, navi_env_t);
 	void (*close_in)(struct navi_port*, navi_env_t);
 	void (*close_out)(struct navi_port*, navi_env_t);
 	unsigned long flags;
-	unsigned long buffer;
+	int32_t buffer;
 	navi_t expr;
-	size_t pos;
+	int32_t pos;
 	void *specific;
 };
 
@@ -356,15 +359,26 @@ navi_t navi_cstr_to_bytevec(const char *str);
 navi_t navi_make_symbol(const char *sym);
 navi_t navi_make_pair(navi_t car, navi_t cdr);
 navi_t navi_make_empty_pair(void);
-navi_t navi_make_port(int(*read)(struct navi_port*, navi_env_t),
-		void(*write)(unsigned char,struct navi_port*, navi_env_t),
+navi_t navi_make_port(
+		int(*read_u8)(struct navi_port*, navi_env_t),
+		void(*write_u8)(unsigned char,struct navi_port*, navi_env_t),
+		int32_t(*read_char)(struct navi_port*, navi_env_t),
+		void(*write_char)(int32_t, struct navi_port*, navi_env_t),
 		void(*close_in)(struct navi_port*, navi_env_t),
 		void(*close_out)(struct navi_port*, navi_env_t),
 		void *specific);
-#define navi_make_input_port(read, close, specific) \
-	navi_make_port(read, NULL, close, NULL, specific)
-#define navi_make_output_port(write, close, specific) \
-	navi_make_port(NULL, write, NULL, close, specific)
+#define navi_make_input_port(read_u8, read_char, close, specific) \
+	navi_make_port(read_u8, NULL, read_char, NULL, close, NULL, specific)
+#define navi_make_output_port(write_u8, write_char, close, specific) \
+	navi_make_port(NULL, write_u8, NULL, write_char, NULL, close, specific)
+#define navi_make_binary_input_port(read, close, specific) \
+	navi_make_input_port(read, NULL, close, specific)
+#define navi_make_binary_output_port(write, close, specific) \
+	navi_make_output_port(write, NULL, close, specific)
+#define navi_make_textual_input_port(read, close, specific) \
+	navi_make_input_port(NULL, read, close, specific)
+#define navi_make_textual_output_port(write, close, specific) \
+	navi_make_output_port(NULL, write, close, specific)
 navi_t navi_make_file_input_port(FILE *file);
 navi_t navi_make_file_output_port(FILE *file);
 navi_t navi_make_vector(size_t size);
@@ -600,7 +614,7 @@ navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env);
 navi_t navi_port_read_char(struct navi_port *port, navi_env_t env);
 navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env);
 void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env);
-void navi_port_write_char(unsigned long ch, struct navi_port *port, navi_env_t env);
+void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env_t env);
 void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env);
 /* Ports }}} */
 /* Strings {{{ */
@@ -611,7 +625,7 @@ static inline bool navi_string_equal(navi_t a, navi_t b)
 	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
 	if (sa->size != sb->size || sa->length != sb->length)
 		return false;
-	for (size_t i = 0; i < sa->size; i++)
+	for (int32_t i = 0; i < sa->size; i++)
 		if (sa->data[i] != sb->data[i])
 			return false;
 	return true;
@@ -627,6 +641,8 @@ static inline size_t navi_vector_length(navi_t vec)
 {
 	return vec.p->data->vec.size;
 }
+
+navi_t navi_vector_map(navi_t fun, navi_t to, navi_t from, navi_env_t env);
 /* Vectors }}} */
 /* Bytevectors {{{ */
 static inline navi_t navi_bytevec_ref(navi_t vec, size_t i)

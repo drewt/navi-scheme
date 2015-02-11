@@ -13,7 +13,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include <string.h>
+#include <unicode/ustring.h>
 
 #include "navi.h"
 
@@ -142,18 +142,15 @@ navi_t navi_make_symbol(const char *str)
 	return new_symbol(str, hashcode);
 }
 
-navi_t navi_cstr_to_string(const char *str)
+navi_t navi_cstr_to_string(const char *cstr)
 {
-	size_t len = strlen(str);
-	navi_t expr = navi_make_string(len, len, len);
-	struct navi_string *vec = navi_string(expr);
-
-	for (size_t i = 0; i < len; i++) {
-		vec->data[i] = str[i];
-	}
-	vec->size = len;
-
-	return expr;
+	size_t len = strlen(cstr);
+	navi_t obj = navi_make_string(len, len, len);
+	struct navi_string *str = navi_string(obj);
+	for (size_t i = 0; i < len; i++)
+		str->data[i] = cstr[i];
+	str->size = len;
+	return obj;
 }
 
 navi_t navi_cstr_to_bytevec(const char *str)
@@ -168,13 +165,13 @@ navi_t navi_cstr_to_bytevec(const char *str)
 	return expr;
 }
 
-navi_t navi_make_string(size_t storage, size_t size, size_t length)
+navi_t navi_make_string(size_t capacity, size_t size, size_t length)
 {
 	struct navi_object *str = make_object(NAVI_STRING, sizeof(struct navi_string));
-	str->data->str.data = navi_critical_malloc(storage + 1);
-	str->data->str.data[storage] = '\0';
+	str->data->str.data = navi_critical_malloc(capacity + 1);
+	str->data->str.data[capacity] = '\0';
 	str->data->str.data[size] = '\0';
-	str->data->str.storage = storage;
+	str->data->str.capacity = capacity;
 	str->data->str.size = size;
 	str->data->str.length = length;
 	return (navi_t) str;
@@ -182,14 +179,14 @@ navi_t navi_make_string(size_t storage, size_t size, size_t length)
 
 void navi_string_grow_storage(struct navi_string *str, long need)
 {
-	long free_space = str->storage - str->size;
+	long free_space = str->capacity - str->size;
 	if (free_space > need)
 		return;
 	need -= free_space;
 	// TODO: align?
-	str->data = navi_critical_realloc(str->data, str->storage + need + 1);
-	str->storage += need;
-	str->data[str->storage] = '\0';
+	str->data = navi_critical_realloc(str->data, str->capacity + need + 1);
+	str->capacity += need;
+	str->data[str->capacity] = '\0';
 }
 
 navi_t navi_make_pair(navi_t car, navi_t cdr)
@@ -205,15 +202,20 @@ navi_t navi_make_empty_pair(void)
 	return (navi_t) make_object(NAVI_PAIR, sizeof(struct navi_pair));
 }
 
-navi_t navi_make_port(int(*read)(struct navi_port*, navi_env_t),
-		void(*write)(unsigned char,struct navi_port*, navi_env_t),
+navi_t navi_make_port(
+		int(*read_u8)(struct navi_port*, navi_env_t),
+		void(*write_u8)(uint8_t,struct navi_port*, navi_env_t),
+		int32_t(*read_char)(struct navi_port*, navi_env_t),
+		void(*write_char)(int32_t, struct navi_port*, navi_env_t),
 		void(*close_in)(struct navi_port*, navi_env_t),
 		void(*close_out)(struct navi_port*, navi_env_t),
 		void *specific)
 {
 	struct navi_object *port = make_object(NAVI_PORT, sizeof(struct navi_port));
-	port->data->port.read_u8 = read;
-	port->data->port.write_u8 = write;
+	port->data->port.read_u8 = read_u8;
+	port->data->port.write_u8 = write_u8;
+	port->data->port.read_char = read_char;
+	port->data->port.write_char = write_char;
 	port->data->port.close_in = close_in;
 	port->data->port.close_out = close_out;
 	port->data->port.flags = 0;

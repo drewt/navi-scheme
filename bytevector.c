@@ -14,7 +14,7 @@
  */
 
 #include "navi.h"
-#include "navi/uchar.h"
+#include "navi/unicode.h"
 
 static void bytevec_fill(navi_t vector, unsigned char fill)
 {
@@ -96,7 +96,7 @@ DEFUN(scm_bytevector_append, args, env)
 	size_t i = 0, size = 0;
 
 	navi_list_for_each(cons, args) {
-		size += navi_bytevec_cast(navi_car(cons), NAVI_BYTEVEC, env)->size;
+		size += navi_bytevec_cast(navi_car(cons), env)->size;
 	}
 
 	obj = navi_make_bytevec(size);
@@ -159,45 +159,61 @@ DEFUN(scm_bytevector_copy_to, args, env)
 	return navi_unspecified();
 }
 
+static int32_t count_chars(struct navi_bytevec *vec)
+{
+	int32_t n = 0;
+	for (int32_t i = 0; (size_t) i < vec->size; n++) {
+		UChar32 ch;
+		u8_next_unchecked(vec->data, i, vec->size, ch);
+		if (ch < 0)
+			return -1;
+	}
+	return n;
+}
+
 DEFUN(scm_utf8_to_string, args, env)
 {
-	navi_t r;
-	long start, end;
-	struct navi_bytevec *vec = navi_bytevec_cast(navi_car(args), NAVI_BYTEVEC, env);
+	navi_t str;
+	int32_t start, end, size, length;
+	struct navi_bytevec *vec = navi_bytevec_cast(navi_car(args), env);
 	int nr_args = navi_list_length(args);
 
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
-	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
+	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env)
+			: (long) vec->size;
 
 	navi_check_copy(vec->size, start, end, env);
-	if (!u_is_valid((char*)vec->data, start, end))
+	size = end - start;
+	length = count_chars(vec);
+	if (length < 0)
 		navi_error(env, "invalid UTF-8");
 
-	r = navi_make_string(end - start, end - start, end - start);
-	memcpy(navi_string(r)->data, vec->data + start, end - start);
-	navi_string(r)->length = u_strlen(navi_string(r)->data);
-
-	return r;
+	str = navi_make_string(size, size, length);
+	memcpy(navi_string(str)->data, vec->data + start, size);
+	return str;
 }
 
 DEFUN(scm_string_to_utf8, args, env)
 {
 	navi_t r;
-	long start, end;
+	int32_t start, end;
 	struct navi_string *str = navi_string_cast(navi_car(args), env);
 	int nr_args = navi_list_length(args);
-	size_t size, i = 0;
+	int32_t end_i, start_i = 0;
 
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
 	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env)
-		: (long) u_strlen((char*)str->data);
+			: str->length;
 
 	navi_check_copy(str->length, start, end, env);
 
-	u_skip_chars(str->data, start, &i);
-	size = u_strsize(str->data + i, 0, end - start);
-	r = navi_make_bytevec(size);
-	memcpy(navi_bytevec(r)->data, str->data + i, size);
+	u8_fwd_n(str->data, start_i, str->size, start);
+	end_i = start_i;
+	for (int32_t count = start; count < end; count++) {
+		u8_fwd_1(str->data, end_i, str->size);
+	}
+	r = navi_make_bytevec(end_i - start_i);
+	memcpy(navi_bytevec(r)->data, str->data + start_i, end_i - start_i);
 
 	return r;
 }

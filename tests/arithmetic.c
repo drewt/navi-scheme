@@ -189,7 +189,7 @@ START_TEST(test_number_to_string)
 
 #define nts_assert(str, ...) \
 	r = $(scm_number_to_string, __VA_ARGS__); \
-	ck_assert(!strcmp(navi_string(r)->data, str));
+	ck_assert(!strcmp((char*)navi_string(r)->data, str));
 
 	nts_assert("1", navi_make_num(1));
 	nts_assert("-1", navi_make_num(-1));

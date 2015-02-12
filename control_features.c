@@ -20,23 +20,16 @@
 
 _Noreturn void navi_raise(navi_obj args, navi_env env)
 {
-	navi_obj expr;
-	struct navi_procedure *proc;
-
 	for (;;) {
-		expr = navi_env_lookup(env, navi_sym_exn);
+		struct navi_procedure *proc;
+		navi_obj expr = navi_env_lookup(env, navi_sym_exn);
 		if (navi_type(expr) != NAVI_PROCEDURE)
 			navi_die("no exception handler installed");
 
 		/* set up environment and run handler */
 		proc = navi_procedure(expr);
 		navi_scope_unset(env, navi_sym_exn);
-		if (navi_proc_is_builtin(proc)) {
-			proc->c_proc(args, env);
-		} else {
-			navi_scope_set(env, navi_car(proc->args), navi_car(args));
-			navi_eval(navi_make_pair(navi_sym_begin, proc->body), env);
-		}
+		navi_apply(proc, args, env);
 		/* handler returned: raise again */
 	}
 }
@@ -138,9 +131,7 @@ DEFUN(with_exception_handler, args, env, "with-exception-handler", 2, 0,
 	navi_env exn_env = navi_env_new_scope(thunk->env);
 	navi_scope_set(exn_env, navi_sym_exn, navi_car(args));
 
-	if (navi_proc_is_builtin(thunk))
-		return thunk->c_proc(navi_make_nil(), exn_env);
-	return scm_begin(thunk->body, exn_env);
+	return navi_apply(thunk, navi_make_nil(), exn_env);
 }
 
 DEFUN(raise, args, env, "raise", 1, 0, NAVI_ANY)
@@ -159,12 +150,7 @@ DEFUN(raise_continuable, args, env, "raise-continuable", 1, 0, NAVI_ANY)
 
 	proc = navi_procedure(handler);
 	navi_scope_unset(env, navi_sym_exn);
-	if (navi_proc_is_builtin(proc)) {
-		result = proc->c_proc(args, env);
-	} else {
-		navi_scope_set(env, navi_car(proc->args), navi_car(args));
-		result = navi_eval(navi_make_pair(navi_sym_begin, proc->body), env);
-	}
+	result = navi_apply(proc, args, env);
 	navi_scope_set(env, navi_sym_exn, handler);
 	return result;
 }

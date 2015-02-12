@@ -536,7 +536,7 @@ DEFUN(force, args, env, "force", 1, 0, NAVI_PROCEDURE)
 	return r;
 }
 
-static navi_obj apply(struct navi_procedure *proc, navi_obj args, navi_env env)
+navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
 {
 	navi_env new_env;
 	if (!navi_arity_satisfied(proc, navi_list_length(args)))
@@ -581,7 +581,7 @@ static navi_obj caselambda_call(navi_obj lambda, navi_obj args, navi_env env)
 	for (size_t i = 0; i < vec->size; i++) {
 		struct navi_procedure *proc = navi_procedure(vec->data[i]);
 		if (navi_arity_satisfied(proc, nr_args))
-			return apply(proc, args, env);
+			return navi_apply(proc, args, env);
 	}
 	navi_arity_error(env, navi_make_symbol("case-lambda"));
 }
@@ -592,11 +592,11 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	switch (navi_type(proc)) {
 	/* special: pass args unevaluated, return result */
 	case NAVI_SPECIAL:
-		return apply(navi_procedure(proc), navi_cdr(call), env);
+		return navi_apply(navi_procedure(proc), navi_cdr(call), env);
 	/* procedure: pass args evaluated, return result */
 	case NAVI_PROCEDURE:
 		expr = make_args(navi_cdr(call), env);
-		return apply(navi_procedure(proc), expr, env);
+		return navi_apply(navi_procedure(proc), expr, env);
 	/* macro: pass args unevaluated, return eval(result) */
 	case NAVI_MACRO:
 		expr = macro_call(proc, navi_cdr(call), env);

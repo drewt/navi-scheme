@@ -490,6 +490,7 @@ static inline navi_obj navi_env_lookup(navi_env env, navi_obj symbol)
 }
 
 navi_obj navi_eval(navi_obj expr, navi_env env);
+navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env);
 navi_obj navi_call_escape(navi_obj escape, navi_obj arg);
 /* Environments/Evaluation }}} */
 /* Types {{{ */

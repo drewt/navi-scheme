@@ -75,6 +75,12 @@ enum navi_type {
 	NAVI_ENVIRONMENT,
 };
 
+enum {
+	NAVI_LIST,
+	NAVI_BYTE,
+	NAVI_ANY,
+};
+
 struct navi_escape {
 	jmp_buf state;
 	navi_env_t env;
@@ -635,8 +641,6 @@ navi_t navi_char_downcase(navi_t ch);
 /* Characters }}} */
 /* Ports {{{ */
 navi_t navi_read(struct navi_port *port, navi_env_t env);
-#define navi_write(expr, env) scm_write(navi_make_pair(expr, navi_make_nil()), env)
-#define navi_display(expr, env) scm_display(navi_make_pair(expr, navi_make_nil()), env)
 void _navi_display(struct navi_port *port, navi_t expr, bool write, navi_env_t env);
 navi_t navi_port_read_byte(struct navi_port *port, navi_env_t env);
 navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env);
@@ -645,6 +649,30 @@ navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env);
 void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env);
 void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env_t env);
 void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env);
+navi_t navi_current_input_port(navi_env_t env);
+navi_t navi_current_output_port(navi_env_t env);
+navi_t navi_current_error_port(navi_env_t env);
+
+static inline void navi_port_display(struct navi_port *port, navi_t obj, navi_env_t env)
+{
+	_navi_display(port, obj, false, env);
+}
+
+static inline void navi_port_write(struct navi_port *port, navi_t obj, navi_env_t env)
+{
+	_navi_display(port, obj, true, env);
+}
+
+static inline void navi_display(navi_t obj, navi_env_t env)
+{
+	navi_port_display(navi_port(navi_current_output_port(env)), obj, env);
+}
+
+static inline void navi_write(navi_t obj, navi_env_t env)
+{
+	navi_port_write(navi_port(navi_current_output_port(env)), obj, env);
+}
+
 /* Ports }}} */
 /* Strings {{{ */
 navi_t navi_string_copy(navi_t str);

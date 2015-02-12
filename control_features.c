@@ -18,6 +18,29 @@
 
 #include "navi.h"
 
+_Noreturn void navi_raise(navi_t args, navi_env_t env)
+{
+	navi_t expr;
+	struct navi_procedure *proc;
+
+	for (;;) {
+		expr = navi_env_lookup(env, navi_sym_exn);
+		if (navi_type(expr) != NAVI_PROCEDURE)
+			navi_die("no exception handler installed");
+
+		/* set up environment and run handler */
+		proc = navi_procedure(expr);
+		navi_scope_unset(env, navi_sym_exn);
+		if (navi_proc_is_builtin(proc)) {
+			proc->c_proc(args, env);
+		} else {
+			navi_scope_set(env, navi_car(proc->args), navi_car(args));
+			navi_eval(navi_make_pair(navi_sym_begin, proc->body), env);
+		}
+		/* handler returned: raise again */
+	}
+}
+
 _Noreturn void _navi_error(navi_env_t env, const char *msg, ...)
 {
 	va_list ap;
@@ -27,15 +50,17 @@ _Noreturn void _navi_error(navi_env_t env, const char *msg, ...)
 	list = navi_vlist(navi_cstr_to_string(msg), ap);
 	va_end(ap);
 
-	scm_raise(navi_make_pair(list, navi_make_nil()), env);
+	navi_raise(navi_make_pair(list, navi_make_nil()), env);
+
 }
 
-DEFUN(scm_procedurep, args, env)
+DEFUN(procedurep, args, env, "procedure?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PROCEDURE);
 }
 
-DEFUN(scm_apply, args, env)
+DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
+		NAVI_PROCEDURE, NAVI_ANY)
 {
 	navi_t cons, last = (navi_t) args;
 
@@ -63,7 +88,7 @@ navi_t navi_call_escape(navi_t escape, navi_t arg)
 	longjmp(esc->state, 1);
 }
 
-DEFUN(scm_call_ec, args, env)
+DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
 {
 	struct navi_escape *escape;
 	navi_t cont, call, proc = navi_car(args);
@@ -80,14 +105,15 @@ DEFUN(scm_call_ec, args, env)
 	return navi_eval(call, env);
 }
 
-DEFUN(scm_values, args, env)
+DEFUN(values, args, env, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	navi_t values = navi_list_to_vector(values);
 	values.p->type = NAVI_VALUES;
 	return values;
 }
 
-DEFUN(scm_call_with_values, args, env)
+DEFUN(call_with_values, args, env, "call-with-values", 2, 0,
+		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
 	navi_t values, call_args;
 	navi_type_check_proc(navi_car(args), 0, env);
@@ -102,7 +128,8 @@ DEFUN(scm_call_with_values, args, env)
 	return navi_eval(navi_make_pair(navi_cadr(args), call_args), env);
 }
 
-DEFUN(scm_with_exception_handler, args, env)
+DEFUN(with_exception_handler, args, env, "with-exception-handler", 2, 0,
+		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
 	navi_type_check_proc(navi_car(args),  1, env);
 	navi_type_check_proc(navi_cadr(args), 0, env);
@@ -116,30 +143,12 @@ DEFUN(scm_with_exception_handler, args, env)
 	return scm_begin(thunk->body, exn_env);
 }
 
-DEFUN(scm_raise, args, env)
+DEFUN(raise, args, env, "raise", 1, 0, NAVI_ANY)
 {
-	navi_t expr;
-	struct navi_procedure *proc;
-
-	for (;;) {
-		expr = navi_env_lookup(env, navi_sym_exn);
-		if (navi_type(expr) != NAVI_PROCEDURE)
-			navi_die("no exception handler installed");
-
-		/* set up environment and run handler */
-		proc = navi_procedure(expr);
-		navi_scope_unset(env, navi_sym_exn);
-		if (navi_proc_is_builtin(proc)) {
-			proc->c_proc(args, env);
-		} else {
-			navi_scope_set(env, navi_car(proc->args), navi_car(args));
-			navi_eval(navi_make_pair(navi_sym_begin, proc->body), env);
-		}
-		/* handler returned: raise again */
-	}
+	navi_raise(args, env);
 }
 
-DEFUN(scm_raise_continuable, args, env)
+DEFUN(raise_continuable, args, env, "raise-continuable", 1, 0, NAVI_ANY)
 {
 	navi_t handler, result;
 	struct navi_procedure *proc;
@@ -160,10 +169,10 @@ DEFUN(scm_raise_continuable, args, env)
 	return result;
 }
 
-DEFUN(scm_error, args, env)
+DEFUN(error, args, env, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	navi_type_check(navi_car(args), NAVI_STRING, env);
-	scm_raise(navi_make_pair(args, navi_make_nil()), env);
+	navi_raise(navi_make_pair(args, navi_make_nil()), env);
 }
 
 static bool is_error_object(navi_t object)
@@ -179,24 +188,24 @@ static navi_t navi_type_check_error(navi_t object, navi_env_t env)
 	return object;
 }
 
-DEFUN(scm_error_objectp, args, env)
+DEFUN(error_objectp, args, env, "error-object?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(is_error_object(navi_car(args)));
 }
 
-DEFUN(scm_error_object_message, args, env)
+DEFUN(error_object_message, args, env, "error-object-message", 1, 0, NAVI_ANY)
 {
 	navi_type_check_error(navi_car(args), env);
 	return navi_caar(args);
 }
 
-DEFUN(scm_error_object_irritants, args, env)
+DEFUN(error_object_irritants, args, env, "error-object-irritants", 1, 0, NAVI_ANY)
 {
 	navi_type_check_error(navi_car(args), env);
 	return navi_cdar(args);
 }
 
-DEFUN(scm_read_errorp, args, env)
+DEFUN(read_errorp, args, env, "read-error?", 1, 0, NAVI_ANY)
 {
 	if (!navi_bool(scm_error_objectp(args, env)))
 		return navi_make_bool(false);
@@ -205,12 +214,12 @@ DEFUN(scm_read_errorp, args, env)
 	return navi_make_bool(navi_symbol_eq(navi_cadr(navi_car(args)), navi_sym_read_error));
 }
 
-DEFUN(scm_promisep, args, env)
+DEFUN(promisep, args, env, "promise?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PROMISE);
 }
 
-DEFUN(scm_make_promise, args, env)
+DEFUN(make_promise, args, env, "make-promise", 1, 0, NAVI_ANY)
 {
 	return navi_make_promise(navi_car(args), env);
 }

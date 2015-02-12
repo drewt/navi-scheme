@@ -16,10 +16,33 @@
 #ifndef _NAVI_MACROS_H
 #define _NAVI_MACROS_H
 
-#define DEFSPECIAL(fname, aname, ename) \
-	navi_t fname (navi_t aname, navi_env_t ename)
-#define DEFUN DEFSPECIAL
-#define DEFMACRO DEFSPECIAL
+#include "types.h"
+
+#define DEFPROC(_type, cname, args, env, name, _arity, _flags, ...) \
+	int scm_typedecl_##cname[_arity] = { __VA_ARGS__ }; \
+	navi_t scm_##cname(navi_t args, navi_env_t env); \
+	struct navi_spec scm_decl_##cname = { \
+		.proc = { \
+			.flags = _flags | NAVI_PROC_BUILTIN, \
+			.arity = _arity, \
+			.c_proc = scm_##cname, \
+		}, \
+		.ident = name, \
+		.type  = _type, \
+	}; \
+	navi_t scm_##cname(navi_t args, navi_env_t env)
+
+#define DEFUN(...)      DEFPROC(NAVI_PROCEDURE, __VA_ARGS__)
+#define DEFMACRO(...)   DEFPROC(NAVI_MACRO,     __VA_ARGS__)
+#define DEFSPECIAL(...) DEFPROC(NAVI_SPECIAL,   __VA_ARGS__)
+
+/*
+ * XXX: really, the functions should be declared static and not exposed here,
+ *      but it's useful to call them directly for unit testing.
+ */
+#define DECLARE(name) \
+	extern struct navi_spec scm_decl_##name; \
+	navi_t scm_##name(navi_t, navi_env_t)
 
 #define navi_list_for_each(cons, head) \
 	for (cons = (navi_t) (head); navi_type(cons) == NAVI_PAIR; \

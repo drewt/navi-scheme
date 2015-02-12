@@ -22,7 +22,7 @@
 
 static navi_t call_read(navi_env_t env)
 {
-	return scm_read(navi_make_nil(), env);
+	return navi_read(navi_port(navi_current_input_port(env)), env);
 }
 
 static _Noreturn void repl(void)

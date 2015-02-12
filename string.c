@@ -110,12 +110,12 @@ static navi_t vector_to_string(navi_t vec_obj)
 	return str_obj;
 }
 
-DEFUN(scm_stringp, args, env)
+DEFUN(stringp, args, env, "string?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_STRING);
 }
 
-DEFUN(scm_make_string, args, env)
+DEFUN(make_string, args, env, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	UChar32 ch = ' ';
 	int nr_args = navi_list_length(args);
@@ -134,17 +134,17 @@ DEFUN(scm_make_string, args, env)
 	return obj;
 }
 
-DEFUN(scm_string, args, env)
+DEFUN(string, args, env, "string", 0, NAVI_PROC_VARIADIC)
 {
 	return list_to_string(args, env);
 }
 
-DEFUN(scm_string_length, args, env)
+DEFUN(string_length, args, env, "string-length", 1, 0, NAVI_STRING)
 {
 	return navi_make_num(navi_string_cast(navi_car(args), env)->length);
 }
 
-DEFUN(scm_string_ref, args, env)
+DEFUN(string_ref, args, env, "string-ref", 2, 0, NAVI_STRING, NAVI_NUM)
 {
 	UChar32 ch;
 	struct navi_string *str = navi_string_cast(navi_car(args), env);
@@ -191,7 +191,8 @@ void navi_string_set(struct navi_string *str, long k, UChar32 new_ch)
 	str->data[str->size] = '\0';
 }
 
-DEFUN(scm_string_set, args, env)
+DEFUN(string_set, args, env, "string-set!", 3, 0,
+		NAVI_STRING, NAVI_NUM, NAVI_CHAR)
 {
 	int32_t k;
 	struct navi_string *str;
@@ -225,8 +226,9 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 	return result;
 }
 
-#define STRING_COMPARE(cname, op, ci) \
-	DEFUN(cname, args, env) \
+#define STRING_COMPARE(cname, scmname, op, ci) \
+	DEFUN(cname, args, env, scmname, 2, NAVI_PROC_VARIADIC, \
+			NAVI_STRING, NAVI_STRING) \
 	{ \
 		navi_t cons; \
 		struct navi_string *fst, *snd; \
@@ -239,16 +241,16 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 		return navi_make_bool(true); \
 	}
 
-STRING_COMPARE(scm_string_lt,     <,  false);
-STRING_COMPARE(scm_string_gt,     >,  false);
-STRING_COMPARE(scm_string_eq,     ==, false);
-STRING_COMPARE(scm_string_lte,    <=, false);
-STRING_COMPARE(scm_string_gte,    >=, false);
-STRING_COMPARE(scm_string_ci_lt,  <,  true);
-STRING_COMPARE(scm_string_ci_gt,  >,  true);
-STRING_COMPARE(scm_string_ci_eq,  ==, true);
-STRING_COMPARE(scm_string_ci_lte, <=, true);
-STRING_COMPARE(scm_string_ci_gte, >=, true);
+STRING_COMPARE(string_lt,     "string<?",     <,  false);
+STRING_COMPARE(string_gt,     "string>?",     >,  false);
+STRING_COMPARE(string_eq,     "string=?",     ==, false);
+STRING_COMPARE(string_lte,    "string<=?",    <=, false);
+STRING_COMPARE(string_gte,    "string>=?",    >=, false);
+STRING_COMPARE(string_ci_lt,  "string-ci<?",  <,  true);
+STRING_COMPARE(string_ci_gt,  "string-ci>?",  >,  true);
+STRING_COMPARE(string_ci_eq,  "string-ci=?",  ==, true);
+STRING_COMPARE(string_ci_lte, "string-ci<=?", <=, true);
+STRING_COMPARE(string_ci_gte, "string-ci>=?", >=, true);
 
 static int32_t count_length(struct navi_string *str)
 {
@@ -260,8 +262,8 @@ static int32_t count_length(struct navi_string *str)
 	return count;
 }
 
-#define STRING_CASEMAP(name, fun) \
-	DEFUN(name, args, env) \
+#define STRING_CASEMAP(cname, scmname, fun) \
+	DEFUN(cname, args, env, scmname, 1, 0, NAVI_STRING) \
 	{ \
 		struct navi_string *src = navi_string_cast(navi_car(args), env); \
 		navi_t dst_obj = navi_make_string(src->size, src->size, src->length); \
@@ -281,16 +283,11 @@ static int32_t count_length(struct navi_string *str)
 		return dst_obj; \
 	}
 
-STRING_CASEMAP(scm_string_upcase,   ucasemap_utf8ToUpper);
-STRING_CASEMAP(scm_string_downcase, ucasemap_utf8ToLower);
-STRING_CASEMAP(scm_string_foldcase, ucasemap_utf8FoldCase);
+STRING_CASEMAP(string_upcase,   "string-upcase",   ucasemap_utf8ToUpper);
+STRING_CASEMAP(string_downcase, "string-downcase", ucasemap_utf8ToLower);
+STRING_CASEMAP(string_foldcase, "string-foldcase", ucasemap_utf8FoldCase);
 
-DEFUN(scm_substring, args, env)
-{
-	return scm_string_copy(args, env);
-}
-
-DEFUN(scm_string_append, args, env)
+DEFUN(string_append, args, env, "string-append", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t cons, obj;
 	struct navi_string *str;
@@ -316,12 +313,12 @@ DEFUN(scm_string_append, args, env)
 	return obj;
 }
 
-DEFUN(scm_string_to_list, args, env)
+DEFUN(string_to_list, args, env, "string->list", 1, 0, NAVI_STRING)
 {
 	return string_to_list(navi_type_check(navi_car(args), NAVI_STRING, env));
 }
 
-DEFUN(scm_list_to_string, args, env)
+DEFUN(list_to_string, args, env, "list->string", 1, 0, NAVI_LIST)
 {
 	return list_to_string(navi_type_check_list(navi_car(args), env), env);
 }
@@ -355,7 +352,8 @@ static navi_t copy_to(navi_t to, int32_t at, navi_t from, int32_t start,
 	return to;
 }
 
-DEFUN(scm_string_fill, args, env)
+DEFUN(string_fill, args, env, "string-fill!", 2, NAVI_PROC_VARIADIC,
+		NAVI_STRING, NAVI_CHAR)
 {
 	UChar32 ch;
 	int32_t start, end, k, j, i = 0;
@@ -396,7 +394,7 @@ navi_t navi_strdup(navi_t from_obj)
 	return to_obj;
 }
 
-DEFUN(scm_string_copy, args, env)
+DEFUN(string_copy, args, env, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	navi_t from, to;
 	long start, end;
@@ -412,7 +410,8 @@ DEFUN(scm_string_copy, args, env)
 	return copy_to(to, 0, from, start, end);
 }
 
-DEFUN(scm_string_copy_to, args, env)
+DEFUN(string_copy_to, args, env, "string-copy!", 3, NAVI_PROC_VARIADIC,
+		NAVI_STRING, NAVI_NUM, NAVI_STRING)
 {
 	navi_t to, from;
 	long at, start, end;
@@ -431,6 +430,11 @@ DEFUN(scm_string_copy_to, args, env)
 	return navi_unspecified();
 }
 
+DEFUN(substring, args, env, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
+{
+	return scm_string_copy(args, env);
+}
+
 static navi_t string_map(navi_t proc, navi_t str, navi_env_t env)
 {
 	navi_t u32_in = string_to_vector(str);
@@ -438,7 +442,7 @@ static navi_t string_map(navi_t proc, navi_t str, navi_env_t env)
 	return navi_vector_map(proc, u32_out, u32_in, env);
 }
 
-DEFUN(scm_string_map_ip, args, env)
+DEFUN(string_map_ip, args, env, "string-map!", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
 {
 	int32_t size;
 	navi_t vec_obj;
@@ -458,7 +462,7 @@ DEFUN(scm_string_map_ip, args, env)
 	return navi_cadr(args);
 }
 
-DEFUN(scm_string_map, args, env)
+DEFUN(string_map, args, env, "string-map", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
 {
 	navi_type_check_proc(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_STRING, env);

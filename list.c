@@ -76,29 +76,29 @@ navi_t navi_map(navi_t list, navi_leaf_t fn, void *data)
 	return head.cdr;
 }
 
-DEFUN(scm_cons, args, env)
+DEFUN(cons, args, env, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
 {
 	return navi_make_pair(navi_car((navi_t)args), navi_cadr((navi_t)args));
 }
 
-DEFUN(scm_car, args, env)
+DEFUN(car, args, env, "car", 1, 0, NAVI_PAIR)
 {
 	navi_type_check(navi_car(args), NAVI_PAIR, env);
 	return navi_car(navi_car(args));
 }
 
-DEFUN(scm_cdr, args, env)
+DEFUN(cdr, args, env, "cdr", 1, 0, NAVI_PAIR)
 {
 	navi_type_check(navi_car(args), NAVI_PAIR, env);
 	return navi_cdr(navi_car(args));
 }
 
-DEFUN(scm_pairp, args, env)
+DEFUN(pairp, args, env, "pair?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PAIR);
 }
 
-DEFUN(scm_listp, args, env)
+DEFUN(listp, args, env, "list?", 1, 0, NAVI_ANY)
 {
 	navi_t cons, list = navi_car(args);
 	enum navi_type type = navi_type(list);
@@ -108,17 +108,18 @@ DEFUN(scm_listp, args, env)
 	return navi_make_bool(navi_type(cons) == NAVI_NIL);
 }
 
-DEFUN(scm_nullp, args, env)
+DEFUN(nullp, args, env, "null?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_NIL);
 }
 
-DEFUN(scm_length, args, env)
+DEFUN(length, args, env, "length", 1, 0, NAVI_ANY)
 {
+	// XXX: this assumes we are given a list!
 	return navi_make_num(navi_list_length(navi_car(args)));
 }
 
-DEFUN(scm_list, args, env)
+DEFUN(list, args, env, "list", 0, NAVI_PROC_VARIADIC)
 {
 	return args;
 }
@@ -135,7 +136,7 @@ static navi_t map_apply(navi_t elm, void *data)
 			arg->env);
 }
 
-DEFUN(scm_map, args, env)
+DEFUN(map, args, env, "map", 2, 0, NAVI_PROCEDURE, NAVI_LIST)
 {
 	struct map_apply_arg arg;
 

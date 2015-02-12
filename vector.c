@@ -50,12 +50,13 @@ navi_t navi_vector_to_list(navi_t obj)
 	return head.cdr;
 }
 
-DEFUN(scm_vectorp, args, env)
+DEFUN(vectorp, args, env, "vector?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_VECTOR);
 }
 
-DEFUN(scm_make_vector, args, env)
+DEFUN(make_vector, args, env, "make-vector", 1, NAVI_PROC_VARIADIC,
+		NAVI_NUM)
 {
 	navi_t vec;
 	int nr_args = navi_list_length(args);
@@ -69,18 +70,18 @@ DEFUN(scm_make_vector, args, env)
 	return vec;
 }
 
-DEFUN(scm_vector, args, env)
+DEFUN(vector, args, env, "vector", 0, NAVI_PROC_VARIADIC)
 {
 	return navi_list_to_vector(args);
 }
 
-DEFUN(scm_vector_length, args, env)
+DEFUN(vector_length, args, env, "vector-length", 1, 0, NAVI_VECTOR)
 {
 	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	return navi_make_num(navi_vector(navi_car(args))->size);
 }
 
-DEFUN(scm_vector_ref, args, env)
+DEFUN(vector_ref, args, env, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_NUM)
 {
 	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	navi_type_check(navi_cadr(args), NAVI_NUM, env);
@@ -91,7 +92,7 @@ DEFUN(scm_vector_ref, args, env)
 	return navi_vector_ref(navi_car(args), navi_num(navi_cadr(args)));
 }
 
-DEFUN(scm_vector_set, args, env)
+DEFUN(vector_set, args, env, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_NUM, NAVI_ANY)
 {
 	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	navi_type_check(navi_cadr(args), NAVI_NUM, env);
@@ -103,13 +104,13 @@ DEFUN(scm_vector_set, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_vector_to_list, args, env)
+DEFUN(vector_to_list, args, env, "vector->list", 1, 0, NAVI_VECTOR)
 {
 	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	return navi_vector_to_list(navi_car(args));
 }
 
-DEFUN(scm_list_to_vector, args, env)
+DEFUN(list_to_vector, args, env, "list->vector", 1, 0, NAVI_LIST)
 {
 	navi_type_check_list(navi_car(args), env);
 	return navi_list_to_vector(navi_car(args));
@@ -124,7 +125,8 @@ static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 	return to;
 }
 
-DEFUN(scm_vector_fill, args, env)
+DEFUN(vector_fill, args, env, "vector-fill!", 2, NAVI_PROC_VARIADIC,
+		NAVI_VECTOR, NAVI_ANY)
 {
 	navi_t fill;
 	long end, start;
@@ -144,7 +146,7 @@ DEFUN(scm_vector_fill, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_vector_copy, args, env)
+DEFUN(vector_copy, args, env, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 {
 	navi_t from;
 	long start, end;
@@ -161,7 +163,8 @@ DEFUN(scm_vector_copy, args, env)
 	return copy_to(navi_make_vector(end-start), 0, from, start, end);
 }
 
-DEFUN(scm_vector_copy_to, args, env)
+DEFUN(vector_copy_to, args, env, "vector-copy!", 3, NAVI_PROC_VARIADIC,
+		NAVI_VECTOR, NAVI_NUM, NAVI_VECTOR)
 {
 	navi_t to, from;
 	long at, start, end;
@@ -195,14 +198,14 @@ navi_t navi_vector_map(navi_t proc, navi_t to, navi_t from, navi_env_t env)
 	return to;
 }
 
-DEFUN(scm_vector_map_ip, args, env)
+DEFUN(vector_map_ip, args, env, "vector-map!", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 {
 	navi_type_check_proc(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
 	return navi_vector_map(navi_car(args), navi_cadr(args), navi_cadr(args), env);
 }
 
-DEFUN(scm_vector_map, args, env)
+DEFUN(vector_map, args, env, "vector-map", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 {
 	navi_type_check_proc(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);

@@ -78,14 +78,16 @@ static bool lambda_valid(navi_t lambda)
 	return true;
 }
 
-DEFSPECIAL(scm_lambda, lambda, env)
+DEFSPECIAL(lambda, lambda, env, "lambda", 2, NAVI_PROC_VARIADIC,
+		NAVI_LIST, NAVI_ANY)
 {
 	if (!lambda_valid(lambda))
 		navi_error(env, "invalid lambda list");
 	return navi_make_lambda(navi_car(lambda), navi_cdr(lambda), env);
 }
 
-DEFSPECIAL(scm_caselambda, caselambda, env)
+DEFSPECIAL(caselambda, caselambda, env, "case-lambda", 1, NAVI_PROC_VARIADIC,
+		NAVI_ANY)
 {
 	navi_t cons, expr;
 	struct navi_vector *vec;
@@ -125,7 +127,8 @@ static navi_t eval_defun(navi_t fundecl, navi_t rest, navi_env_t env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_define, define, env)
+DEFSPECIAL(define, define, env, "define", 2, NAVI_PROC_VARIADIC,
+		NAVI_LIST, NAVI_ANY)
 {
 	enum navi_type type;
 
@@ -160,7 +163,8 @@ static void extend_with_values(navi_t vars, navi_t vals, navi_t which, navi_env_
 	}
 }
 
-DEFSPECIAL(scm_define_values, defvals, env)
+DEFSPECIAL(define_values, defvals, env, "define-values", 2, NAVI_PROC_VARIADIC,
+		NAVI_LIST, NAVI_ANY)
 {
 	if (navi_list_length(defvals) != 2)
 		navi_error(env, "invalid define-values list");
@@ -170,7 +174,8 @@ DEFSPECIAL(scm_define_values, defvals, env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_defmacro, defmacro, env)
+DEFSPECIAL(defmacro, defmacro, env, "defmacro", 2, NAVI_PROC_VARIADIC,
+		NAVI_LIST, NAVI_ANY)
 {
 	navi_t macro, name;
 
@@ -183,7 +188,7 @@ DEFSPECIAL(scm_defmacro, defmacro, env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_begin, begin, env)
+DEFSPECIAL(begin, begin, env, "begin", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	navi_t cons, result;
 
@@ -275,14 +280,15 @@ static navi_env_t letvals_extend_env(navi_t def_list, navi_env_t env)
 	return new;
 }
 
-#define DEFLET(name, strname, validate, extend) \
-	DEFSPECIAL(name, let, env) \
+#define DEFLET(name, scmname, validate, extend) \
+	DEFSPECIAL(name, let, env, scmname, 2, NAVI_PROC_VARIADIC, \
+			NAVI_LIST, NAVI_ANY) \
 	{ \
 		navi_t result; \
 		navi_env_t new_env; \
 		\
 		if (!validate(navi_car(let))) \
-			navi_error(env, "invalid " strname " list"); \
+			navi_error(env, "invalid " scmname " list"); \
 		\
 		new_env = extend(navi_car(let), env); \
 		result = scm_begin(navi_cdr(let), new_env); \
@@ -290,9 +296,9 @@ static navi_env_t letvals_extend_env(navi_t def_list, navi_env_t env)
 		return result; \
 	}
 
-DEFLET(scm_let, "let", let_defs_valid, let_extend_env)
-DEFLET(scm_sequential_let, "let*", let_defs_valid, sequential_let_extend_env)
-DEFLET(scm_let_values, "let-values", letvals_defs_valid, letvals_extend_env)
+DEFLET(let, "let", let_defs_valid, let_extend_env)
+DEFLET(sequential_let, "let*", let_defs_valid, sequential_let_extend_env)
+DEFLET(let_values, "let-values", letvals_defs_valid, letvals_extend_env)
 
 static inline bool set_valid(navi_t set)
 {
@@ -301,7 +307,7 @@ static inline bool set_valid(navi_t set)
 		navi_type(navi_cddr(set)) == NAVI_NIL;
 }
 
-DEFSPECIAL(scm_set, set, env)
+DEFSPECIAL(set, set, env, "set!", 2, 0, NAVI_ANY, NAVI_ANY)
 {
 	struct navi_binding *binding;
 	navi_t value;
@@ -319,14 +325,14 @@ DEFSPECIAL(scm_set, set, env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_quote, quote, env)
+DEFSPECIAL(quote, quote, env, "quote", 1, 0, NAVI_ANY)
 {
 	if (navi_type(navi_cdr(quote)) != NAVI_NIL)
 		navi_error(env, "invalid argument to quote");
 	return navi_car(quote);
 }
 
-DEFSPECIAL(scm_unquote, unquote, env)
+DEFSPECIAL(unquote, unquote, env, "unquote", 1, 0, NAVI_ANY)
 {
 	if (navi_list_length(unquote) != 1)
 		navi_arity_error(env, navi_make_symbol("unquote"));
@@ -371,7 +377,7 @@ static navi_t eval_qq(navi_t expr, navi_env_t env)
 	return expr;
 }
 
-DEFSPECIAL(scm_quasiquote, quote, env)
+DEFSPECIAL(quasiquote, quote, env, "quasiquote", 1, 0, NAVI_ANY)
 {
 	if (!navi_is_nil(navi_cdr(quote)))
 		navi_arity_error(env, navi_make_symbol("quasiquote"));
@@ -405,7 +411,7 @@ static navi_t eval_clause(navi_t arg, navi_t begin, navi_env_t env)
 	return scm_begin(begin, env);
 }
 
-DEFSPECIAL(scm_case, scase, env)
+DEFSPECIAL(case, scase, env, "case", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
 	navi_t test, cons, inner;
 
@@ -452,7 +458,7 @@ static navi_t scm_cond_clause(navi_t test, navi_t clause, navi_env_t env)
 	return scm_begin(clause, env);
 }
 
-DEFSPECIAL(scm_cond, cond, env)
+DEFSPECIAL(cond, cond, env, "cond", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	navi_t cons;
 
@@ -472,7 +478,7 @@ DEFSPECIAL(scm_cond, cond, env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_if, sif, env)
+DEFSPECIAL(if, sif, env, "if", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
 	navi_t test;
 	int nr_args = navi_list_length(sif);
@@ -488,7 +494,7 @@ DEFSPECIAL(scm_if, sif, env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(scm_and, and, env)
+DEFSPECIAL(and, and, env, "and", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t cons;
 
@@ -501,7 +507,7 @@ DEFSPECIAL(scm_and, and, env)
 	return navi_make_bool(true);
 }
 
-DEFSPECIAL(scm_or, or, env)
+DEFSPECIAL(or, or, env, "or", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t cons;
 
@@ -514,13 +520,14 @@ DEFSPECIAL(scm_or, or, env)
 	return navi_make_bool(false);
 }
 
-DEFSPECIAL(scm_delay, args, env)
+DEFSPECIAL(delay, args, env, "delay", 1, 0, NAVI_ANY)
 {
 	return navi_make_promise(navi_car(args), env);
 }
 
-DEFUN(scm_force, args, env)
+DEFUN(force, args, env, "force", 1, 0, NAVI_PROCEDURE)
 {
+	// FIXME: type checking...
 	struct navi_procedure *proc = navi_procedure(navi_car(args));
 	navi_t r = navi_eval(navi_make_pair(navi_sym_begin,
 				proc->body), proc->env);
@@ -663,7 +670,7 @@ navi_t navi_eval(navi_t expr, navi_env_t env)
 	return result;
 }
 
-DEFUN(scm_eval, args, env)
+DEFUN(eval, args, env, "eval", 1, 0, NAVI_ANY)
 {
 	return navi_eval(navi_car(args), env);
 }

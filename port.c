@@ -310,74 +310,89 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t en
 		navi_port_write_byte(*str++, port, env);
 }
 
-static struct navi_port *get_port(navi_builtin_t fallback, navi_t args, navi_env_t env)
+navi_t navi_current_input_port(navi_env_t env)
+{
+	return navi_env_lookup(env, navi_sym_current_input);
+}
+
+navi_t navi_current_output_port(navi_env_t env)
+{
+	return navi_env_lookup(env, navi_sym_current_output);
+}
+
+navi_t navi_current_error_port(navi_env_t env)
+{
+	return navi_env_lookup(env, navi_sym_current_error);
+}
+
+static struct navi_port *get_port(navi_t fallback, navi_t args, navi_env_t env)
 {
 	if (navi_is_nil(args))
-		return navi_port_cast(fallback(navi_make_nil(), env), env);
+		return navi_port_cast(navi_env_lookup(env, fallback), env);
 	return navi_port_cast(navi_car(args), env);
 }
 
 static inline struct navi_port *get_input_port(navi_t args, navi_env_t env)
 {
-	struct navi_port *p = get_port(scm_current_input_port, args, env);
+	struct navi_port *p = get_port(navi_sym_current_input, args, env);
 	check_input_port(p, env);
 	return p;
 }
 
 static inline struct navi_port *get_output_port(navi_t args, navi_env_t env)
 {
-	struct navi_port *p = get_port(scm_current_output_port, args, env);
+	struct navi_port *p = get_port(navi_sym_current_output, args, env);
 	check_output_port(p, env);
 	return p;
 }
 
-DEFUN(scm_input_portp, args, env)
+DEFUN(input_portp, args, env, "input-port?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PORT
 			&& navi_port(navi_car(args))->read_u8);
 }
 
-DEFUN(scm_output_portp, args, env)
+DEFUN(output_portp, args, env, "output-port?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PORT
 			&& navi_port(navi_car(args))->write_u8);
 }
 
-DEFUN(scm_portp, args, env)
+DEFUN(portp, args, env, "port?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PORT);
 }
 
-DEFUN(scm_input_port_openp, args, env)
+DEFUN(input_port_openp, args, env, "input-port-open?", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 	check_input_port(p, env);
 	return navi_make_bool(!(p->flags & INPUT_CLOSED));
 }
 
-DEFUN(scm_output_port_openp, args, env)
+DEFUN(output_port_openp, args, env, "output-port-open?", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 	check_output_port(p, env);
 	return navi_make_bool(!(p->flags & OUTPUT_CLOSED));
 }
 
-DEFUN(scm_current_input_port, args, env)
+DEFUN(current_input_port, args, env, "current-input-port", 0, 0)
 {
-	return navi_env_lookup(env, navi_sym_current_input);
+	return navi_current_input_port(env);
 }
 
-DEFUN(scm_current_output_port, args, env)
+DEFUN(current_output_port, args, env, "current-output-port", 0, 0)
 {
-	return navi_env_lookup(env, navi_sym_current_output);
+	return navi_current_output_port(env);
 }
 
-DEFUN(scm_current_error_port, args, env)
+DEFUN(current_error_port, args, env, "current-error-port", 0, 0)
 {
-	return navi_env_lookup(env, navi_sym_current_error);
+	return navi_current_error_port(env);
 }
 
-DEFUN(scm_open_input_file, args, env)
+DEFUN(open_input_file, args, env, "open-input-file", 1, 0, NAVI_STRING)
 {
 	FILE *f;
 
@@ -390,7 +405,7 @@ DEFUN(scm_open_input_file, args, env)
 	return navi_make_file_input_port(f);
 }
 
-DEFUN(scm_open_output_file, args, env)
+DEFUN(open_output_file, args, env, "open-output-file", 1, 0, NAVI_STRING)
 {
 	FILE *f;
 
@@ -403,17 +418,17 @@ DEFUN(scm_open_output_file, args, env)
 	return navi_make_file_output_port(f);
 }
 
-DEFUN(scm_open_input_string, args, env)
+DEFUN(open_input_string, args, env, "open-input-string", 1, 0, NAVI_STRING)
 {
 	return make_string_input_port(navi_type_check(navi_car(args), NAVI_STRING, env));
 }
 
-DEFUN(scm_open_output_string, args, env)
+DEFUN(open_output_string, args, env, "open-output-string", 0, 0)
 {
 	return make_string_output_port();
 }
 
-DEFUN(scm_get_output_string, args, env)
+DEFUN(get_output_string, args, env, "get-output-string", 1, 0, NAVI_PORT)
 {
 	navi_t expr;
 	struct navi_string *str;
@@ -442,7 +457,7 @@ static void close_output_port(struct navi_port *p, navi_env_t env)
 	p->flags |= OUTPUT_CLOSED;
 }
 
-DEFUN(scm_close_port, args, env)
+DEFUN(close_port, args, env, "close-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 	if (p->read_u8 || p->read_char)
@@ -452,7 +467,7 @@ DEFUN(scm_close_port, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_close_input_port, args, env)
+DEFUN(close_input_port, args, env, "close-input-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 	check_input_port(p, env);
@@ -460,7 +475,7 @@ DEFUN(scm_close_input_port, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_close_output_port, args, env)
+DEFUN(close_output_port, args, env, "close-output-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 	check_output_port(p, env);
@@ -468,61 +483,61 @@ DEFUN(scm_close_output_port, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_eof_objectp, args, env)
+DEFUN(eof_objectp, args, env, "eof-object?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_is_eof(navi_car(args)));
 }
 
-DEFUN(scm_eof_object, args, env)
+DEFUN(eof_object, args, env, "eof-object", 0, 0)
 {
 	return navi_make_eof();
 }
 
-DEFUN(scm_read_u8, args, env)
+DEFUN(read_u8, args, env, "read-u8", 0, NAVI_PROC_VARIADIC)
 {
 	struct navi_port *p = get_input_port(args, env);
 	return navi_port_read_byte(p, env);
 }
 
-DEFUN(scm_peek_u8, args, env)
+DEFUN(peek_u8, args, env, "peek-u8", 0, NAVI_PROC_VARIADIC)
 {
 	struct navi_port *p = get_input_port(args, env);
 	return navi_port_peek_byte(p, env);
 }
 
-DEFUN(scm_read_char, args, env)
+DEFUN(read_char, args, env, "read-char", 0, NAVI_PROC_VARIADIC)
 {
 	struct navi_port *p = get_input_port(args, env);
 	return navi_port_read_char(p, env);
 }
 
-DEFUN(scm_peek_char, args, env)
+DEFUN(peek_char, args, env, "peek-char", 0, NAVI_PROC_VARIADIC)
 {
 	struct navi_port *p = get_input_port(args, env);
 	return navi_port_peek_char(p, env);
 }
 
-DEFUN(scm_read, args, env)
+DEFUN(read, args, env, "read", 0, NAVI_PROC_VARIADIC)
 {
 	struct navi_port *p = get_input_port(args, env);
 	return navi_read(p, env);
 }
 
-DEFUN(scm_write_u8, args, env)
+DEFUN(write_u8, args, env, "write-u8", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
 	navi_port_write_char(navi_type_check_byte(navi_car(args), env), p, env);
 	return navi_unspecified();
 }
 
-DEFUN(scm_write_char, args, env)
+DEFUN(write_char, args, env, "write-char", 1, NAVI_PROC_VARIADIC, NAVI_CHAR)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
 	navi_port_write_char(navi_char_cast(navi_car(args), env), p, env);
 	return navi_unspecified();
 }
 
-DEFUN(scm_write_string, args, env)
+DEFUN(write_string, args, env, "write-string", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
 	navi_type_check(navi_car(args), NAVI_STRING, env);
@@ -530,21 +545,21 @@ DEFUN(scm_write_string, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_display, args, env)
+DEFUN(display, args, env, "display", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
-	_navi_display(p, navi_car(args), false, env);
+	navi_port_display(p, navi_car(args), env);
 	return navi_unspecified();
 }
 
-DEFUN(scm_write, args, env)
+DEFUN(write, args, env, "write", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
-	_navi_display(p, navi_car(args), true, env);
+	navi_port_write(p, navi_car(args), env);
 	return navi_unspecified();
 }
 
-DEFUN(scm_newline, args, env)
+DEFUN(newline, args, env, "newline", 0, NAVI_PROC_VARIADIC)
 {
 	scm_write_u8(navi_make_pair(navi_make_char('\n'), args), env);
 	return navi_unspecified();

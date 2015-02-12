@@ -15,248 +15,193 @@
 
 #include "navi.h"
 
-/* PROC_TYPE(const char *scmname, navi_builtin_t _c_proc, unsigned _arity, uint32_t flags)
- * @scmname:	the (Scheme) name of the procedure
- * @_c_proc:	the (C) procedure to which the object refers
- * @_arity:	the (minimum) arity of the procedure
- * @_flags:	bitwise OR of zero or more NAVI_PROC_* flags
- * @_type:	the type of the created object (procedure, macro, etc.)
- */
-#define PROC_TYPE(scmname, _c_proc, _arity, _flags, _type) \
-{ \
-	.type = _type, \
-	.proc = { \
-		.c_proc   = _c_proc, \
-		.arity    = _arity, \
-		.flags    = NAVI_PROC_BUILTIN | _flags, \
-	}, \
-	.ident = scmname, \
-}
-
-#define SPECIAL(scmname, _fn, ary, var) \
-	PROC_TYPE(scmname, _fn, ary, var, NAVI_SPECIAL)
-
-#define PROCEDURE(scmname, _fn, ary, var) \
-	PROC_TYPE(scmname, _fn, ary, var, NAVI_PROCEDURE)
-
-#define MACRO(scmname, _fn, ary, var) \
-	PROC_TYPE(scmname, _fn, ary, var, NAVI_MACRO)
-
-#define NUMBER(scmname, val) \
-{ \
-	.type = NAVI_NUM, \
-	.num = val, \
-	.ident = scmname, \
-}
-
-#define BOOLEAN(scmname, val) \
-{ \
-	.type = NAVI_BOOL, \
-	.num = val, \
-	.ident = scmname, \
-}
-
-static DECLARE(scm_toplevel_exn);
+DECLARE(toplevel_exn);
 #define TOPLEVEL_EXN_INDEX 0
 
-#define V NAVI_PROC_VARIADIC
-static struct navi_spec default_bindings[] = {
-	[TOPLEVEL_EXN_INDEX] = PROCEDURE("#exn",  scm_toplevel_exn, 1, 0),
+#define DECL_SPEC(name) &scm_decl_##name
+static struct navi_spec *default_bindings[] = {
+	[TOPLEVEL_EXN_INDEX] = DECL_SPEC(toplevel_exn),
+	DECL_SPEC(lambda),
+	DECL_SPEC(caselambda),
+	DECL_SPEC(define),
+	DECL_SPEC(define_values),
+	DECL_SPEC(defmacro),
+	DECL_SPEC(begin),
+	DECL_SPEC(let),
+	DECL_SPEC(sequential_let),
+	DECL_SPEC(let_values),
+	DECL_SPEC(set),
+	DECL_SPEC(quote),
+	DECL_SPEC(unquote),
+	DECL_SPEC(quasiquote),
+	DECL_SPEC(case),
+	DECL_SPEC(cond),
+	DECL_SPEC(if),
+	DECL_SPEC(and),
+	DECL_SPEC(or),
+	DECL_SPEC(delay),
 
-	SPECIAL("lambda",        scm_lambda,         2, V),
-	SPECIAL("case-lambda",   scm_caselambda,     2, V),
-	SPECIAL("define",        scm_define,         2, V),
-	SPECIAL("define-values", scm_define_values,  2, V),
-	SPECIAL("define-macro",  scm_defmacro,       2, V),
-	SPECIAL("begin",         scm_begin,          1, V),
-	SPECIAL("let",           scm_let,            2, V),
-	SPECIAL("let*",          scm_sequential_let, 2, V),
-	SPECIAL("letrec",        scm_let,            2, V),
-	SPECIAL("letrec*",       scm_sequential_let, 2, V),
-	SPECIAL("let-values",    scm_let_values,     2, V),
-	SPECIAL("set!",          scm_set,            2, 0),
-	SPECIAL("quote",         scm_quote,          1, 0),
-	SPECIAL("quasiquote",    scm_quasiquote,     1, 0),
-	SPECIAL("case",          scm_case,           2, V),
-	SPECIAL("cond",          scm_cond,           1, V),
-	SPECIAL("if",            scm_if,             2, V),
-	SPECIAL("and",           scm_and,            0, V),
-	SPECIAL("or",            scm_or,             0, V),
-	SPECIAL("delay",         scm_delay,          1, 0),
+	DECL_SPEC(eqvp),
+	DECL_SPEC(eval),
+	DECL_SPEC(apply),
+	DECL_SPEC(force),
+	DECL_SPEC(promisep),
+	DECL_SPEC(make_promise),
+	DECL_SPEC(call_ec),
+	DECL_SPEC(values),
+	DECL_SPEC(call_with_values),
+	DECL_SPEC(with_exception_handler),
+	DECL_SPEC(raise),
+	DECL_SPEC(raise_continuable),
+	DECL_SPEC(error),
+	DECL_SPEC(error_objectp),
+	DECL_SPEC(error_object_message),
+	DECL_SPEC(error_object_irritants),
+	DECL_SPEC(read_errorp),
 
-	PROCEDURE("gensym", scm_gensym, 0, 0),
+	DECL_SPEC(add),
+	DECL_SPEC(sub),
+	DECL_SPEC(mul),
+	DECL_SPEC(div),
+	DECL_SPEC(quotient),
+	DECL_SPEC(remainder),
+	DECL_SPEC(lt),
+	DECL_SPEC(gt),
+	DECL_SPEC(lte),
+	DECL_SPEC(gte),
+	DECL_SPEC(numeq),
+	DECL_SPEC(zerop),
+	DECL_SPEC(positivep),
+	DECL_SPEC(negativep),
+	DECL_SPEC(oddp),
+	DECL_SPEC(evenp),
+	DECL_SPEC(number_to_string),
+	DECL_SPEC(string_to_number),
 
-	PROCEDURE("eval",        scm_eval,          1, 0),
-	PROCEDURE("apply",       scm_apply,         2, V),
-	PROCEDURE("map",         scm_map,           2, 0),
-	PROCEDURE("string-map",  scm_string_map,    2, 0),
-	PROCEDURE("string-map!", scm_string_map_ip, 2, 0),
-	PROCEDURE("vector-map",  scm_vector_map,    2, 0),
-	PROCEDURE("vector-map!", scm_vector_map_ip, 2, 0),
+	DECL_SPEC(not),
+	DECL_SPEC(booleanp),
+	DECL_SPEC(boolean_eq),
 
-	PROCEDURE("force",        scm_force,        1, 0),
-	PROCEDURE("promise?",     scm_promisep,     1, 0),
-	PROCEDURE("make-promise", scm_make_promise, 1, 0),
+	DECL_SPEC(charp),
+	DECL_SPEC(char_lt),
+	DECL_SPEC(char_gt),
+	DECL_SPEC(char_eq),
+	DECL_SPEC(char_lte),
+	DECL_SPEC(char_gte),
+	DECL_SPEC(char_ci_lt),
+	DECL_SPEC(char_ci_gt),
+	DECL_SPEC(char_ci_eq),
+	DECL_SPEC(char_ci_lte),
+	DECL_SPEC(char_ci_gte),
+	DECL_SPEC(char_upcase),
+	DECL_SPEC(char_downcase),
 
-	PROCEDURE("call/ec", scm_call_ec, 0, V),
-	PROCEDURE("values", scm_values, 1, V),
-	PROCEDURE("call-with-values", scm_call_with_values, 2, 0),
-	PROCEDURE("with-exception-handler", scm_with_exception_handler, 2, 0),
-	PROCEDURE("raise", scm_raise, 1, 0),
-	PROCEDURE("raise-continuable", scm_raise_continuable, 1, 0),
-	PROCEDURE("error", scm_error, 1, V),
-	PROCEDURE("error-object?", scm_error_objectp, 1, 0),
-	PROCEDURE("error-object-message", scm_error_object_message, 1, 0),
-	PROCEDURE("error-object-irritants", scm_error_object_irritants, 1, 0),
-	PROCEDURE("read-error?", scm_read_errorp, 1, 0),
+	DECL_SPEC(cons),
+	DECL_SPEC(car),
+	DECL_SPEC(cdr),
+	DECL_SPEC(pairp),
+	DECL_SPEC(listp),
+	DECL_SPEC(nullp),
+	DECL_SPEC(list),
+	DECL_SPEC(length),
+	DECL_SPEC(map),
 
-	PROCEDURE("input-port?",             scm_input_portp,         1, 0),
-	PROCEDURE("output-port?",            scm_output_portp,        1, 0),
-	PROCEDURE("textual-port?",           scm_portp,               1, 0),
-	PROCEDURE("binary-port?",            scm_portp,               1, 0),
-	PROCEDURE("port?",                   scm_portp,               1, 0),
-	PROCEDURE("input-port-open?",        scm_input_port_openp,    1, 0),
-	PROCEDURE("output-port-open?",       scm_output_port_openp,   1, 0),
-	PROCEDURE("current-input-port",      scm_current_input_port,  0, 0),
-	PROCEDURE("current-output-port",     scm_current_output_port, 0, 0),
-	PROCEDURE("current-error-port",      scm_current_error_port,  0, 0),
-	PROCEDURE("open-input-file",         scm_open_input_file,     1, 0),
-	PROCEDURE("open-binary-input-file",  scm_open_input_file,     1, 0),
-	PROCEDURE("open-output-file",        scm_open_output_file,    1, 0),
-	PROCEDURE("open-binary-output-file", scm_open_output_file,    1, 0),
-	PROCEDURE("open-input-string",       scm_open_input_string,   1, 0),
-	PROCEDURE("open-output-string",      scm_open_output_string,  0, 0),
-	PROCEDURE("get-output-string",       scm_get_output_string,   1, 0),
-	PROCEDURE("close-port",              scm_close_port,          1, 0),
-	PROCEDURE("close-input-port",        scm_close_input_port,    1, 0),
-	PROCEDURE("close-output-port",       scm_close_output_port,   1, 0),
-	PROCEDURE("eof-object?",             scm_eof_objectp,         1, 0),
-	PROCEDURE("eof-object",              scm_eof_object,          0, 0),
-	PROCEDURE("read-u8",                 scm_read_u8,             0, V),
-	PROCEDURE("peek-u8",                 scm_peek_u8,             0, V),
-	PROCEDURE("read-char",               scm_read_char,           0, V),
-	PROCEDURE("peek-char",               scm_peek_char,           0, V),
-	PROCEDURE("read",                    scm_read,                0, V),
-	PROCEDURE("write-u8",                scm_write_u8,            1, V),
-	PROCEDURE("write-char",              scm_write_char,          1, V),
-	PROCEDURE("write-string",            scm_write_string,        1, V),
-	PROCEDURE("write",                   scm_write,               1, V),
-	PROCEDURE("display",                 scm_display,             1, V),
-	PROCEDURE("newline",                 scm_newline,             0, V),
+	DECL_SPEC(stringp),
+	DECL_SPEC(make_string),
+	DECL_SPEC(string_length),
+	DECL_SPEC(string),
+	DECL_SPEC(string_ref),
+	DECL_SPEC(string_set),
+	DECL_SPEC(string_lt),
+	DECL_SPEC(string_gt),
+	DECL_SPEC(string_eq),
+	DECL_SPEC(string_lte),
+	DECL_SPEC(string_gte),
+	DECL_SPEC(string_ci_lt),
+	DECL_SPEC(string_ci_gt),
+	DECL_SPEC(string_ci_eq),
+	DECL_SPEC(string_ci_lte),
+	DECL_SPEC(string_ci_gte),
+	DECL_SPEC(string_upcase),
+	DECL_SPEC(string_downcase),
+	DECL_SPEC(string_foldcase),
+	DECL_SPEC(substring),
+	DECL_SPEC(string_append),
+	DECL_SPEC(string_to_list),
+	DECL_SPEC(list_to_string),
+	DECL_SPEC(string_fill),
+	DECL_SPEC(string_copy),
+	DECL_SPEC(string_copy_to),
+	DECL_SPEC(string_map),
+	DECL_SPEC(string_map_ip),
 
-	PROCEDURE("eqv?", scm_eqvp, 2, 0),
+	DECL_SPEC(vectorp),
+	DECL_SPEC(make_vector),
+	DECL_SPEC(vector),
+	DECL_SPEC(vector_length),
+	DECL_SPEC(vector_ref),
+	DECL_SPEC(vector_set),
+	DECL_SPEC(vector_to_list),
+	DECL_SPEC(list_to_vector),
+	DECL_SPEC(vector_fill),
+	DECL_SPEC(vector_copy),
+	DECL_SPEC(vector_copy_to),
+	DECL_SPEC(vector_map),
+	DECL_SPEC(vector_map_ip),
 
-	PROCEDURE("+", scm_add, 0, V),
-	PROCEDURE("-", scm_sub, 1, V),
-	PROCEDURE("*", scm_mul, 0, V),
-	PROCEDURE("/", scm_div, 1, V),
-	PROCEDURE("quotient",  scm_quotient,  2, 0),
-	PROCEDURE("remainder", scm_remainder, 2, 0),
+	DECL_SPEC(bytevectorp),
+	DECL_SPEC(make_bytevector),
+	DECL_SPEC(bytevector),
+	DECL_SPEC(bytevector_length),
+	DECL_SPEC(bytevector_u8_ref),
+	DECL_SPEC(bytevector_u8_set),
+	DECL_SPEC(bytevector_append),
+	DECL_SPEC(bytevector_copy),
+	DECL_SPEC(bytevector_copy_to),
+	DECL_SPEC(utf8_to_string),
+	DECL_SPEC(string_to_utf8),
 
-	PROCEDURE("<",  scm_lt,    1, V),
-	PROCEDURE(">",  scm_gt,    1, V),
-	PROCEDURE("<=", scm_lte,   1, V),
-	PROCEDURE(">=", scm_gte,   1, V),
-	PROCEDURE("=",  scm_numeq, 1, V),
+	DECL_SPEC(input_portp),
+	DECL_SPEC(output_portp),
+	DECL_SPEC(portp),
+	DECL_SPEC(input_port_openp),
+	DECL_SPEC(output_port_openp),
+	DECL_SPEC(current_input_port),
+	DECL_SPEC(current_output_port),
+	DECL_SPEC(current_error_port),
+	DECL_SPEC(open_input_file),
+	DECL_SPEC(open_output_file),
+	DECL_SPEC(open_input_string),
+	DECL_SPEC(open_output_string),
+	DECL_SPEC(get_output_string),
+	DECL_SPEC(close_port),
+	DECL_SPEC(close_input_port),
+	DECL_SPEC(close_output_port),
+	DECL_SPEC(eof_objectp),
+	DECL_SPEC(eof_object),
+	DECL_SPEC(read_u8),
+	DECL_SPEC(peek_u8),
+	DECL_SPEC(read_char),
+	DECL_SPEC(peek_char),
+	DECL_SPEC(read),
+	DECL_SPEC(write_u8),
+	DECL_SPEC(write_char),
+	DECL_SPEC(write_string),
+	DECL_SPEC(write),
+	DECL_SPEC(display),
+	DECL_SPEC(newline),
 
-	PROCEDURE("zero?",     scm_zerop,     1, 0),
-	PROCEDURE("positive?", scm_positivep, 1, 0),
-	PROCEDURE("negative?", scm_negativep, 1, 0),
-	PROCEDURE("odd?",      scm_oddp,      1, 0),
-	PROCEDURE("even?",     scm_evenp,     1, 0),
-
-	PROCEDURE("number->string", scm_number_to_string, 1, V),
-	PROCEDURE("string->number", scm_string_to_number, 1, V),
-
-	PROCEDURE("not",       scm_not,        1, 0),
-	PROCEDURE("boolean?",  scm_booleanp,   1, 0),
-	PROCEDURE("boolean=?", scm_boolean_eq, 1, V),
-
-	PROCEDURE("cons",   scm_cons,   2, 0),
-	PROCEDURE("car",    scm_car,    1, 0),
-	PROCEDURE("cdr",    scm_cdr,    1, 0),
-	PROCEDURE("pair?",  scm_pairp,  1, 0),
-	PROCEDURE("list?",  scm_listp,  1, 0),
-	PROCEDURE("null?",  scm_nullp,  1, 0),
-	PROCEDURE("list",   scm_list,   0, V),
-	PROCEDURE("length", scm_length, 1, 0),
-
-	PROCEDURE("char?",      scm_charp,    1, 0),
-	PROCEDURE("char<?",     scm_char_lt,  2, 0),
-	PROCEDURE("char>?",     scm_char_gt,  2, 0),
-	PROCEDURE("char=?",     scm_char_eq,  2, 0),
-	PROCEDURE("char<=?",    scm_char_lte, 2, 0),
-	PROCEDURE("char>=>",    scm_char_gte, 2, 0),
-	PROCEDURE("char-ci<?",  scm_char_ci_lt,  2, 0),
-	PROCEDURE("char-ci>?",  scm_char_ci_gt,  2, 0),
-	PROCEDURE("char-ci=?",  scm_char_ci_eq,  2, 0),
-	PROCEDURE("char-ci<=?", scm_char_ci_lte, 2, 0),
-	PROCEDURE("char-ci>=>", scm_char_ci_gte, 2, 0),
-
-	PROCEDURE("char-upcase",   scm_char_upcase,   1, 0),
-	PROCEDURE("char-downcase", scm_char_downcase, 1, 0),
-
-	PROCEDURE("string?",         scm_stringp,         1, 0),
-	PROCEDURE("make-string",     scm_make_string,     1, V),
-	PROCEDURE("string",          scm_string,          0, V),
-	PROCEDURE("string-length",   scm_string_length,   1, 0),
-	PROCEDURE("string-ref",      scm_string_ref,      2, 0),
-	PROCEDURE("string-set!",     scm_string_set,      3, 0),
-	PROCEDURE("string<?",        scm_string_lt,       2, 0),
-	PROCEDURE("string>?",        scm_string_gt,       2, 0),
-	PROCEDURE("string=?",        scm_string_eq,       2, 0),
-	PROCEDURE("string<=?",       scm_string_lte,      2, 0),
-	PROCEDURE("string>=?",       scm_string_gte,      2, 0),
-	PROCEDURE("string-ci<?",     scm_string_ci_lt,    2, 0),
-	PROCEDURE("string-ci>?",     scm_string_ci_gt,    2, 0),
-	PROCEDURE("string-ci=?",     scm_string_ci_eq,    2, 0),
-	PROCEDURE("string-ci<=?",    scm_string_ci_lte,   2, 0),
-	PROCEDURE("string-ci>=?",    scm_string_ci_gte,   2, 0),
-	PROCEDURE("string-upcase",   scm_string_upcase,   1, 0),
-	PROCEDURE("string-downcase", scm_string_downcase, 1, 0),
-	PROCEDURE("string-foldcase", scm_string_foldcase, 1, 0),
-	PROCEDURE("substring",       scm_substring,       3, 0),
-	PROCEDURE("string-append",   scm_string_append,   1, V),
-	PROCEDURE("string->list",    scm_string_to_list,  1, 0),
-	PROCEDURE("list->string",    scm_list_to_string,  1, 0),
-	PROCEDURE("string-fill!",    scm_string_fill,     2, V),
-	PROCEDURE("string-copy",     scm_string_copy,     1, V),
-	PROCEDURE("string-copy!",    scm_string_copy_to,  3, V),
-
-	PROCEDURE("vector?",       scm_vectorp,        1, 0),
-	PROCEDURE("make-vector",   scm_make_vector,    1, V),
-	PROCEDURE("vector",        scm_vector,         0, V),
-	PROCEDURE("vector-length", scm_vector_length,  1, 0),
-	PROCEDURE("vector-ref",    scm_vector_ref,     2, 0),
-	PROCEDURE("vector-set!",   scm_vector_set,     3, 0),
-	PROCEDURE("vector-fill!",  scm_vector_fill,    2, V),
-	PROCEDURE("vector-copy",   scm_vector_copy,    1, V),
-	PROCEDURE("vector-copy!",  scm_vector_copy_to, 3, V),
-
-	PROCEDURE("bytevector?",        scm_bytevectorp,        1, 0),
-	PROCEDURE("make-bytevector",    scm_make_bytevector,    1, V),
-	PROCEDURE("bytevector",         scm_bytevector,         0, V),
-	PROCEDURE("bytevector-length",  scm_bytevector_length,  1, 0),
-	PROCEDURE("bytevector-u8-ref",  scm_bytevector_u8_ref,  2, 0),
-	PROCEDURE("bytevector-u8-set!", scm_bytevector_u8_set,  3, 0),
-	PROCEDURE("bytevector-append",  scm_bytevector_append,  0, V),
-	PROCEDURE("bytevector-copy",    scm_bytevector_copy,    1, V),
-	PROCEDURE("bytevector-copy!",   scm_bytevector_copy_to, 3, V),
-	PROCEDURE("utf8->string",       scm_utf8_to_string,     1, V),
-	PROCEDURE("string->utf8",       scm_string_to_utf8,     1, V),
-
-	PROCEDURE("env-count",     scm_env_count,     0, 0),
-	PROCEDURE("gc-collect",    scm_gc_collect,    0, 0),
-	PROCEDURE("gc-count",      scm_gc_count,      0, 0),
+	DECL_SPEC(env_count),
+	DECL_SPEC(gc_collect),
+	DECL_SPEC(gc_count),
 };
-#undef V
-#define NR_DEFAULT_BINDINGS \
+#define _NR_DEFAULT_BINDINGS \
 	(sizeof(default_bindings) / sizeof(*default_bindings))
 
 /*
  * The top-level exception handler: prints a message and returns to the REPL.
  */
-static DEFUN(scm_toplevel_exn, args, env)
+DEFUN(toplevel_exn, args, env, "#exn", 1, 0, NAVI_ANY)
 {
 	navi_t cont;
 
@@ -267,7 +212,8 @@ static DEFUN(scm_toplevel_exn, args, env)
 	if (navi_type(cont) != NAVI_ESCAPE)
 		navi_die("#repl not bound to continuation");
 
-	navi_scope_set(env, navi_sym_exn, navi_from_spec(&default_bindings[0]));
+	navi_scope_set(env, navi_sym_exn,
+			navi_from_spec(default_bindings[TOPLEVEL_EXN_INDEX]));
 	longjmp(navi_escape(cont)->state, 1);
 }
 

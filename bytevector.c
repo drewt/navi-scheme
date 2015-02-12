@@ -37,12 +37,13 @@ navi_t navi_list_to_bytevec(navi_t list, navi_env_t env)
 	return vec;
 }
 
-DEFUN(scm_bytevectorp, args, env)
+DEFUN(bytevectorp, args, env, "bytevector?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BYTEVEC);
 }
 
-DEFUN(scm_make_bytevector, args, env)
+DEFUN(make_bytevector, args, env, "make-bytevector", 1, NAVI_PROC_VARIADIC,
+		NAVI_NUM)
 {
 	navi_t obj;
 	int nr_args = navi_list_length(args);
@@ -60,18 +61,19 @@ DEFUN(scm_make_bytevector, args, env)
 	return obj;
 }
 
-DEFUN(scm_bytevector, args, env)
+DEFUN(bytevector, args, env, "bytevector", 0, NAVI_PROC_VARIADIC)
 {
 	return navi_list_to_bytevec(args, env);
 }
 
-DEFUN(scm_bytevector_length, args, env)
+DEFUN(bytevector_length, args, env, "bytevector-length", 1, 0, NAVI_BYTEVEC)
 {
 	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
 	return navi_make_num(navi_bytevec(navi_car(args))->size);
 }
 
-DEFUN(scm_bytevector_u8_ref, args, env)
+DEFUN(bytevector_u8_ref, args, env, "bytevector-u8-ref", 2, 0,
+		NAVI_BYTEVEC, NAVI_NUM)
 {
 	navi_type_check(navi_car(args),  NAVI_BYTEVEC, env);
 	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
@@ -79,7 +81,8 @@ DEFUN(scm_bytevector_u8_ref, args, env)
 	return navi_bytevec_ref(navi_car(args), navi_num(navi_cadr(args)));
 }
 
-DEFUN(scm_bytevector_u8_set, args, env)
+DEFUN(bytevector_u8_set, args, env, "bytevector-u8-set!", 3, 0,
+		NAVI_BYTEVEC, NAVI_NUM, NAVI_BYTE)
 {
 	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
 	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
@@ -89,7 +92,7 @@ DEFUN(scm_bytevector_u8_set, args, env)
 	return navi_unspecified();
 }
 
-DEFUN(scm_bytevector_append, args, env)
+DEFUN(bytevector_append, args, env, "bytevector-append", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t cons, obj;
 	struct navi_bytevec *vec;
@@ -120,7 +123,8 @@ static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 	return to;
 }
 
-DEFUN(scm_bytevector_copy, args, env)
+DEFUN(bytevector_copy, args, env, "bytevector-copy", 1, NAVI_PROC_VARIADIC,
+		NAVI_BYTEVEC)
 {
 	navi_t from;
 	long start, end;
@@ -137,7 +141,8 @@ DEFUN(scm_bytevector_copy, args, env)
 	return copy_to(navi_make_bytevec(end - start), 0, from, start, end);
 }
 
-DEFUN(scm_bytevector_copy_to, args, env)
+DEFUN(bytevector_copy_to, args, env, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
+		NAVI_BYTEVEC, NAVI_NUM, NAVI_BYTEVEC)
 {
 	navi_t to, from;
 	long at, start, end;
@@ -171,7 +176,8 @@ static int32_t count_chars(struct navi_bytevec *vec)
 	return n;
 }
 
-DEFUN(scm_utf8_to_string, args, env)
+DEFUN(utf8_to_string, args, env, "utf8->string", 1, NAVI_PROC_VARIADIC,
+		NAVI_BYTEVEC)
 {
 	navi_t str;
 	int32_t start, end, size, length;
@@ -193,7 +199,8 @@ DEFUN(scm_utf8_to_string, args, env)
 	return str;
 }
 
-DEFUN(scm_string_to_utf8, args, env)
+DEFUN(string_to_utf8, args, env, "string->utf8", 1, NAVI_PROC_VARIADIC,
+		NAVI_STRING)
 {
 	navi_t r;
 	int32_t start, end;

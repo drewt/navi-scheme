@@ -26,15 +26,7 @@
 		} \
 	} while (0)
 
-#define ARITHMETIC_DEFUN(cname, operator) \
-	DEFUN(cname, ____MAD_ARGS, env) \
-	{ \
-		navi_t ____MAD_ACC; \
-		ARITHMETIC_FOLD(operator, ____MAD_ARGS, ____MAD_ACC, env); \
-		return ____MAD_ACC; \
-	}
-
-DEFUN(scm_add, args, env)
+DEFUN(add, args, env, "+", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t acc = navi_make_num(0);
 	if (navi_is_nil(args))
@@ -45,7 +37,7 @@ DEFUN(scm_add, args, env)
 	return acc;
 }
 
-DEFUN(scm_sub, args, env)
+DEFUN(sub, args, env, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	navi_t acc;
 	if (navi_is_nil(navi_cdr(args))) {
@@ -56,7 +48,7 @@ DEFUN(scm_sub, args, env)
 	return acc;
 }
 
-DEFUN(scm_mul, args, env)
+DEFUN(mul, args, env, "*", 0, NAVI_PROC_VARIADIC)
 {
 	navi_t acc;
 	if (navi_is_nil(args))
@@ -67,7 +59,7 @@ DEFUN(scm_mul, args, env)
 	return acc;
 }
 
-DEFUN(scm_div, args, env)
+DEFUN(div, args, env, "/", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	navi_t acc;
 	if (navi_is_nil(navi_cdr(args))) {
@@ -78,14 +70,14 @@ DEFUN(scm_div, args, env)
 	return acc;
 }
 
-DEFUN(scm_quotient, args, env)
+DEFUN(quotient, args, env, "quotient", 2, 0, NAVI_NUM, NAVI_NUM)
 {
 	navi_type_check(navi_car(args),  NAVI_NUM, env);
 	navi_type_check(navi_cadr(args), NAVI_NUM, env);
 	return navi_make_num(navi_num(navi_car(args)) / navi_num(navi_cadr(args)));
 }
 
-DEFUN(scm_remainder, args, env)
+DEFUN(remainder, args, env, "remainder", 2, 0, NAVI_NUM, NAVI_NUM)
 {
 	navi_type_check(navi_car(args),  NAVI_NUM, env);
 	navi_type_check(navi_cadr(args), NAVI_NUM, env);
@@ -106,39 +98,40 @@ static bool fold_pairs(navi_t list, bool (*compare)(navi_t,navi_t,navi_env_t),
 	return true;
 }
 
-#define VARIADIC_PREDICATE(cname, symbol) \
+#define NUMERIC_COMPARISON(cname, scmname, op) \
 	static bool _ ## cname(navi_t ____MAP_A, navi_t ____MAP_B, \
 			navi_env_t ____MAP_ENV) \
 	{ \
 		navi_type_check(____MAP_A, NAVI_NUM, ____MAP_ENV); \
 		navi_type_check(____MAP_B, NAVI_NUM, ____MAP_ENV); \
-		return navi_num(____MAP_A) symbol navi_num(____MAP_B); \
+		return navi_num(____MAP_A) op navi_num(____MAP_B); \
 	} \
-	DEFUN(cname, args, env) \
+	DEFUN(cname, args, env, scmname, 1, NAVI_PROC_VARIADIC, NAVI_NUM) \
 	{ \
 		return navi_make_bool(fold_pairs(args, _ ## cname, env)); \
 	}
 
-VARIADIC_PREDICATE(scm_lt,    <)
-VARIADIC_PREDICATE(scm_gt,    >)
-VARIADIC_PREDICATE(scm_lte,   <=)
-VARIADIC_PREDICATE(scm_gte,   >=)
-VARIADIC_PREDICATE(scm_numeq, ==)
+NUMERIC_COMPARISON(lt,    "<",  <)
+NUMERIC_COMPARISON(gt,    ">",  >)
+NUMERIC_COMPARISON(lte,   "<=", <=)
+NUMERIC_COMPARISON(gte,   ">=", >=)
+NUMERIC_COMPARISON(numeq, "=",  ==)
 
-#define UNARY_PREDICATE(cname, test) \
-	DEFUN(cname, args, env) \
+#define NUMERIC_PREDICATE(cname, scmname, test) \
+	DEFUN(cname, args, env, scmname, 1, 0, NAVI_NUM) \
 	{ \
 		navi_type_check(navi_car(args), NAVI_NUM, env); \
 		return navi_make_bool(navi_num(navi_car(args)) test); \
 	}
 
-UNARY_PREDICATE(scm_zerop,     == 0)
-UNARY_PREDICATE(scm_positivep, > 0)
-UNARY_PREDICATE(scm_negativep, < 0)
-UNARY_PREDICATE(scm_oddp,      % 2 != 0)
-UNARY_PREDICATE(scm_evenp,     % 2 == 0)
+NUMERIC_PREDICATE(zerop,     "zero?",     == 0)
+NUMERIC_PREDICATE(positivep, "positive?", > 0)
+NUMERIC_PREDICATE(negativep, "negative?", < 0)
+NUMERIC_PREDICATE(oddp,      "odd?",      % 2 != 0)
+NUMERIC_PREDICATE(evenp,     "even?",     % 2 == 0)
 
-DEFUN(scm_number_to_string, args, env)
+DEFUN(number_to_string, args, env, "number->string", 1, NAVI_PROC_VARIADIC,
+		NAVI_NUM)
 {
 	char buf[64];
 	long radix = 10;
@@ -178,7 +171,8 @@ static int explicit_radix(const char *str)
 	return 0;
 }
 
-DEFUN(scm_string_to_number, args, env)
+DEFUN(string_to_number, args, env, "string->number", 1, NAVI_PROC_VARIADIC,
+		NAVI_STRING)
 {
 	navi_t bytes;
 	char *string, *endptr;
@@ -200,17 +194,17 @@ DEFUN(scm_string_to_number, args, env)
 	return navi_make_num(n);
 }
 
-DEFUN(scm_not, args, env)
+DEFUN(not, args, env, "not", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(!navi_is_true(navi_car(args)));
 }
 
-DEFUN(scm_booleanp, args, env)
+DEFUN(booleanp, args, env, "boolean?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BOOL);
 }
 
-DEFUN(scm_boolean_eq, args, env)
+DEFUN(boolean_eq, args, env, "boolean=?", 1, NAVI_PROC_VARIADIC, NAVI_BOOL)
 {
 	navi_t cons;
 	navi_t bval;

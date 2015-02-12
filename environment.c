@@ -174,9 +174,9 @@ struct navi_scope *navi_make_default_environment(void)
 	struct navi_scope *env = make_scope();
 	if (!env)
 		return NULL;
-	for (unsigned i = 0; i < NR_DEFAULT_BINDINGS; i++) {
-		navi_t symbol = navi_make_symbol(default_bindings[i].ident);
-		navi_t object = navi_from_spec(&default_bindings[i]);
+	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
+		navi_t symbol = navi_make_symbol(default_bindings[i]->ident);
+		navi_t object = navi_from_spec(default_bindings[i]);
 		if (navi_type(object) == NAVI_PROCEDURE)
 			navi_procedure(object)->env = env;
 		env_set(env, symbol, object);
@@ -208,7 +208,7 @@ void navi_scope_free(struct navi_scope *scope)
 		navi_scope_unref(scope->next);
 }
 
-DEFUN(scm_env_count, args, env)
+DEFUN(env_count, args, env, "env-count", 0, 0)
 {
 	unsigned i = 0;
 	struct navi_clist_head *it;

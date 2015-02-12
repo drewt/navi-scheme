@@ -177,8 +177,8 @@ struct navi_scope *navi_make_default_environment(void)
 	for (unsigned i = 0; i < NR_DEFAULT_BINDINGS; i++) {
 		navi_t symbol = navi_make_symbol(default_bindings[i].ident);
 		navi_t object = navi_from_spec(&default_bindings[i]);
-		if (navi_type(object) == NAVI_FUNCTION)
-			navi_fun(object)->env = env;
+		if (navi_type(object) == NAVI_PROCEDURE)
+			navi_procedure(object)->env = env;
 		env_set(env, symbol, object);
 	}
 

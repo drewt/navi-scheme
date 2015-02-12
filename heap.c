@@ -250,18 +250,19 @@ static inline unsigned count_pairs(navi_t list)
 	return i;
 }
 
-navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env)
+navi_t navi_make_procedure(navi_t args, navi_t body, navi_t name, navi_env_t env)
 {
-	struct navi_object *obj = make_object(NAVI_FUNCTION,
-			sizeof(struct navi_function));
-	struct navi_function *fun = &obj->data->fun;
-	fun->name = name;
-	fun->args = args;
-	fun->body = body;
-	fun->builtin = false;
-	fun->arity = count_pairs((navi_t)args);
-	fun->variadic = !navi_is_proper_list((navi_t)args);
-	fun->env = env;
+	struct navi_object *obj = make_object(NAVI_PROCEDURE,
+			sizeof(struct navi_procedure));
+	struct navi_procedure *proc = &obj->data->proc;
+	proc->name = name;
+	proc->args = args;
+	proc->body = body;
+	proc->env = env;
+	proc->arity = count_pairs((navi_t)args);
+	proc->flags = 0;
+	if (!navi_is_proper_list(args))
+		proc->flags |= NAVI_PROC_VARIADIC;
 	navi_scope_ref(env);
 	return (navi_t) obj;
 }
@@ -272,7 +273,7 @@ navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env)
 	static unsigned long count = 0;
 	snprintf(buf, 64, "lam%lu", count++);
 	buf[63] = '\0';
-	return navi_make_function(args, body, navi_make_uninterned(buf), env);
+	return navi_make_procedure(args, body, navi_make_uninterned(buf), env);
 }
 
 navi_t navi_make_escape(void)
@@ -291,7 +292,7 @@ navi_t navi_capture_env(navi_env_t env)
 navi_t navi_from_spec(struct navi_spec *spec)
 {
 	struct navi_object *obj;
-	struct navi_function *fun;
+	struct navi_procedure *proc;
 
 	switch (spec->type) {
 	case NAVI_EOF:
@@ -316,11 +317,11 @@ navi_t navi_from_spec(struct navi_spec *spec)
 		return navi_make_bytevec(spec->size);
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
-	case NAVI_FUNCTION:
-		obj = make_object(spec->type, sizeof(struct navi_function));
-		fun = (void*) obj->data;
-		memcpy(fun, &spec->fun, sizeof(struct navi_function));
-		fun->name = navi_make_symbol(spec->ident);
+	case NAVI_PROCEDURE:
+		obj = make_object(spec->type, sizeof(struct navi_procedure));
+		proc = (void*) obj->data;
+		memcpy(proc, &spec->proc, sizeof(struct navi_procedure));
+		proc->name = navi_make_symbol(spec->ident);
 		return (navi_t) obj;
 	case NAVI_VOID:
 	case NAVI_PORT:
@@ -360,7 +361,7 @@ bool navi_eqvp(navi_t fst, navi_t snd)
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
 	case NAVI_PROMISE:
-	case NAVI_FUNCTION:
+	case NAVI_PROCEDURE:
 	case NAVI_CASELAMBDA:
 	case NAVI_ESCAPE:
 	case NAVI_ENVIRONMENT:
@@ -385,7 +386,7 @@ static inline void gc_set_mark(navi_t obj)
 static void gc_mark_obj(navi_t obj)
 {
 	struct navi_vector *vec;
-	struct navi_function *fun;
+	struct navi_procedure *proc;
 
 	if (!navi_ptr_type(obj))
 		return;
@@ -423,13 +424,14 @@ static void gc_mark_obj(navi_t obj)
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
 	case NAVI_PROMISE:
-	case NAVI_FUNCTION:
+	case NAVI_PROCEDURE:
 		gc_set_mark(obj);
-		fun = navi_fun(obj);
-		if (!fun->builtin)
-			gc_mark_obj(fun->body);
-		gc_mark_obj(fun->args);
-		gc_set_mark(fun->name);
+		proc = navi_procedure(obj);
+		if (!navi_proc_is_builtin(proc)) {
+			gc_mark_obj(proc->body);
+			gc_mark_obj(proc->args);
+		}
+		gc_set_mark(proc->name);
 		break;
 	case NAVI_ESCAPE:
 		gc_set_mark(obj);
@@ -490,8 +492,7 @@ DEFUN(scm_gc_count, args, env)
 {
 	struct navi_object *expr;
 	navi_clist_for_each_entry(expr, &heap, chain) {
-		if (navi_type((navi_t)expr) == NAVI_FUNCTION &&
-				navi_fun((navi_t)expr)->builtin)
+		if (navi_is_builtin((navi_t)expr))
 			continue;
 		printf("<%p> ", expr);
 		navi_write((navi_t)expr, env);

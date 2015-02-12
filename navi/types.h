@@ -68,7 +68,7 @@ enum navi_type {
 	NAVI_MACRO,
 	NAVI_SPECIAL,
 	NAVI_PROMISE,
-	NAVI_FUNCTION,
+	NAVI_PROCEDURE,
 	NAVI_CASELAMBDA,
 	NAVI_ESCAPE,
 	NAVI_BOUNCE,
@@ -81,17 +81,23 @@ struct navi_escape {
 	navi_t arg;
 };
 
-struct navi_function {
-	union {
-		navi_t body;
-		navi_builtin_t fn;
-	};
-	navi_t args;
+enum {
+	NAVI_PROC_BUILTIN  = 1,
+	NAVI_PROC_VARIADIC = 2,
+};
+
+struct navi_procedure {
+	uint32_t flags;
+	unsigned arity;
 	navi_t name;
 	navi_env_t env;
-	unsigned short arity;
-	bool variadic;
-	bool builtin;
+	union {
+		struct {
+			navi_t args;
+			navi_t body;
+		};
+		navi_builtin_t c_proc;
+	};
 };
 
 struct navi_vector {
@@ -142,7 +148,7 @@ struct navi_object {
 	union {
 		struct navi_scope *env;
 		struct navi_escape esc;
-		struct navi_function fun;
+		struct navi_procedure proc;
 		struct navi_vector vec;
 		struct navi_bytevec bvec;
 		struct navi_string str;
@@ -157,7 +163,7 @@ struct navi_spec {
 	union {
 		long num;
 		char *str;
-		struct navi_function fun;
+		struct navi_procedure proc;
 		struct navi_vector vec;
 		struct navi_pair pair;
 	};
@@ -261,9 +267,9 @@ static inline struct navi_symbol *navi_symbol(navi_t obj)
 	return &obj.p->data->sym;
 }
 
-static inline struct navi_function *navi_fun(navi_t obj)
+static inline struct navi_procedure *navi_procedure(navi_t obj)
 {
-	return &obj.p->data->fun;
+	return &obj.p->data->proc;
 }
 
 static inline struct navi_escape *navi_escape(navi_t obj)
@@ -385,7 +391,7 @@ navi_t navi_make_vector(size_t size);
 navi_t navi_make_bytevec(size_t size);
 navi_t navi_make_string(size_t storage, size_t size, size_t length);
 void navi_string_grow_storage(struct navi_string *str, long need);
-navi_t navi_make_function(navi_t args, navi_t body, navi_t name, navi_env_t env);
+navi_t navi_make_procedure(navi_t args, navi_t body, navi_t name, navi_env_t env);
 navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env);
 navi_t navi_make_escape(void);
 
@@ -422,7 +428,7 @@ static inline navi_t navi_make_char(unsigned long c)
 static inline navi_t navi_make_macro(navi_t args, navi_t body, navi_t name,
 		navi_env_t env)
 {
-	navi_t macro = navi_make_function(args, body, name, env);
+	navi_t macro = navi_make_procedure(args, body, name, env);
 	macro.p->type = NAVI_MACRO;
 	return macro;
 }
@@ -430,7 +436,7 @@ static inline navi_t navi_make_macro(navi_t args, navi_t body, navi_t name,
 static inline navi_t navi_make_promise(navi_t e, navi_env_t env)
 {
 	navi_t body = navi_make_pair(e, navi_make_nil());
-	navi_t promise = navi_make_function(navi_make_nil(), body,
+	navi_t promise = navi_make_procedure(navi_make_nil(), body,
 			navi_make_symbol("promise"), env);
 	promise.p->type = NAVI_PROMISE;
 	return promise;
@@ -528,7 +534,7 @@ static inline const char *navi_strtype(enum navi_type type)
 	case NAVI_MACRO:       return "macro";
 	case NAVI_SPECIAL:     return "special";
 	case NAVI_PROMISE:     return "promise";
-	case NAVI_FUNCTION:    return "function";
+	case NAVI_PROCEDURE:   return "procedure";
 	case NAVI_CASELAMBDA:  return "case-lambda";
 	case NAVI_ESCAPE:      return "escape";
 	case NAVI_ENVIRONMENT: return "environment";
@@ -561,15 +567,38 @@ NAVI_TYPE_PREDICATE(navi_is_symbol, NAVI_SYMBOL)
 NAVI_TYPE_PREDICATE(navi_is_vector, NAVI_VECTOR)
 NAVI_TYPE_PREDICATE(navi_is_bytevec, NAVI_BYTEVEC)
 NAVI_TYPE_PREDICATE(navi_is_macro, NAVI_MACRO)
-NAVI_TYPE_PREDICATE(navi_is_function, NAVI_FUNCTION)
+NAVI_TYPE_PREDICATE(navi_is_procedure, NAVI_PROCEDURE)
 NAVI_TYPE_PREDICATE(navi_is_caselambda, NAVI_CASELAMBDA)
 NAVI_TYPE_PREDICATE(navi_is_escape, NAVI_ESCAPE)
 NAVI_TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
 NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 #undef NAVI_TYPE_PREDICATE
 
+static inline bool navi_is_builtin(navi_t obj)
+{
+	return navi_is_procedure(obj) &&
+		navi_procedure(obj)->flags & NAVI_PROC_BUILTIN;
+}
+
 bool navi_is_proper_list(navi_t list);
 /* Types }}} */
+/* Procedures {{{ */
+static inline bool navi_proc_is_builtin(struct navi_procedure *p)
+{
+	return p->flags & NAVI_PROC_BUILTIN;
+}
+
+static inline bool navi_proc_is_variadic(struct navi_procedure *p)
+{
+	return p->flags & NAVI_PROC_VARIADIC;
+}
+
+static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
+{
+	return n == p->arity
+		|| ((p->flags & NAVI_PROC_VARIADIC) && n > p->arity);
+}
+/* Procedures }}} */
 /* Lists {{{ */
 navi_t navi_vlist(navi_t first, va_list ap);
 navi_t navi_list(navi_t first, ...);
@@ -642,7 +671,7 @@ static inline size_t navi_vector_length(navi_t vec)
 	return vec.p->data->vec.size;
 }
 
-navi_t navi_vector_map(navi_t fun, navi_t to, navi_t from, navi_env_t env);
+navi_t navi_vector_map(navi_t proc, navi_t to, navi_t from, navi_env_t env);
 /* Vectors }}} */
 /* Bytevectors {{{ */
 static inline navi_t navi_bytevec_ref(navi_t vec, size_t i)

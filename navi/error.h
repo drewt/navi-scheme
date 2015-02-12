@@ -59,15 +59,15 @@ static inline navi_t navi_type_check_list(navi_t list, navi_env_t env)
 	return list;
 }
 
-static inline navi_t navi_type_check_fun(navi_t fun, int arity, navi_env_t env)
+static inline navi_t navi_type_check_proc(navi_t proc, int arity, navi_env_t env)
 {
-	navi_type_check(fun, NAVI_FUNCTION, env);
-	int actual = navi_fun(fun)->arity;
+	navi_type_check(proc, NAVI_PROCEDURE, env);
+	int actual = navi_procedure(proc)->arity;
 	if (actual != arity)
 		navi_error(env, "wrong arity",
 				navi_make_apair("expected", navi_make_num(arity)),
 				navi_make_apair("actual", navi_make_num(actual)));
-	return fun;
+	return proc;
 }
 
 static inline long navi_fixnum_cast(navi_t num, navi_env_t env)

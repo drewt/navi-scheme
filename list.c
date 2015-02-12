@@ -124,14 +124,14 @@ DEFUN(scm_list, args, env)
 }
 
 struct map_apply_arg {
-	navi_t fun;
+	navi_t proc;
 	navi_env_t env;
 };
 
 static navi_t map_apply(navi_t elm, void *data)
 {
 	struct map_apply_arg *arg = data;
-	return  navi_eval(navi_make_pair(arg->fun, navi_make_pair(elm, navi_make_nil())),
+	return  navi_eval(navi_make_pair(arg->proc, navi_make_pair(elm, navi_make_nil())),
 			arg->env);
 }
 
@@ -139,10 +139,10 @@ DEFUN(scm_map, args, env)
 {
 	struct map_apply_arg arg;
 
-	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check_proc(navi_car(args), 1, env);
 	navi_type_check_list(navi_cadr(args), env);
 
-	arg.fun = navi_car(args);
+	arg.proc = navi_car(args);
 	arg.env = env;
 
 	return navi_map(navi_cadr(args), map_apply, &arg);

@@ -114,14 +114,14 @@ static navi_t eval_defvar(navi_t sym, navi_t rest, navi_env_t env)
 
 static navi_t eval_defun(navi_t fundecl, navi_t rest, navi_env_t env)
 {
-	navi_t fun, name;
+	navi_t proc, name;
 
 	if (!list_of(fundecl, NAVI_SYMBOL, true))
 		navi_error(env, "invalid defun list");
 
 	name = navi_car(fundecl);
-	fun = navi_make_function(navi_cdr(fundecl), rest, name, env);
-	navi_scope_set(env, name, fun);
+	proc = navi_make_procedure(navi_cdr(fundecl), rest, name, env);
+	navi_scope_set(env, name, proc);
 	return navi_unspecified();
 }
 
@@ -398,8 +398,8 @@ static bool case_valid(navi_t scase)
 static navi_t eval_clause(navi_t arg, navi_t begin, navi_env_t env)
 {
 	if (navi_symbol_eq(navi_car(begin), navi_sym_eq_lt)) {
-		navi_t fun  = navi_eval(navi_cadr(begin), env);
-		navi_t call = navi_make_pair(fun, navi_make_pair(arg, navi_make_nil()));
+		navi_t proc = navi_eval(navi_cadr(begin), env);
+		navi_t call = navi_make_pair(proc, navi_make_pair(arg, navi_make_nil()));
 		return _eval(call, env);
 	}
 	return scm_begin(begin, env);
@@ -445,8 +445,8 @@ static bool cond_valid(navi_t cond)
 static navi_t scm_cond_clause(navi_t test, navi_t clause, navi_env_t env)
 {
 	if (navi_symbol_eq(navi_car(clause), navi_sym_eq_lt)) {
-		navi_t fun = navi_eval(navi_cadr(clause), env);
-		navi_t call = navi_make_pair(fun, navi_make_pair(test, navi_make_nil()));
+		navi_t proc = navi_eval(navi_cadr(clause), env);
+		navi_t call = navi_make_pair(proc, navi_make_pair(test, navi_make_nil()));
 		return _eval(call, env);
 	}
 	return scm_begin(clause, env);
@@ -521,28 +521,23 @@ DEFSPECIAL(scm_delay, args, env)
 
 DEFUN(scm_force, args, env)
 {
-	struct navi_function *fun = navi_fun(navi_car(args));
-	navi_t r = navi_eval(navi_make_pair(navi_sym_begin, fun->body), fun->env);
-	fun->body = navi_make_pair(navi_sym_quote, navi_make_pair(r, navi_make_nil()));
+	struct navi_procedure *proc = navi_procedure(navi_car(args));
+	navi_t r = navi_eval(navi_make_pair(navi_sym_begin,
+				proc->body), proc->env);
+	proc->body = navi_make_pair(navi_sym_quote,
+			navi_make_pair(r, navi_make_nil()));
 	return r;
 }
 
-static inline bool arity_satisfied(struct navi_function *fun, navi_t args)
-{
-	int nr_args = navi_list_length(args);
-	return (fun->variadic && nr_args  >= fun->arity)
-		|| nr_args == fun->arity;
-}
-
-static navi_t apply(struct navi_function *fun, navi_t args, navi_env_t env)
+static navi_t apply(struct navi_procedure *proc, navi_t args, navi_env_t env)
 {
 	navi_env_t new_env;
-	if (!arity_satisfied(fun, args))
-		navi_arity_error(env, fun->name);
-	if (fun->builtin)
-		return fun->fn(args, env);
-	new_env = navi_extend_environment(fun->env, fun->args, args);
-	return scm_begin(fun->body, new_env);
+	if (!navi_arity_satisfied(proc, navi_list_length(args)))
+		navi_arity_error(env, proc->name);
+	if (proc->flags & NAVI_PROC_BUILTIN)
+		return proc->c_proc(args, env);
+	new_env = navi_extend_environment(proc->env, proc->args, args);
+	return scm_begin(proc->body, new_env);
 }
 
 static navi_t map_eval(navi_t obj, void *data)
@@ -565,7 +560,7 @@ static navi_t map_quote(navi_t obj, void *data)
 static inline navi_t macro_call(navi_t macro, navi_t args, navi_env_t env)
 {
 	navi_t result;
-	macro.p->type = NAVI_FUNCTION;
+	macro.p->type = NAVI_PROCEDURE;
 	result = navi_eval(navi_make_pair(macro, navi_map(args, map_quote, NULL)), env);
 	macro.p->type = NAVI_MACRO;
 	return result;
@@ -577,38 +572,38 @@ static navi_t caselambda_call(navi_t lambda, navi_t args, navi_env_t env)
 	struct navi_vector *vec = navi_vector(lambda);
 
 	for (size_t i = 0; i < vec->size; i++) {
-		struct navi_function *fun = navi_fun(vec->data[i]);
-		if (fun->arity == nr_args || (fun->arity < nr_args && fun->variadic))
-			return apply(fun, args, env);
+		struct navi_procedure *proc = navi_procedure(vec->data[i]);
+		if (navi_arity_satisfied(proc, nr_args))
+			return apply(proc, args, env);
 	}
 	navi_arity_error(env, navi_make_symbol("case-lambda"));
 }
 
 static navi_t eval_call(navi_t call, navi_env_t env)
 {
-	navi_t expr, fun = navi_eval(navi_car(call), env);
-	switch (navi_type(fun)) {
+	navi_t expr, proc = navi_eval(navi_car(call), env);
+	switch (navi_type(proc)) {
 	/* special: pass args unevaluated, return result */
 	case NAVI_SPECIAL:
-		return apply(navi_fun(fun), navi_cdr(call), env);
-	/* function: pass args evaluated, return result */
-	case NAVI_FUNCTION:
+		return apply(navi_procedure(proc), navi_cdr(call), env);
+	/* procedure: pass args evaluated, return result */
+	case NAVI_PROCEDURE:
 		expr = make_args(navi_cdr(call), env);
-		return apply(navi_fun(fun), expr, env);
+		return apply(navi_procedure(proc), expr, env);
 	/* macro: pass args unevaluated, return eval(result) */
 	case NAVI_MACRO:
-		expr = macro_call(fun, navi_cdr(call), env);
+		expr = macro_call(proc, navi_cdr(call), env);
 		return _eval(expr, env);
 	/* escape: magic */
 	case NAVI_ESCAPE:
 		expr = navi_list_length(call) < 2 ? navi_make_nil() : navi_cadr(call);
-		return navi_call_escape(fun, expr);
+		return navi_call_escape(proc, expr);
 	/* caselambda: magic */
 	case NAVI_CASELAMBDA:
-		return caselambda_call(fun, navi_cdr(call), env);
+		return caselambda_call(proc, navi_cdr(call), env);
 	default: break;
 	}
-	navi_error(env, "call of non-procedure", navi_make_apair("value", fun));
+	navi_error(env, "call of non-procedure", navi_make_apair("value", proc));
 }
 
 static navi_t _eval(navi_t expr, navi_env_t env)
@@ -628,7 +623,7 @@ static navi_t _eval(navi_t expr, navi_env_t env)
 	case NAVI_BYTEVEC:
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
-	case NAVI_FUNCTION:
+	case NAVI_PROCEDURE:
 	case NAVI_PROMISE:
 	case NAVI_CASELAMBDA:
 	case NAVI_ESCAPE:

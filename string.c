@@ -431,11 +431,11 @@ DEFUN(scm_string_copy_to, args, env)
 	return navi_unspecified();
 }
 
-static navi_t string_map(navi_t fun, navi_t str, navi_env_t env)
+static navi_t string_map(navi_t proc, navi_t str, navi_env_t env)
 {
 	navi_t u32_in = string_to_vector(str);
 	navi_t u32_out = navi_make_vector(navi_vector(u32_in)->size);
-	return navi_vector_map(fun, u32_out, u32_in, env);
+	return navi_vector_map(proc, u32_out, u32_in, env);
 }
 
 DEFUN(scm_string_map_ip, args, env)
@@ -444,7 +444,7 @@ DEFUN(scm_string_map_ip, args, env)
 	navi_t vec_obj;
 	struct navi_vector *vec;
 	struct navi_string *str;
-	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check_proc(navi_car(args), 1, env);
 	str = navi_string_cast(navi_cadr(args), env);
 
 	vec_obj = string_map(navi_car(args), navi_cadr(args), env);
@@ -460,7 +460,7 @@ DEFUN(scm_string_map_ip, args, env)
 
 DEFUN(scm_string_map, args, env)
 {
-	navi_type_check_fun(navi_car(args), 1, env);
+	navi_type_check_proc(navi_car(args), 1, env);
 	navi_type_check(navi_cadr(args), NAVI_STRING, env);
 	return vector_to_string(string_map(navi_car(args), navi_cadr(args), env));
 }

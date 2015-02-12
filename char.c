@@ -17,7 +17,7 @@
 
 #include "navi.h"
 
-static inline bool both_chars(navi_t a, navi_t b)
+static inline bool both_chars(navi_obj a, navi_obj b)
 {
 	return navi_type(a) == NAVI_CHAR && navi_type(b) == NAVI_CHAR;
 }
@@ -30,7 +30,7 @@ DEFUN(charp, args, env, "char?", 1, 0, NAVI_ANY)
 #define CHAR_COMPARE(cname, scmname, op) \
 	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
-		navi_t fst = navi_car(args), snd = navi_cadr(args); \
+		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
 		navi_type_check(fst, NAVI_CHAR, env); \
 		navi_type_check(snd, NAVI_CHAR, env); \
 		return navi_make_bool(navi_char(fst) op navi_char(snd)); \
@@ -45,7 +45,7 @@ CHAR_COMPARE(char_gte, "char>=?", >=)
 #define CHAR_CI_COMPARE(cname, scmname, op) \
 	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
-		navi_t fst = navi_car(args), snd = navi_cadr(args); \
+		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
 		navi_type_check(fst, NAVI_CHAR, env); \
 		navi_type_check(snd, NAVI_CHAR, env); \
 		return navi_make_bool(tolower(navi_char(fst)) op \
@@ -58,12 +58,12 @@ CHAR_CI_COMPARE(char_ci_eq,  "char-ci=?",  ==)
 CHAR_CI_COMPARE(char_ci_lte, "char-ci<=?", <=)
 CHAR_CI_COMPARE(char_ci_gte, "char-ci>=?", >=)
 
-navi_t navi_char_upcase(navi_t ch)
+navi_obj navi_char_upcase(navi_obj ch)
 {
 	return navi_make_char(toupper(navi_char(ch)));
 }
 
-navi_t navi_char_downcase(navi_t ch)
+navi_obj navi_char_downcase(navi_obj ch)
 {
 	return navi_make_char(tolower(navi_char(ch)));
 }

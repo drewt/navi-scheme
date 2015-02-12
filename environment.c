@@ -23,7 +23,7 @@
 NAVI_LIST_HEAD(active_environments);
 
 /* FIXME: this is a REALLY bad hash function! */
-static unsigned long ptr_hash(navi_t ptr)
+static unsigned long ptr_hash(navi_obj ptr)
 {
 	return ptr.n;
 }
@@ -34,7 +34,7 @@ static struct navi_hlist_head *get_bucket(struct navi_scope *scope,
 	return &scope->bindings[hashcode % NAVI_ENV_HT_SIZE];
 }
 
-static struct navi_binding *make_binding(navi_t symbol, navi_t object)
+static struct navi_binding *make_binding(navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding = malloc(sizeof(struct navi_binding));
 	if (!binding)
@@ -45,7 +45,7 @@ static struct navi_binding *make_binding(navi_t symbol, navi_t object)
 }
 
 static struct navi_binding *scope_lookup(struct navi_scope *scope,
-		navi_t symbol, unsigned long hashcode)
+		navi_obj symbol, unsigned long hashcode)
 {
 	struct navi_binding *binding;
 	struct navi_hlist_head *hd = get_bucket(scope, hashcode);
@@ -57,7 +57,7 @@ static struct navi_binding *scope_lookup(struct navi_scope *scope,
 	return NULL;
 }
 
-struct navi_binding *navi_env_binding(struct navi_scope *env, navi_t symbol)
+struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
@@ -94,7 +94,7 @@ struct navi_scope *navi_env_new_scope(struct navi_scope *env)
 	return scope;
 }
 
-static int env_set(struct navi_scope *env, navi_t symbol, navi_t object)
+static int env_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding;
 	struct navi_hlist_head *head;
@@ -115,7 +115,7 @@ static int env_set(struct navi_scope *env, navi_t symbol, navi_t object)
 	return 0;
 }
 
-static int _navi_scope_set(struct navi_scope *env, navi_t symbol, navi_t object)
+static int _navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
@@ -133,13 +133,13 @@ static int _navi_scope_set(struct navi_scope *env, navi_t symbol, navi_t object)
 }
 
 /* XXX: assumes we're executing in env */
-void navi_scope_set(struct navi_scope *env, navi_t symbol, navi_t object)
+void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 {
 	if (_navi_scope_set(env, symbol, object) < 0)
 		navi_enomem(env);
 }
 
-int navi_scope_unset(struct navi_scope *env, navi_t symbol)
+int navi_scope_unset(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
@@ -152,10 +152,10 @@ int navi_scope_unset(struct navi_scope *env, navi_t symbol)
 }
 
 /* XXX: assumes we're executing in env */
-struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_t vars,
-		navi_t args)
+struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_obj vars,
+		navi_obj args)
 {
-	navi_t vcons, acons;
+	navi_obj vcons, acons;
 	struct navi_scope *new = navi_env_new_scope(env);
 
 	navi_list_for_each_zipped(vcons, acons, vars, args) {
@@ -170,13 +170,13 @@ struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_t vars,
 
 struct navi_scope *navi_make_default_environment(void)
 {
-	navi_t std_in, std_out, std_err;
+	navi_obj std_in, std_out, std_err;
 	struct navi_scope *env = make_scope();
 	if (!env)
 		return NULL;
 	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
-		navi_t symbol = navi_make_symbol(default_bindings[i]->ident);
-		navi_t object = navi_from_spec(default_bindings[i]);
+		navi_obj symbol = navi_make_symbol(default_bindings[i]->ident);
+		navi_obj object = navi_from_spec(default_bindings[i]);
 		if (navi_type(object) == NAVI_PROCEDURE)
 			navi_procedure(object)->env = env;
 		env_set(env, symbol, object);

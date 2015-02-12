@@ -16,9 +16,9 @@
 #include "navi.h"
 #include "navi/unicode.h"
 
-static navi_t list_to_string(navi_t list, navi_env_t env)
+static navi_obj list_to_string(navi_obj list, navi_env env)
 {
-	navi_t cons;
+	navi_obj cons;
 	size_t size = 0, length = 0;
 
 	navi_list_for_each(cons, list) {
@@ -28,7 +28,7 @@ static navi_t list_to_string(navi_t list, navi_env_t env)
 	}
 
 	int32_t i = 0;
-	navi_t expr = navi_make_string(size, size, length);
+	navi_obj expr = navi_make_string(size, size, length);
 	struct navi_string *str = navi_string(expr);
 
 	navi_list_for_each(cons, list) {
@@ -37,7 +37,7 @@ static navi_t list_to_string(navi_t list, navi_env_t env)
 	return expr;
 }
 
-static navi_t string_to_list(navi_t expr)
+static navi_obj string_to_list(navi_obj expr)
 {
 	struct navi_pair head, *ptr;
 	struct navi_string *str = navi_string(expr);
@@ -54,10 +54,10 @@ static navi_t string_to_list(navi_t expr)
 	return head.cdr;
 }
 
-static navi_t string_to_vector(navi_t str_obj)
+static navi_obj string_to_vector(navi_obj str_obj)
 {
 	struct navi_string *str = navi_string(str_obj);
-	navi_t vec_obj = navi_make_vector(str->length);
+	navi_obj vec_obj = navi_make_vector(str->length);
 	struct navi_vector *vec = navi_vector(vec_obj);
 	int32_t si;
 	size_t vi;
@@ -95,10 +95,10 @@ static void vector_to_string_ip(struct navi_string *str,
 	str->data[si] = '\0';
 }
 
-static navi_t vector_to_string(navi_t vec_obj)
+static navi_obj vector_to_string(navi_obj vec_obj)
 {
 	int32_t size;
-	navi_t str_obj;
+	navi_obj str_obj;
 	struct navi_string *str;
 	struct navi_vector *vec = navi_vector(vec_obj);
 
@@ -126,7 +126,7 @@ DEFUN(make_string, args, env, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 		ch = navi_char_cast(navi_cadr(args), env);
 
 	int32_t size = length * u8_length(ch);
-	navi_t obj = navi_make_string(size, size, length);
+	navi_obj obj = navi_make_string(size, size, length);
 	struct navi_string *str = navi_string(obj);
 	for (int32_t i = 0; i < size;) {
 		u8_append(str->data, i, size, ch);
@@ -230,7 +230,7 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 	DEFUN(cname, args, env, scmname, 2, NAVI_PROC_VARIADIC, \
 			NAVI_STRING, NAVI_STRING) \
 	{ \
-		navi_t cons; \
+		navi_obj cons; \
 		struct navi_string *fst, *snd; \
 		fst = navi_string_cast(navi_car(args), env); \
 		navi_list_for_each(cons, navi_cdr(args)) { \
@@ -266,7 +266,7 @@ static int32_t count_length(struct navi_string *str)
 	DEFUN(cname, args, env, scmname, 1, 0, NAVI_STRING) \
 	{ \
 		struct navi_string *src = navi_string_cast(navi_car(args), env); \
-		navi_t dst_obj = navi_make_string(src->size, src->size, src->length); \
+		navi_obj dst_obj = navi_make_string(src->size, src->size, src->length); \
 		struct navi_string *dst = navi_string(dst_obj); \
 		UErrorCode error = U_ZERO_ERROR; \
 		UCaseMap *map = ucasemap_open(NULL, 0, &error); \
@@ -289,7 +289,7 @@ STRING_CASEMAP(string_foldcase, "string-foldcase", ucasemap_utf8FoldCase);
 
 DEFUN(string_append, args, env, "string-append", 0, NAVI_PROC_VARIADIC)
 {
-	navi_t cons, obj;
+	navi_obj cons, obj;
 	struct navi_string *str;
 	int32_t i = 0, size = 0, length = 0;
 
@@ -323,7 +323,7 @@ DEFUN(list_to_string, args, env, "list->string", 1, 0, NAVI_LIST)
 	return list_to_string(navi_type_check_list(navi_car(args), env), env);
 }
 
-static navi_t copy_to(navi_t to, int32_t at, navi_t from, int32_t start,
+static navi_obj copy_to(navi_obj to, int32_t at, navi_obj from, int32_t start,
 		int32_t end)
 {
 	UChar32 ch;
@@ -385,10 +385,10 @@ DEFUN(string_fill, args, env, "string-fill!", 2, NAVI_PROC_VARIADIC,
 	return navi_unspecified();
 }
 
-navi_t navi_strdup(navi_t from_obj)
+navi_obj navi_strdup(navi_obj from_obj)
 {
 	struct navi_string *from = navi_string(from_obj);
-	navi_t to_obj = navi_make_string(from->size, from->size, from->length);
+	navi_obj to_obj = navi_make_string(from->size, from->size, from->length);
 	struct navi_string *to = navi_string(to_obj);
 	memcpy(to->data, from->data, from->size);
 	return to_obj;
@@ -396,7 +396,7 @@ navi_t navi_strdup(navi_t from_obj)
 
 DEFUN(string_copy, args, env, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
-	navi_t from, to;
+	navi_obj from, to;
 	long start, end;
 	int nr_args = navi_list_length(args);
 
@@ -413,7 +413,7 @@ DEFUN(string_copy, args, env, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 DEFUN(string_copy_to, args, env, "string-copy!", 3, NAVI_PROC_VARIADIC,
 		NAVI_STRING, NAVI_NUM, NAVI_STRING)
 {
-	navi_t to, from;
+	navi_obj to, from;
 	long at, start, end;
 	int nr_args = navi_list_length(args);
 
@@ -435,17 +435,17 @@ DEFUN(substring, args, env, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
 	return scm_string_copy(args, env);
 }
 
-static navi_t string_map(navi_t proc, navi_t str, navi_env_t env)
+static navi_obj string_map(navi_obj proc, navi_obj str, navi_env env)
 {
-	navi_t u32_in = string_to_vector(str);
-	navi_t u32_out = navi_make_vector(navi_vector(u32_in)->size);
+	navi_obj u32_in = string_to_vector(str);
+	navi_obj u32_out = navi_make_vector(navi_vector(u32_in)->size);
 	return navi_vector_map(proc, u32_out, u32_in, env);
 }
 
 DEFUN(string_map_ip, args, env, "string-map!", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
 {
 	int32_t size;
-	navi_t vec_obj;
+	navi_obj vec_obj;
 	struct navi_vector *vec;
 	struct navi_string *str;
 	navi_type_check_proc(navi_car(args), 1, env);

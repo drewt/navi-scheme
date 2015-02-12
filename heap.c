@@ -23,20 +23,20 @@ extern struct navi_clist_head active_environments;
 static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
 static NAVI_LIST_HEAD(heap);
 
-navi_t navi_sym_begin;
-navi_t navi_sym_quote;
-navi_t navi_sym_quasiquote;
-navi_t navi_sym_unquote;
-navi_t navi_sym_splice;
-navi_t navi_sym_else;
-navi_t navi_sym_eq_lt;
-navi_t navi_sym_exn;
-navi_t navi_sym_current_input;
-navi_t navi_sym_current_output;
-navi_t navi_sym_current_error;
-navi_t navi_sym_read_error;
-navi_t navi_sym_file_error;
-navi_t navi_sym_repl;
+navi_obj navi_sym_begin;
+navi_obj navi_sym_quote;
+navi_obj navi_sym_quasiquote;
+navi_obj navi_sym_unquote;
+navi_obj navi_sym_splice;
+navi_obj navi_sym_else;
+navi_obj navi_sym_eq_lt;
+navi_obj navi_sym_exn;
+navi_obj navi_sym_current_input;
+navi_obj navi_sym_current_output;
+navi_obj navi_sym_current_error;
+navi_obj navi_sym_read_error;
+navi_obj navi_sym_file_error;
+navi_obj navi_sym_repl;
 
 void navi_free(struct navi_object *obj)
 {
@@ -81,16 +81,16 @@ void navi_init(void)
 	symbol_table_init();
 }
 
-static navi_t symbol_lookup(const char *str, unsigned long hashcode)
+static navi_obj symbol_lookup(const char *str, unsigned long hashcode)
 {
 	struct navi_symbol *it;
 	struct navi_hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
 
 	navi_hlist_for_each_entry(it, head, chain) {
 		if (!strcmp(it->data, str))
-			return (navi_t) navi_object(it);
+			return (navi_obj) navi_object(it);
 	}
-	return (navi_t) 0L;
+	return (navi_obj) 0L;
 }
 
 static struct navi_object *make_object(enum navi_type type, size_t size)
@@ -101,16 +101,16 @@ static struct navi_object *make_object(enum navi_type type, size_t size)
 	return obj;
 }
 
-navi_t navi_make_uninterned(const char *str)
+navi_obj navi_make_uninterned(const char *str)
 {
 	size_t len = strlen(str);
 	struct navi_object *object = make_object(NAVI_SYMBOL,
 			sizeof(struct navi_symbol) + len + 1);
-	struct navi_symbol *symbol = navi_symbol((navi_t)object);
+	struct navi_symbol *symbol = navi_symbol((navi_obj)object);
 
 	for (size_t i = 0; i < len+1; i++)
 		symbol->data[i] = str[i];
-	return (navi_t) object;
+	return (navi_obj) object;
 }
 
 DEFUN(gensym, args, env, "gensym", 0, 0)
@@ -124,28 +124,28 @@ DEFUN(gensym, args, env, "gensym", 0, 0)
 }
 
 /* Only called if symbol doesn't already exist */
-static navi_t new_symbol(const char *str, unsigned long hashcode)
+static navi_obj new_symbol(const char *str, unsigned long hashcode)
 {
-	navi_t object = navi_make_uninterned(str);
+	navi_obj object = navi_make_uninterned(str);
 	struct navi_symbol *symbol = navi_symbol(object);
 	navi_hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
 	return object;
 }
 
-navi_t navi_make_symbol(const char *str)
+navi_obj navi_make_symbol(const char *str)
 {
 	unsigned long hashcode = symbol_hash(str);
-	navi_t symbol = symbol_lookup(str, hashcode);
+	navi_obj symbol = symbol_lookup(str, hashcode);
 
 	if (symbol.n != 0)
 		return symbol;
 	return new_symbol(str, hashcode);
 }
 
-navi_t navi_cstr_to_string(const char *cstr)
+navi_obj navi_cstr_to_string(const char *cstr)
 {
 	size_t len = strlen(cstr);
-	navi_t obj = navi_make_string(len, len, len);
+	navi_obj obj = navi_make_string(len, len, len);
 	struct navi_string *str = navi_string(obj);
 	for (size_t i = 0; i < len; i++)
 		str->data[i] = cstr[i];
@@ -153,10 +153,10 @@ navi_t navi_cstr_to_string(const char *cstr)
 	return obj;
 }
 
-navi_t navi_cstr_to_bytevec(const char *str)
+navi_obj navi_cstr_to_bytevec(const char *str)
 {
 	size_t len = strlen(str);
-	navi_t expr = navi_make_bytevec(len);
+	navi_obj expr = navi_make_bytevec(len);
 	struct navi_bytevec *vec = navi_bytevec(expr);
 
 	for (size_t i = 0; i < len; i++)
@@ -165,7 +165,7 @@ navi_t navi_cstr_to_bytevec(const char *str)
 	return expr;
 }
 
-navi_t navi_make_string(size_t capacity, size_t size, size_t length)
+navi_obj navi_make_string(size_t capacity, size_t size, size_t length)
 {
 	struct navi_object *str = make_object(NAVI_STRING, sizeof(struct navi_string));
 	str->data->str.data = navi_critical_malloc(capacity + 1);
@@ -174,7 +174,7 @@ navi_t navi_make_string(size_t capacity, size_t size, size_t length)
 	str->data->str.capacity = capacity;
 	str->data->str.size = size;
 	str->data->str.length = length;
-	return (navi_t) str;
+	return (navi_obj) str;
 }
 
 void navi_string_grow_storage(struct navi_string *str, long need)
@@ -189,26 +189,26 @@ void navi_string_grow_storage(struct navi_string *str, long need)
 	str->data[str->capacity] = '\0';
 }
 
-navi_t navi_make_pair(navi_t car, navi_t cdr)
+navi_obj navi_make_pair(navi_obj car, navi_obj cdr)
 {
 	struct navi_object *pair = make_object(NAVI_PAIR, sizeof(struct navi_pair));
 	pair->data->pair.car = car;
 	pair->data->pair.cdr = cdr;
-	return (navi_t) pair;
+	return (navi_obj) pair;
 }
 
-navi_t navi_make_empty_pair(void)
+navi_obj navi_make_empty_pair(void)
 {
-	return (navi_t) make_object(NAVI_PAIR, sizeof(struct navi_pair));
+	return (navi_obj) make_object(NAVI_PAIR, sizeof(struct navi_pair));
 }
 
-navi_t navi_make_port(
-		int(*read_u8)(struct navi_port*, navi_env_t),
-		void(*write_u8)(uint8_t,struct navi_port*, navi_env_t),
-		int32_t(*read_char)(struct navi_port*, navi_env_t),
-		void(*write_char)(int32_t, struct navi_port*, navi_env_t),
-		void(*close_in)(struct navi_port*, navi_env_t),
-		void(*close_out)(struct navi_port*, navi_env_t),
+navi_obj navi_make_port(
+		int(*read_u8)(struct navi_port*, navi_env),
+		void(*write_u8)(uint8_t,struct navi_port*, navi_env),
+		int32_t(*read_char)(struct navi_port*, navi_env),
+		void(*write_char)(int32_t, struct navi_port*, navi_env),
+		void(*close_in)(struct navi_port*, navi_env),
+		void(*close_out)(struct navi_port*, navi_env),
 		void *specific)
 {
 	struct navi_object *port = make_object(NAVI_PORT, sizeof(struct navi_port));
@@ -222,35 +222,35 @@ navi_t navi_make_port(
 	port->data->port.expr = navi_make_void();
 	port->data->port.pos = 0;
 	port->data->port.specific = specific;
-	return (navi_t) port;
+	return (navi_obj) port;
 }
 
-navi_t navi_make_vector(size_t size)
+navi_obj navi_make_vector(size_t size)
 {
 	struct navi_object *vec = make_object(NAVI_VECTOR,
-			sizeof(struct navi_vector) + sizeof(navi_t)*size);
+			sizeof(struct navi_vector) + sizeof(navi_obj)*size);
 	vec->data->vec.size = size;
-	return (navi_t) vec;
+	return (navi_obj) vec;
 }
 
-navi_t navi_make_bytevec(size_t size)
+navi_obj navi_make_bytevec(size_t size)
 {
 	struct navi_object *vec = make_object(NAVI_BYTEVEC,
 			sizeof(struct navi_bytevec) + size + 1);
 	vec->data->bvec.size = size;
 	vec->data->bvec.data[size] = '\0';
-	return (navi_t) vec;
+	return (navi_obj) vec;
 }
 
-static inline unsigned count_pairs(navi_t list)
+static inline unsigned count_pairs(navi_obj list)
 {
-	navi_t cons;
+	navi_obj cons;
 	unsigned i = 0;
 	navi_list_for_each(cons, list) { i++; }
 	return i;
 }
 
-navi_t navi_make_procedure(navi_t args, navi_t body, navi_t name, navi_env_t env)
+navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_env env)
 {
 	struct navi_object *obj = make_object(NAVI_PROCEDURE,
 			sizeof(struct navi_procedure));
@@ -259,15 +259,15 @@ navi_t navi_make_procedure(navi_t args, navi_t body, navi_t name, navi_env_t env
 	proc->args = args;
 	proc->body = body;
 	proc->env = env;
-	proc->arity = count_pairs((navi_t)args);
+	proc->arity = count_pairs((navi_obj)args);
 	proc->flags = 0;
 	if (!navi_is_proper_list(args))
 		proc->flags |= NAVI_PROC_VARIADIC;
 	navi_scope_ref(env);
-	return (navi_t) obj;
+	return (navi_obj) obj;
 }
 
-navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env)
+navi_obj navi_make_lambda(navi_obj args, navi_obj body, navi_env env)
 {
 	char buf[64];
 	static unsigned long count = 0;
@@ -276,20 +276,20 @@ navi_t navi_make_lambda(navi_t args, navi_t body, navi_env_t env)
 	return navi_make_procedure(args, body, navi_make_uninterned(buf), env);
 }
 
-navi_t navi_make_escape(void)
+navi_obj navi_make_escape(void)
 {
-	return (navi_t) make_object(NAVI_ESCAPE, sizeof(struct navi_escape));
+	return (navi_obj) make_object(NAVI_ESCAPE, sizeof(struct navi_escape));
 }
 
-navi_t navi_capture_env(navi_env_t env)
+navi_obj navi_capture_env(navi_env env)
 {
 	struct navi_object *obj = make_object(NAVI_ENVIRONMENT,
 			sizeof(struct navi_scope*));
 	obj->data->env = env;
-	return (navi_t) obj;
+	return (navi_obj) obj;
 }
 
-navi_t navi_from_spec(struct navi_spec *spec)
+navi_obj navi_from_spec(struct navi_spec *spec)
 {
 	struct navi_object *obj;
 	struct navi_procedure *proc;
@@ -322,7 +322,7 @@ navi_t navi_from_spec(struct navi_spec *spec)
 		proc = (void*) obj->data;
 		memcpy(proc, &spec->proc, sizeof(struct navi_procedure));
 		proc->name = navi_make_symbol(spec->ident);
-		return (navi_t) obj;
+		return (navi_obj) obj;
 	case NAVI_VOID:
 	case NAVI_PORT:
 	case NAVI_VALUES:
@@ -336,7 +336,7 @@ navi_t navi_from_spec(struct navi_spec *spec)
 	navi_die("navi_from_spec: unknown or unsupported type");
 }
 
-bool navi_eqvp(navi_t fst, navi_t snd)
+bool navi_eqvp(navi_obj fst, navi_obj snd)
 {
 	if (navi_type(fst) != navi_type(snd))
 		return false;
@@ -378,12 +378,12 @@ DEFUN(eqvp, args, env, "eqv?", 2, 0, NAVI_ANY, NAVI_ANY)
 	return navi_make_bool(navi_eqvp(navi_car(args), navi_cadr(args)));
 }
 
-static inline void gc_set_mark(navi_t obj)
+static inline void gc_set_mark(navi_obj obj)
 {
 	navi_ptr(obj)->gc_mark = true;
 }
 
-static void gc_mark_obj(navi_t obj)
+static void gc_mark_obj(navi_obj obj)
 {
 	struct navi_vector *vec;
 	struct navi_procedure *proc;
@@ -492,10 +492,10 @@ DEFUN(gc_count, args, env, "gc-count", 0, 0)
 {
 	struct navi_object *expr;
 	navi_clist_for_each_entry(expr, &heap, chain) {
-		if (navi_is_builtin((navi_t)expr))
+		if (navi_is_builtin((navi_obj)expr))
 			continue;
 		printf("<%p> ", expr);
-		navi_write((navi_t)expr, env);
+		navi_write((navi_obj)expr, env);
 		putchar('\n');
 	}
 	return navi_unspecified();

@@ -16,7 +16,7 @@
 #include "navi.h"
 #include "navi/unicode.h"
 
-static void bytevec_fill(navi_t vector, unsigned char fill)
+static void bytevec_fill(navi_obj vector, unsigned char fill)
 {
 	struct navi_bytevec *vec = navi_bytevec(vector);
 
@@ -24,9 +24,9 @@ static void bytevec_fill(navi_t vector, unsigned char fill)
 		vec->data[i] = fill;
 }
 
-navi_t navi_list_to_bytevec(navi_t list, navi_env_t env)
+navi_obj navi_list_to_bytevec(navi_obj list, navi_env env)
 {
-	navi_t cons, vec = navi_make_bytevec(navi_list_length(list));
+	navi_obj cons, vec = navi_make_bytevec(navi_list_length(list));
 
 	unsigned i = 0;
 	struct navi_bytevec *vector = navi_bytevec(vec);
@@ -45,7 +45,7 @@ DEFUN(bytevectorp, args, env, "bytevector?", 1, 0, NAVI_ANY)
 DEFUN(make_bytevector, args, env, "make-bytevector", 1, NAVI_PROC_VARIADIC,
 		NAVI_NUM)
 {
-	navi_t obj;
+	navi_obj obj;
 	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
@@ -94,7 +94,7 @@ DEFUN(bytevector_u8_set, args, env, "bytevector-u8-set!", 3, 0,
 
 DEFUN(bytevector_append, args, env, "bytevector-append", 0, NAVI_PROC_VARIADIC)
 {
-	navi_t cons, obj;
+	navi_obj cons, obj;
 	struct navi_bytevec *vec;
 	size_t i = 0, size = 0;
 
@@ -114,7 +114,7 @@ DEFUN(bytevector_append, args, env, "bytevector-append", 0, NAVI_PROC_VARIADIC)
 	return obj;
 }
 
-static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
+static navi_obj copy_to(navi_obj to, size_t at, navi_obj from, size_t start,
 		size_t end)
 {
 	struct navi_bytevec *tov = navi_bytevec(to), *fromv = navi_bytevec(from);
@@ -126,7 +126,7 @@ static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 DEFUN(bytevector_copy, args, env, "bytevector-copy", 1, NAVI_PROC_VARIADIC,
 		NAVI_BYTEVEC)
 {
-	navi_t from;
+	navi_obj from;
 	long start, end;
 	struct navi_bytevec *vec;
 	int nr_args = navi_list_length(args);
@@ -144,7 +144,7 @@ DEFUN(bytevector_copy, args, env, "bytevector-copy", 1, NAVI_PROC_VARIADIC,
 DEFUN(bytevector_copy_to, args, env, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
 		NAVI_BYTEVEC, NAVI_NUM, NAVI_BYTEVEC)
 {
-	navi_t to, from;
+	navi_obj to, from;
 	long at, start, end;
 	struct navi_bytevec *from_vec, *to_vec;
 	int nr_args = navi_list_length(args);
@@ -179,7 +179,7 @@ static int32_t count_chars(struct navi_bytevec *vec)
 DEFUN(utf8_to_string, args, env, "utf8->string", 1, NAVI_PROC_VARIADIC,
 		NAVI_BYTEVEC)
 {
-	navi_t str;
+	navi_obj str;
 	int32_t start, end, size, length;
 	struct navi_bytevec *vec = navi_bytevec_cast(navi_car(args), env);
 	int nr_args = navi_list_length(args);
@@ -202,7 +202,7 @@ DEFUN(utf8_to_string, args, env, "utf8->string", 1, NAVI_PROC_VARIADIC,
 DEFUN(string_to_utf8, args, env, "string->utf8", 1, NAVI_PROC_VARIADIC,
 		NAVI_STRING)
 {
-	navi_t r;
+	navi_obj r;
 	int32_t start, end;
 	struct navi_string *str = navi_string_cast(navi_car(args), env);
 	int nr_args = navi_list_length(args);

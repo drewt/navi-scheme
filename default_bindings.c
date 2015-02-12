@@ -203,7 +203,7 @@ static struct navi_spec *default_bindings[] = {
  */
 DEFUN(toplevel_exn, args, env, "#exn", 1, 0, NAVI_ANY)
 {
-	navi_t cont;
+	navi_obj cont;
 
 	navi_write(navi_car(args), env);
 	putchar('\n');

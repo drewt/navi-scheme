@@ -27,75 +27,75 @@ enum {
 	STRING_OUTPUT = 16,
 };
 
-static inline void check_input_port(struct navi_port *p, navi_env_t env)
+static inline void check_input_port(struct navi_port *p, navi_env env)
 {
 	if (!p->read_u8 && !p->read_char)
 		navi_error(env, "not an input port");
 }
 
-static inline void check_output_port(struct navi_port *p, navi_env_t env)
+static inline void check_output_port(struct navi_port *p, navi_env env)
 {
 	if (!p->write_u8 && !p->write_char)
 		navi_error(env, "not an output port");
 }
 
-static inline void check_can_read(struct navi_port *p, navi_env_t env)
+static inline void check_can_read(struct navi_port *p, navi_env env)
 {
 	check_input_port(p, env);
 	if (p->flags & INPUT_CLOSED)
 		navi_error(env, "attempted to read from closed port");
 }
 
-static inline void check_can_read_u8(struct navi_port *p, navi_env_t env)
+static inline void check_can_read_u8(struct navi_port *p, navi_env env)
 {
 	check_can_read(p, env);
 	if (!p->read_u8)
 		navi_error(env, "port doesn't support binary input");
 }
 
-static inline void check_can_write(struct navi_port *p, navi_env_t env)
+static inline void check_can_write(struct navi_port *p, navi_env env)
 {
 	check_output_port(p, env);
 	if (p->flags & OUTPUT_CLOSED)
 		navi_error(env, "attempted to write to closed port");
 }
 
-static inline void check_can_write_u8(struct navi_port *p, navi_env_t env)
+static inline void check_can_write_u8(struct navi_port *p, navi_env env)
 {
 	check_can_write(p, env);
 	if (!p->write_u8)
 		navi_error(env, "port doesn't support binary output");
 }
 
-static void void_close(struct navi_port *port, navi_env_t env) {}
+static void void_close(struct navi_port *port, navi_env env) {}
 
-static int stdio_read(struct navi_port *port, navi_env_t env)
+static int stdio_read(struct navi_port *port, navi_env env)
 {
 	return getc(port->specific);
 }
 
-static void stdio_write(unsigned char ch, struct navi_port *port, navi_env_t env)
+static void stdio_write(unsigned char ch, struct navi_port *port, navi_env env)
 {
 	putc(ch, port->specific);
 }
 
-static void stdio_close(struct navi_port *port, navi_env_t env)
+static void stdio_close(struct navi_port *port, navi_env env)
 {
 	if (fclose(port->specific))
 		navi_error(env, "failed to close port");
 }
 
-navi_t navi_make_file_input_port(FILE *file)
+navi_obj navi_make_file_input_port(FILE *file)
 {
 	return navi_make_input_port(stdio_read, NULL, stdio_close, file);
 }
 
-navi_t navi_make_file_output_port(FILE *file)
+navi_obj navi_make_file_output_port(FILE *file)
 {
 	return navi_make_output_port(stdio_write, NULL, stdio_close, file);
 }
 
-static int32_t string_read(struct navi_port *port, navi_env_t env)
+static int32_t string_read(struct navi_port *port, navi_env env)
 {
 	UChar32 ch;
 	struct navi_string *str = navi_string(port->expr);
@@ -105,7 +105,7 @@ static int32_t string_read(struct navi_port *port, navi_env_t env)
 	return ch;
 }
 
-static void string_write(int32_t ch, struct navi_port *port, navi_env_t env)
+static void string_write(int32_t ch, struct navi_port *port, navi_env env)
 {
 	struct navi_string *str = navi_string(port->expr);
 
@@ -115,27 +115,27 @@ static void string_write(int32_t ch, struct navi_port *port, navi_env_t env)
 	str->length++;
 }
 
-static navi_t make_string_input_port(navi_t string)
+static navi_obj make_string_input_port(navi_obj string)
 {
-	navi_t port = navi_make_textual_input_port(string_read, NULL, NULL);
+	navi_obj port = navi_make_textual_input_port(string_read, NULL, NULL);
 	navi_port(port)->expr = string;
 	return port;
 }
 
-static navi_t make_string_output_port(void)
+static navi_obj make_string_output_port(void)
 {
-	navi_t port = navi_make_textual_output_port(string_write, NULL, NULL);
+	navi_obj port = navi_make_textual_output_port(string_write, NULL, NULL);
 	port.p->data->port.expr = navi_make_string(STRING_INIT_SIZE, 0, 0);
 	port.p->data->port.flags |= STRING_OUTPUT;
 	return port;
 }
 
-static void navi_port_buffer_byte(struct navi_port *port, navi_env_t env)
+static void navi_port_buffer_byte(struct navi_port *port, navi_env env)
 {
 	port->buffer = port->read_u8(port, env);
 }
 
-static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env_t env)
+static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env env)
 {
 	check_can_read_u8(port, env);
 	if (port->flags & GOT_EOF)
@@ -147,13 +147,13 @@ static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env_t env)
 	return port->buffer;
 }
 
-navi_t navi_port_peek_byte(struct navi_port *port, navi_env_t env)
+navi_obj navi_port_peek_byte(struct navi_port *port, navi_env env)
 {
 	int32_t b = navi_port_peek_c_byte(port, env);
 	return b == EOF ? navi_make_eof() : navi_make_num(b);
 }
 
-static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env_t env)
+static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env env)
 {
 	check_can_read_u8(port, env);
 	if (port->flags & GOT_EOF)
@@ -165,7 +165,7 @@ static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env_t env)
 	return port->buffer;
 }
 
-navi_t navi_port_read_byte(struct navi_port *port, navi_env_t env)
+navi_obj navi_port_read_byte(struct navi_port *port, navi_env env)
 {
 	int32_t b = navi_port_read_c_byte(port, env);
 	if (b == EOF) {
@@ -218,7 +218,7 @@ static inline int utf8_char_size(unsigned char ch)
 	navi_error(env, msg, navi_make_symbol("#utf8-error"), \
 			##__VA_ARGS__)
 
-static void navi_port_buffer_char(struct navi_port *port, navi_env_t env)
+static void navi_port_buffer_char(struct navi_port *port, navi_env env)
 {
 	int size;
 	int byte;
@@ -252,7 +252,7 @@ static void navi_port_buffer_char(struct navi_port *port, navi_env_t env)
 		navi_utf8_error(env, "invalid byte sequence");
 }
 
-navi_t navi_port_read_char(struct navi_port *port, navi_env_t env)
+navi_obj navi_port_read_char(struct navi_port *port, navi_env env)
 {
 	check_can_read(port, env);
 	if (port->flags & GOT_EOF)
@@ -267,7 +267,7 @@ navi_t navi_port_read_char(struct navi_port *port, navi_env_t env)
 	return navi_make_char(port->buffer);
 }
 
-navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env)
+navi_obj navi_port_peek_char(struct navi_port *port, navi_env env)
 {
 	check_can_read(port, env);
 	if (port->flags & GOT_EOF)
@@ -279,13 +279,13 @@ navi_t navi_port_peek_char(struct navi_port *port, navi_env_t env)
 	return navi_make_char(port->buffer);
 }
 
-void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env_t env)
+void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env env)
 {
 	check_can_write_u8(port, env);
 	port->write_u8(ch, port, env);
 }
 
-void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env_t env)
+void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env env)
 {
 	uint8_t buf[5];
 	int size;
@@ -304,42 +304,42 @@ void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env_t env)
 		port->write_u8(buf[i], port, env);
 }
 
-void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env_t env)
+void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 {
 	while (*str != '\0')
 		navi_port_write_byte(*str++, port, env);
 }
 
-navi_t navi_current_input_port(navi_env_t env)
+navi_obj navi_current_input_port(navi_env env)
 {
 	return navi_env_lookup(env, navi_sym_current_input);
 }
 
-navi_t navi_current_output_port(navi_env_t env)
+navi_obj navi_current_output_port(navi_env env)
 {
 	return navi_env_lookup(env, navi_sym_current_output);
 }
 
-navi_t navi_current_error_port(navi_env_t env)
+navi_obj navi_current_error_port(navi_env env)
 {
 	return navi_env_lookup(env, navi_sym_current_error);
 }
 
-static struct navi_port *get_port(navi_t fallback, navi_t args, navi_env_t env)
+static struct navi_port *get_port(navi_obj fallback, navi_obj args, navi_env env)
 {
 	if (navi_is_nil(args))
 		return navi_port_cast(navi_env_lookup(env, fallback), env);
 	return navi_port_cast(navi_car(args), env);
 }
 
-static inline struct navi_port *get_input_port(navi_t args, navi_env_t env)
+static inline struct navi_port *get_input_port(navi_obj args, navi_env env)
 {
 	struct navi_port *p = get_port(navi_sym_current_input, args, env);
 	check_input_port(p, env);
 	return p;
 }
 
-static inline struct navi_port *get_output_port(navi_t args, navi_env_t env)
+static inline struct navi_port *get_output_port(navi_obj args, navi_env env)
 {
 	struct navi_port *p = get_port(navi_sym_current_output, args, env);
 	check_output_port(p, env);
@@ -430,7 +430,7 @@ DEFUN(open_output_string, args, env, "open-output-string", 0, 0)
 
 DEFUN(get_output_string, args, env, "get-output-string", 1, 0, NAVI_PORT)
 {
-	navi_t expr;
+	navi_obj expr;
 	struct navi_string *str;
 	struct navi_port *p = navi_port_cast(navi_car(args), env);
 
@@ -443,14 +443,14 @@ DEFUN(get_output_string, args, env, "get-output-string", 1, 0, NAVI_PORT)
 	return expr;
 }
 
-static void close_input_port(struct navi_port *p, navi_env_t env)
+static void close_input_port(struct navi_port *p, navi_env env)
 {
 	p->close_in(p, env);
 	p->close_in = void_close;
 	p->flags |= INPUT_CLOSED;
 }
 
-static void close_output_port(struct navi_port *p, navi_env_t env)
+static void close_output_port(struct navi_port *p, navi_env env)
 {
 	p->close_out(p, env);
 	p->close_out = void_close;

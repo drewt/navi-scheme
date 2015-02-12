@@ -20,21 +20,21 @@
 
 #include "navi.h"
 
-static navi_t call_read(navi_env_t env)
+static navi_obj call_read(navi_env env)
 {
 	return navi_read(navi_port(navi_current_input_port(env)), env);
 }
 
 static _Noreturn void repl(void)
 {
-	navi_env_t env = navi_make_default_environment();
-	navi_t cont = navi_make_escape();
+	navi_env env = navi_make_default_environment();
+	navi_obj cont = navi_make_escape();
 	struct navi_escape *escape = navi_escape(cont);
 
 	navi_scope_set(env, navi_sym_repl, cont);
 
 	for (volatile int i = 0;; i++) {
-		navi_t expr;
+		navi_obj expr;
 
 		setjmp(escape->state);
 
@@ -54,10 +54,10 @@ static _Noreturn void repl(void)
 
 static _Noreturn void script(void)
 {
-	navi_env_t env = navi_make_default_environment();
+	navi_env env = navi_make_default_environment();
 
 	for (;;) {
-		navi_t expr = call_read(env);
+		navi_obj expr = call_read(env);
 		if (navi_is_eof(expr))
 			break;
 		navi_write(navi_eval(expr, env), env);

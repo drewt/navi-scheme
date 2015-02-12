@@ -17,8 +17,8 @@
 
 #include "navi.h"
 
-static void display_cdr(struct navi_port *port, navi_t cdr, bool head,
-		bool write, navi_env_t env)
+static void display_cdr(struct navi_port *port, navi_obj cdr, bool head,
+		bool write, navi_env env)
 {
 	switch (navi_type(cdr)) {
 	case NAVI_PAIR:
@@ -37,8 +37,8 @@ static void display_cdr(struct navi_port *port, navi_t cdr, bool head,
 	}
 }
 
-static void display_vector(struct navi_port *port, navi_t obj, bool write,
-		navi_env_t env)
+static void display_vector(struct navi_port *port, navi_obj obj, bool write,
+		navi_env env)
 {
 	struct navi_vector *vec = navi_vector(obj);
 
@@ -58,7 +58,7 @@ static void display_vector(struct navi_port *port, navi_t obj, bool write,
 	navi_port_write_cstr(")", port, env);
 }
 
-static void display_bytevec(struct navi_port *port, navi_t obj, navi_env_t env)
+static void display_bytevec(struct navi_port *port, navi_obj obj, navi_env env)
 {
 	struct navi_bytevec *vec = navi_bytevec(obj);
 
@@ -78,7 +78,7 @@ static void display_bytevec(struct navi_port *port, navi_t obj, navi_env_t env)
 	navi_port_write_cstr(")", port, env);
 }
 
-static void display_symbol(struct navi_port *port, navi_t obj, navi_env_t env)
+static void display_symbol(struct navi_port *port, navi_obj obj, navi_env env)
 {
 	char *p;
 	struct navi_symbol *sym = navi_symbol(obj);
@@ -86,7 +86,7 @@ static void display_symbol(struct navi_port *port, navi_t obj, navi_env_t env)
 		navi_port_write_byte(*p, port, env);
 }
 
-void _navi_display(struct navi_port *port, navi_t obj, bool write, navi_env_t env)
+void _navi_display(struct navi_port *port, navi_obj obj, bool write, navi_env env)
 {
 	char buf[128];
 	switch (navi_type(obj)) {

@@ -17,7 +17,7 @@
 
 #define ARITHMETIC_FOLD(operator, args, acc, env) \
 	do { \
-		navi_t ____MAF_CONS; \
+		navi_obj ____MAF_CONS; \
 		navi_type_check(navi_car(args), NAVI_NUM, env); \
 		acc = navi_car(args); \
 		navi_list_for_each(____MAF_CONS, navi_cdr(args)) { \
@@ -28,7 +28,7 @@
 
 DEFUN(add, args, env, "+", 0, NAVI_PROC_VARIADIC)
 {
-	navi_t acc = navi_make_num(0);
+	navi_obj acc = navi_make_num(0);
 	if (navi_is_nil(args))
 		return navi_make_num(0);
 	if (navi_is_nil(navi_cdr(args)))
@@ -39,7 +39,7 @@ DEFUN(add, args, env, "+", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(sub, args, env, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
-	navi_t acc;
+	navi_obj acc;
 	if (navi_is_nil(navi_cdr(args))) {
 		acc.n = navi_fixnum_minus(navi_make_num(0).n, navi_car(args).n);
 		return acc;
@@ -50,7 +50,7 @@ DEFUN(sub, args, env, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 
 DEFUN(mul, args, env, "*", 0, NAVI_PROC_VARIADIC)
 {
-	navi_t acc;
+	navi_obj acc;
 	if (navi_is_nil(args))
 		return navi_make_num(1);
 	if (navi_is_nil(navi_cdr(args)))
@@ -61,7 +61,7 @@ DEFUN(mul, args, env, "*", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(div, args, env, "/", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
-	navi_t acc;
+	navi_obj acc;
 	if (navi_is_nil(navi_cdr(args))) {
 		acc.n = navi_fixnum_divide(navi_make_num(1).n, navi_car(args).n);
 		return acc;
@@ -84,10 +84,10 @@ DEFUN(remainder, args, env, "remainder", 2, 0, NAVI_NUM, NAVI_NUM)
 	return navi_make_num(navi_num(navi_car(args)) % navi_num(navi_cadr(args)));
 }
 
-static bool fold_pairs(navi_t list, bool (*compare)(navi_t,navi_t,navi_env_t),
-		navi_env_t env)
+static bool fold_pairs(navi_obj list, bool (*compare)(navi_obj,navi_obj,navi_env),
+		navi_env env)
 {
-	navi_t cons;
+	navi_obj cons;
 
 	navi_list_for_each(cons, list) {
 		if (navi_type(navi_cdr(cons)) == NAVI_NIL)
@@ -99,8 +99,8 @@ static bool fold_pairs(navi_t list, bool (*compare)(navi_t,navi_t,navi_env_t),
 }
 
 #define NUMERIC_COMPARISON(cname, scmname, op) \
-	static bool _ ## cname(navi_t ____MAP_A, navi_t ____MAP_B, \
-			navi_env_t ____MAP_ENV) \
+	static bool _ ## cname(navi_obj ____MAP_A, navi_obj ____MAP_B, \
+			navi_env ____MAP_ENV) \
 	{ \
 		navi_type_check(____MAP_A, NAVI_NUM, ____MAP_ENV); \
 		navi_type_check(____MAP_B, NAVI_NUM, ____MAP_ENV); \
@@ -174,7 +174,7 @@ static int explicit_radix(const char *str)
 DEFUN(string_to_number, args, env, "string->number", 1, NAVI_PROC_VARIADIC,
 		NAVI_STRING)
 {
-	navi_t bytes;
+	navi_obj bytes;
 	char *string, *endptr;
 	long n, radix;
 
@@ -206,8 +206,8 @@ DEFUN(booleanp, args, env, "boolean?", 1, 0, NAVI_ANY)
 
 DEFUN(boolean_eq, args, env, "boolean=?", 1, NAVI_PROC_VARIADIC, NAVI_BOOL)
 {
-	navi_t cons;
-	navi_t bval;
+	navi_obj cons;
+	navi_obj bval;
 
 	navi_type_check(navi_car(args), NAVI_BOOL, env);
 	bval = navi_car(args);

@@ -15,7 +15,7 @@
 
 #include "navi.h"
 
-void navi_vector_fill(navi_t vector, navi_t fill)
+void navi_vector_fill(navi_obj vector, navi_obj fill)
 {
 	struct navi_vector *vec = navi_vector(vector);
 
@@ -23,9 +23,9 @@ void navi_vector_fill(navi_t vector, navi_t fill)
 		vec->data[i] = fill;
 }
 
-navi_t navi_list_to_vector(navi_t list)
+navi_obj navi_list_to_vector(navi_obj list)
 {
-	navi_t cons, vec = navi_make_vector(navi_list_length(list));
+	navi_obj cons, vec = navi_make_vector(navi_list_length(list));
 
 	unsigned i = 0;
 	struct navi_vector *vector = navi_vector(vec);
@@ -35,7 +35,7 @@ navi_t navi_list_to_vector(navi_t list)
 	return vec;
 }
 
-navi_t navi_vector_to_list(navi_t obj)
+navi_obj navi_vector_to_list(navi_obj obj)
 {
 	struct navi_vector *vector;
 	struct navi_pair head, *ptr = &head;
@@ -58,7 +58,7 @@ DEFUN(vectorp, args, env, "vector?", 1, 0, NAVI_ANY)
 DEFUN(make_vector, args, env, "make-vector", 1, NAVI_PROC_VARIADIC,
 		NAVI_NUM)
 {
-	navi_t vec;
+	navi_obj vec;
 	int nr_args = navi_list_length(args);
 
 	if (nr_args != 1 && nr_args != 2)
@@ -116,7 +116,7 @@ DEFUN(list_to_vector, args, env, "list->vector", 1, 0, NAVI_LIST)
 	return navi_list_to_vector(navi_car(args));
 }
 
-static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
+static navi_obj copy_to(navi_obj to, size_t at, navi_obj from, size_t start,
 		size_t end)
 {
 	struct navi_vector *tov = navi_vector(to), *fromv = navi_vector(from);
@@ -128,7 +128,7 @@ static navi_t copy_to(navi_t to, size_t at, navi_t from, size_t start,
 DEFUN(vector_fill, args, env, "vector-fill!", 2, NAVI_PROC_VARIADIC,
 		NAVI_VECTOR, NAVI_ANY)
 {
-	navi_t fill;
+	navi_obj fill;
 	long end, start;
 	struct navi_vector *vec;
 	int nr_args = navi_list_length(args);
@@ -148,7 +148,7 @@ DEFUN(vector_fill, args, env, "vector-fill!", 2, NAVI_PROC_VARIADIC,
 
 DEFUN(vector_copy, args, env, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 {
-	navi_t from;
+	navi_obj from;
 	long start, end;
 	struct navi_vector *vec;
 	int nr_args = navi_list_length(args);
@@ -166,7 +166,7 @@ DEFUN(vector_copy, args, env, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 DEFUN(vector_copy_to, args, env, "vector-copy!", 3, NAVI_PROC_VARIADIC,
 		NAVI_VECTOR, NAVI_NUM, NAVI_VECTOR)
 {
-	navi_t to, from;
+	navi_obj to, from;
 	long at, start, end;
 	struct navi_vector *fromv, *tov;
 	int nr_args = navi_list_length(args);
@@ -186,13 +186,13 @@ DEFUN(vector_copy_to, args, env, "vector-copy!", 3, NAVI_PROC_VARIADIC,
 	return navi_unspecified();
 }
 
-navi_t navi_vector_map(navi_t proc, navi_t to, navi_t from, navi_env_t env)
+navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env)
 {
 	struct navi_vector *tov = navi_vector_cast(to, NAVI_VECTOR, env);
 	struct navi_vector *fromv = navi_vector_cast(from, NAVI_VECTOR, env);
 
 	for (size_t i = 0; i < tov->size; i++) {
-		navi_t call = navi_list(proc, fromv->data[i], navi_make_void());
+		navi_obj call = navi_list(proc, fromv->data[i], navi_make_void());
 		tov->data[i] = navi_eval(call, env);
 	}
 	return to;

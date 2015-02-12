@@ -17,19 +17,19 @@
 #define _NAVI_SYMBOLS_H
 
 /* automatically interned symbols */
-extern navi_t navi_sym_begin;
-extern navi_t navi_sym_quote;
-extern navi_t navi_sym_quasiquote;
-extern navi_t navi_sym_unquote;
-extern navi_t navi_sym_splice;
-extern navi_t navi_sym_else;
-extern navi_t navi_sym_eq_lt;
-extern navi_t navi_sym_exn;
-extern navi_t navi_sym_current_input;
-extern navi_t navi_sym_current_output;
-extern navi_t navi_sym_current_error;
-extern navi_t navi_sym_read_error;
-extern navi_t navi_sym_file_error;
-extern navi_t navi_sym_repl;
+extern navi_obj navi_sym_begin;
+extern navi_obj navi_sym_quote;
+extern navi_obj navi_sym_quasiquote;
+extern navi_obj navi_sym_unquote;
+extern navi_obj navi_sym_splice;
+extern navi_obj navi_sym_else;
+extern navi_obj navi_sym_eq_lt;
+extern navi_obj navi_sym_exn;
+extern navi_obj navi_sym_current_input;
+extern navi_obj navi_sym_current_output;
+extern navi_obj navi_sym_current_error;
+extern navi_obj navi_sym_read_error;
+extern navi_obj navi_sym_file_error;
+extern navi_obj navi_sym_repl;
 
 #endif

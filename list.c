@@ -17,15 +17,15 @@
 
 #include "navi.h"
 
-navi_t navi_vlist(navi_t first, va_list ap)
+navi_obj navi_vlist(navi_obj first, va_list ap)
 {
-	navi_t list, listptr;
+	navi_obj list, listptr;
 
 	list = listptr = navi_make_empty_pair();
 	navi_pair(list)->car = first;
-	for (navi_t arg = va_arg(ap, navi_t);
+	for (navi_obj arg = va_arg(ap, navi_obj);
 			navi_type(arg) != NAVI_VOID;
-			arg = va_arg(ap, navi_t)) {
+			arg = va_arg(ap, navi_obj)) {
 		navi_pair(listptr)->cdr = navi_make_empty_pair();
 		listptr = navi_cdr(listptr);
 		navi_pair(listptr)->car = arg;
@@ -34,10 +34,10 @@ navi_t navi_vlist(navi_t first, va_list ap)
 	return list;
 }
 
-navi_t navi_list(navi_t first, ...)
+navi_obj navi_list(navi_obj first, ...)
 {
 	va_list ap;
-	navi_t list;
+	navi_obj list;
 
 	if (navi_type(first) == NAVI_VOID)
 		return navi_make_nil();
@@ -49,9 +49,9 @@ navi_t navi_list(navi_t first, ...)
 	return list;
 }
 
-bool navi_is_proper_list(navi_t list)
+bool navi_is_proper_list(navi_obj list)
 {
-	navi_t cons;
+	navi_obj cons;
 	enum navi_type type = navi_type(list);
 	if (type == NAVI_NIL)
 		return true;
@@ -61,9 +61,9 @@ bool navi_is_proper_list(navi_t list)
 	return navi_is_nil(cons);
 }
 
-navi_t navi_map(navi_t list, navi_leaf_t fn, void *data)
+navi_obj navi_map(navi_obj list, navi_leaf fn, void *data)
 {
-	navi_t cons;
+	navi_obj cons;
 	struct navi_pair head, *ptr;
 
 	ptr = &head;
@@ -78,7 +78,7 @@ navi_t navi_map(navi_t list, navi_leaf_t fn, void *data)
 
 DEFUN(cons, args, env, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
 {
-	return navi_make_pair(navi_car((navi_t)args), navi_cadr((navi_t)args));
+	return navi_make_pair(navi_car((navi_obj)args), navi_cadr((navi_obj)args));
 }
 
 DEFUN(car, args, env, "car", 1, 0, NAVI_PAIR)
@@ -100,7 +100,7 @@ DEFUN(pairp, args, env, "pair?", 1, 0, NAVI_ANY)
 
 DEFUN(listp, args, env, "list?", 1, 0, NAVI_ANY)
 {
-	navi_t cons, list = navi_car(args);
+	navi_obj cons, list = navi_car(args);
 	enum navi_type type = navi_type(list);
 	if (type != NAVI_PAIR && type != NAVI_NIL)
 		return navi_make_bool(false);
@@ -125,11 +125,11 @@ DEFUN(list, args, env, "list", 0, NAVI_PROC_VARIADIC)
 }
 
 struct map_apply_arg {
-	navi_t proc;
-	navi_env_t env;
+	navi_obj proc;
+	navi_env env;
 };
 
-static navi_t map_apply(navi_t elm, void *data)
+static navi_obj map_apply(navi_obj elm, void *data)
 {
 	struct map_apply_arg *arg = data;
 	return  navi_eval(navi_make_pair(arg->proc, navi_make_pair(elm, navi_make_nil())),

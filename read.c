@@ -37,20 +37,20 @@ static int no_fold_case(int c)
 
 static int (*handle_case)(int) = no_fold_case;
 
-static inline void unexpected_eof(navi_env_t env)
+static inline void unexpected_eof(navi_env env)
 {
 	navi_read_error(env, "unexpected end of file");
 }
 
-static inline int peek_char(struct navi_port *port, navi_env_t env)
+static inline int peek_char(struct navi_port *port, navi_env env)
 {
-	navi_t ch = navi_port_peek_char(port, env);
+	navi_obj ch = navi_port_peek_char(port, env);
 	if (navi_is_eof(ch))
 		return EOF;
 	return navi_char(ch);
 }
 
-static inline int ipeek_char(struct navi_port *port, navi_env_t env)
+static inline int ipeek_char(struct navi_port *port, navi_env env)
 {
 	int c = peek_char(port, env);
 	if (c == EOF)
@@ -58,15 +58,15 @@ static inline int ipeek_char(struct navi_port *port, navi_env_t env)
 	return c;
 }
 
-static inline int read_char(struct navi_port *port, navi_env_t env)
+static inline int read_char(struct navi_port *port, navi_env env)
 {
-	navi_t ch = navi_port_read_char(port, env);
+	navi_obj ch = navi_port_read_char(port, env);
 	if (navi_is_eof(ch))
 		return EOF;
 	return navi_char(ch);
 }
 
-static inline int iread_char(struct navi_port *port, navi_env_t env)
+static inline int iread_char(struct navi_port *port, navi_env env)
 {
 	int c = read_char(port, env);
 	if (c == EOF)
@@ -74,7 +74,7 @@ static inline int iread_char(struct navi_port *port, navi_env_t env)
 	return c;
 }
 
-static inline int peek_first_char(struct navi_port *port, navi_env_t env)
+static inline int peek_first_char(struct navi_port *port, navi_env env)
 {
 	int c;
 	while (isspace((c = peek_char(port, env))))
@@ -82,7 +82,7 @@ static inline int peek_first_char(struct navi_port *port, navi_env_t env)
 	return c;
 }
 
-static inline int ipeek_first_char(struct navi_port *port, navi_env_t env)
+static inline int ipeek_first_char(struct navi_port *port, navi_env env)
 {
 	int c = peek_first_char(port, env);
 	if (c == EOF)
@@ -90,9 +90,9 @@ static inline int ipeek_first_char(struct navi_port *port, navi_env_t env)
 	return c;
 }
 
-static inline navi_t navi_iread(struct navi_port *port, navi_env_t env)
+static inline navi_obj navi_iread(struct navi_port *port, navi_env env)
 {
-	navi_t expr = navi_read(port, env);
+	navi_obj expr = navi_read(port, env);
 	if (navi_is_eof(expr))
 		unexpected_eof(env);
 	return expr;
@@ -108,24 +108,24 @@ static int isbdigit(int c)
 	return c == '0' || c == '1';
 }
 
-static int ispipe(int c, navi_env_t env)
+static int ispipe(int c, navi_env env)
 {
 	if (c == EOF)
 		unexpected_eof(env);
 	return c == '|';
 }
 
-static int isterminal(int c, navi_env_t env)
+static int isterminal(int c, navi_env env)
 {
 	return isspace(c) || c == '(' || c == ')' || c == EOF;
 }
 
-static long decimal_value(char c, navi_env_t env)
+static long decimal_value(char c, navi_env env)
 {
 	return c - '0';
 }
 
-static long hex_value(char c, navi_env_t env)
+static long hex_value(char c, navi_env env)
 {
 	switch (c) {
 	case '0': return 0;
@@ -150,7 +150,7 @@ static long hex_value(char c, navi_env_t env)
 }
 
 static unsigned long read_unum(struct navi_port *port, int radix,
-		int (*ctype)(int), long (*tonum)(char,navi_env_t), navi_env_t env)
+		int (*ctype)(int), long (*tonum)(char,navi_env), navi_env env)
 {
 	char c;
 	unsigned long n = 0;
@@ -163,7 +163,7 @@ static unsigned long read_unum(struct navi_port *port, int radix,
 }
 
 static long read_num(struct navi_port *port, int radix, int (*ctype)(int),
-		long (*tonum)(char,navi_env_t), navi_env_t env)
+		long (*tonum)(char,navi_env), navi_env env)
 {
 	char c;
 	long sign = 1;
@@ -178,28 +178,28 @@ static long read_num(struct navi_port *port, int radix, int (*ctype)(int),
 	return sign * read_unum(port, radix, ctype, tonum, env);
 }
 
-static navi_t read_decimal(struct navi_port *port, navi_env_t env)
+static navi_obj read_decimal(struct navi_port *port, navi_env env)
 {
 	return navi_make_num(read_num(port, 10, isdigit, decimal_value, env));
 }
 
-static navi_t read_hex(struct navi_port *port, navi_env_t env)
+static navi_obj read_hex(struct navi_port *port, navi_env env)
 {
 	return navi_make_num(read_num(port, 16, isxdigit, hex_value, env));
 }
 
-static navi_t read_octal(struct navi_port *port, navi_env_t env)
+static navi_obj read_octal(struct navi_port *port, navi_env env)
 {
 	return navi_make_num(read_num(port, 8, isodigit, decimal_value, env));
 }
 
-static navi_t read_binary(struct navi_port *port, navi_env_t env)
+static navi_obj read_binary(struct navi_port *port, navi_env env)
 {
 	return navi_make_num(read_num(port, 2, isbdigit, decimal_value, env));
 }
 
-static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t),
-		navi_env_t env)
+static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env),
+		navi_env env)
 {
 	UChar c;
 	int32_t pos = 0;
@@ -225,7 +225,7 @@ static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env_t),
 	return (char*) str;
 }
 
-static UChar32 read_string_escape(struct navi_port *port, navi_env_t env)
+static UChar32 read_string_escape(struct navi_port *port, navi_env env)
 {
 	UChar32 c = iread_char(port, env);
 	switch (c) {
@@ -250,12 +250,12 @@ static UChar32 read_string_escape(struct navi_port *port, navi_env_t env)
 	navi_read_error(env, "unknown string escape", navi_make_apair("char", navi_make_char(c)));
 }
 
-static navi_t read_string(struct navi_port *port, navi_env_t env)
+static navi_obj read_string(struct navi_port *port, navi_env env)
 {
 	UChar32 c;
 	int32_t pos = 0, length = 0;
 	int32_t buf_len = STR_BUF_LEN;
-	navi_t obj = navi_make_string(buf_len, 0, 0);
+	navi_obj obj = navi_make_string(buf_len, 0, 0);
 	struct navi_string *str = navi_string(obj);
 
 	while ((c = iread_char(port, env)) != '"') {
@@ -272,8 +272,8 @@ static navi_t read_string(struct navi_port *port, navi_env_t env)
 	return obj;
 }
 
-static inline navi_t read_symbol(struct navi_port *port, int (*stop)(int,navi_env_t),
-		navi_env_t env)
+static inline navi_obj read_symbol(struct navi_port *port, int (*stop)(int,navi_env),
+		navi_env env)
 {
 	char *str = read_until(port, stop, env);
 
@@ -282,8 +282,8 @@ static inline navi_t read_symbol(struct navi_port *port, int (*stop)(int,navi_en
 	return navi_make_symbol(str);
 }
 
-static navi_t read_symbol_with_prefix(struct navi_port *port,
-		int(*stop)(int,navi_env_t), int first, navi_env_t env)
+static navi_obj read_symbol_with_prefix(struct navi_port *port,
+		int(*stop)(int,navi_env), int first, navi_env env)
 {
 	char *unfixed = read_until(port, stop, env);
 	size_t length = strlen(unfixed);
@@ -297,9 +297,9 @@ static navi_t read_symbol_with_prefix(struct navi_port *port,
 	return navi_make_symbol(prefixed);
 }
 
-static navi_t read_character(struct navi_port *port, navi_env_t env)
+static navi_obj read_character(struct navi_port *port, navi_env env)
 {
-	navi_t ret;
+	navi_obj ret;
 	char *str = read_until(port, isterminal, env);
 	size_t len = strlen(str);
 
@@ -349,15 +349,15 @@ end:
 	return ret;
 }
 
-static navi_t read_sharp(struct navi_port *port, navi_env_t env);
+static navi_obj read_sharp(struct navi_port *port, navi_env env);
 
-static navi_t read_list(struct navi_port *port, navi_env_t env)
+static navi_obj read_list(struct navi_port *port, navi_env env)
 {
 	struct navi_pair head, *elmptr;
 
 	elmptr = &head;
 	for (;;) {
-		navi_t expr;
+		navi_obj expr;
 		char c = ipeek_first_char(port, env);
 		switch (c) {
 		case ')':
@@ -386,17 +386,17 @@ static navi_t read_list(struct navi_port *port, navi_env_t env)
 	return head.cdr;
 }
 
-static navi_t read_vector(struct navi_port *port, navi_env_t env)
+static navi_obj read_vector(struct navi_port *port, navi_env env)
 {
 	return navi_list_to_vector(read_list(port, env));
 }
 
-static navi_t read_bytevec(struct navi_port *port, navi_env_t env)
+static navi_obj read_bytevec(struct navi_port *port, navi_env env)
 {
 	return navi_list_to_bytevec(read_list(port, env), env);
 }
 
-static navi_t read_sharp_bang(struct navi_port *port, navi_env_t env)
+static navi_obj read_sharp_bang(struct navi_port *port, navi_env env)
 {
 	char *str = read_until(port, isterminal, env);
 	if (str[0] == '/') {
@@ -419,7 +419,7 @@ static navi_t read_sharp_bang(struct navi_port *port, navi_env_t env)
 			navi_make_apair("directive", navi_cstr_to_string(str)));
 }
 
-static navi_t read_sharp(struct navi_port *port, navi_env_t env)
+static navi_obj read_sharp(struct navi_port *port, navi_env env)
 {
 	char c, n;
 
@@ -464,16 +464,16 @@ static navi_t read_sharp(struct navi_port *port, navi_env_t env)
 			navi_make_apair("discriminator", navi_make_char(c)));
 }
 
-static navi_t navi_sym_wrap(navi_t symbol, navi_t expr)
+static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
 {
 	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
 }
 
-navi_t navi_read(struct navi_port *port, navi_env_t env)
+navi_obj navi_read(struct navi_port *port, navi_env env)
 {
 	char c, d;
 	int sign;
-	navi_t expr;
+	navi_obj expr;
 
 	switch ((c = peek_first_char(port, env))) {
 	case '0': case '1': case '2': case '3': case '4':

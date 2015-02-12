@@ -18,9 +18,9 @@
 
 #include "navi.h"
 
-_Noreturn void navi_raise(navi_t args, navi_env_t env)
+_Noreturn void navi_raise(navi_obj args, navi_env env)
 {
-	navi_t expr;
+	navi_obj expr;
 	struct navi_procedure *proc;
 
 	for (;;) {
@@ -41,10 +41,10 @@ _Noreturn void navi_raise(navi_t args, navi_env_t env)
 	}
 }
 
-_Noreturn void _navi_error(navi_env_t env, const char *msg, ...)
+_Noreturn void _navi_error(navi_env env, const char *msg, ...)
 {
 	va_list ap;
-	navi_t list;
+	navi_obj list;
 
 	va_start(ap, msg);
 	list = navi_vlist(navi_cstr_to_string(msg), ap);
@@ -62,10 +62,10 @@ DEFUN(procedurep, args, env, "procedure?", 1, 0, NAVI_ANY)
 DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
 		NAVI_PROCEDURE, NAVI_ANY)
 {
-	navi_t cons, last = (navi_t) args;
+	navi_obj cons, last = (navi_obj) args;
 
 	navi_list_for_each(cons, args) {
-		navi_t fst = navi_car(cons);
+		navi_obj fst = navi_car(cons);
 		/* walk to the last argument */
 		if (navi_type(navi_cdr(cons)) != NAVI_NIL) {
 			last = cons;
@@ -81,7 +81,7 @@ DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
 	return navi_eval(args, env);
 }
 
-navi_t navi_call_escape(navi_t escape, navi_t arg)
+navi_obj navi_call_escape(navi_obj escape, navi_obj arg)
 {
 	struct navi_escape *esc = navi_escape(escape);
 	esc->arg = arg;
@@ -91,7 +91,7 @@ navi_t navi_call_escape(navi_t escape, navi_t arg)
 DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
 {
 	struct navi_escape *escape;
-	navi_t cont, call, proc = navi_car(args);
+	navi_obj cont, call, proc = navi_car(args);
 
 	navi_type_check_proc(proc, 1, env);
 
@@ -107,7 +107,7 @@ DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
 
 DEFUN(values, args, env, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
-	navi_t values = navi_list_to_vector(values);
+	navi_obj values = navi_list_to_vector(values);
 	values.p->type = NAVI_VALUES;
 	return values;
 }
@@ -115,7 +115,7 @@ DEFUN(values, args, env, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 DEFUN(call_with_values, args, env, "call-with-values", 2, 0,
 		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
-	navi_t values, call_args;
+	navi_obj values, call_args;
 	navi_type_check_proc(navi_car(args), 0, env);
 	navi_type_check(navi_cadr(args), NAVI_PROCEDURE, env);
 
@@ -135,7 +135,7 @@ DEFUN(with_exception_handler, args, env, "with-exception-handler", 2, 0,
 	navi_type_check_proc(navi_cadr(args), 0, env);
 
 	struct navi_procedure *thunk = navi_procedure(navi_cadr(args));
-	navi_env_t exn_env = navi_env_new_scope(thunk->env);
+	navi_env exn_env = navi_env_new_scope(thunk->env);
 	navi_scope_set(exn_env, navi_sym_exn, navi_car(args));
 
 	if (navi_proc_is_builtin(thunk))
@@ -150,7 +150,7 @@ DEFUN(raise, args, env, "raise", 1, 0, NAVI_ANY)
 
 DEFUN(raise_continuable, args, env, "raise-continuable", 1, 0, NAVI_ANY)
 {
-	navi_t handler, result;
+	navi_obj handler, result;
 	struct navi_procedure *proc;
 
 	handler = navi_env_lookup(env, navi_sym_exn);
@@ -175,13 +175,13 @@ DEFUN(error, args, env, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 	navi_raise(navi_make_pair(args, navi_make_nil()), env);
 }
 
-static bool is_error_object(navi_t object)
+static bool is_error_object(navi_obj object)
 {
 	return navi_type(object) == NAVI_PAIR && navi_is_proper_list(object) &&
 		navi_type(navi_car(object)) == NAVI_STRING;
 }
 
-static navi_t navi_type_check_error(navi_t object, navi_env_t env)
+static navi_obj navi_type_check_error(navi_obj object, navi_env env)
 {
 	if (!is_error_object(object))
 		navi_error(env, "type error");

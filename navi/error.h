@@ -20,7 +20,7 @@
 #include "types.h"
 #include "symbols.h"
 
-_Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
+_Noreturn void _navi_error(navi_env env, const char *msg, ...);
 #define navi_error(env, msg, ...) \
 	_navi_error(env, msg, ##__VA_ARGS__, navi_make_void())
 #define navi_read_error(env, msg, ...) \
@@ -32,7 +32,7 @@ _Noreturn void _navi_error(navi_env_t env, const char *msg, ...);
 #define navi_arity_error(env, name) \
 	navi_error(env, "wrong number of arguments", navi_make_apair("target", name))
 
-static inline navi_t navi_type_check(navi_t obj, enum navi_type type, navi_env_t env)
+static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_env env)
 {
 	if (navi_type(obj) != type)
 		navi_error(env, "type error",
@@ -41,7 +41,7 @@ static inline navi_t navi_type_check(navi_t obj, enum navi_type type, navi_env_t
 	return obj;
 }
 
-static inline long navi_type_check_range(navi_t n, long min, long max, navi_env_t env)
+static inline long navi_type_check_range(navi_obj n, long min, long max, navi_env env)
 {
 	navi_type_check(n, NAVI_NUM, env);
 	if (navi_num(n) < min || navi_num(n) >= max)
@@ -52,14 +52,14 @@ static inline long navi_type_check_range(navi_t n, long min, long max, navi_env_
 	return navi_num(n);
 }
 
-static inline navi_t navi_type_check_list(navi_t list, navi_env_t env)
+static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
 {
 	if (!navi_is_proper_list(list))
 		navi_error(env, "type error: not a proper list");
 	return list;
 }
 
-static inline navi_t navi_type_check_proc(navi_t proc, int arity, navi_env_t env)
+static inline navi_obj navi_type_check_proc(navi_obj proc, int arity, navi_env env)
 {
 	navi_type_check(proc, NAVI_PROCEDURE, env);
 	int actual = navi_procedure(proc)->arity;
@@ -70,44 +70,44 @@ static inline navi_t navi_type_check_proc(navi_t proc, int arity, navi_env_t env
 	return proc;
 }
 
-static inline long navi_fixnum_cast(navi_t num, navi_env_t env)
+static inline long navi_fixnum_cast(navi_obj num, navi_env env)
 {
 	return navi_num(navi_type_check(num, NAVI_NUM, env));
 }
 
-static inline unsigned long navi_char_cast(navi_t ch, navi_env_t env)
+static inline unsigned long navi_char_cast(navi_obj ch, navi_env env)
 {
 	return navi_char(navi_type_check(ch, NAVI_CHAR, env));
 }
 
-static inline struct navi_string *navi_string_cast(navi_t str, navi_env_t env)
+static inline struct navi_string *navi_string_cast(navi_obj str, navi_env env)
 {
 	return navi_string(navi_type_check(str, NAVI_STRING, env));
 }
 
-static inline struct navi_bytevec *navi_bytevec_cast(navi_t vec, navi_env_t env)
+static inline struct navi_bytevec *navi_bytevec_cast(navi_obj vec, navi_env env)
 {
 	return navi_bytevec(navi_type_check(vec, NAVI_BYTEVEC, env));
 }
 
-static inline struct navi_vector *navi_vector_cast(navi_t vec,
-		enum navi_type type, navi_env_t env)
+static inline struct navi_vector *navi_vector_cast(navi_obj vec,
+		enum navi_type type, navi_env env)
 {
 	return navi_vector(navi_type_check(vec, type, env));
 }
 
-static inline struct navi_port *navi_port_cast(navi_t port, navi_env_t env)
+static inline struct navi_port *navi_port_cast(navi_obj port, navi_env env)
 {
 	return navi_port(navi_type_check(port, NAVI_PORT, env));
 }
 
-static inline unsigned char navi_type_check_byte(navi_t byte, navi_env_t env)
+static inline unsigned char navi_type_check_byte(navi_obj byte, navi_env env)
 {
 	return navi_type_check_range(byte, 0, 256, env);
 }
 
 static inline void navi_check_copy_to(size_t to, long at, size_t from,
-		long start, long end, navi_env_t env)
+		long start, long end, navi_env env)
 {
 	if (at < 0 || (size_t)at >= to || start < 0 || (size_t)start >= from
 			|| end < start || (size_t)end > from

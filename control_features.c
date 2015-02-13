@@ -47,29 +47,28 @@ _Noreturn void _navi_error(navi_env env, const char *msg, ...)
 
 }
 
-DEFUN(procedurep, args, env, "procedure?", 1, 0, NAVI_ANY)
+DEFUN(procedurep, "procedure?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PROCEDURE);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_PROCEDURE);
 }
 
-DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
-		NAVI_PROCEDURE, NAVI_ANY)
+DEFUN(apply, "apply", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 {
-	navi_obj cons, last = (navi_obj) args;
-	navi_list_for_each(cons, args) {
+	navi_obj cons, last = (navi_obj) scm_args;
+	navi_list_for_each(cons, scm_args) {
 		navi_obj fst = navi_car(cons);
 		/* walk to the last argument */
 		if (navi_type(navi_cdr(cons)) != NAVI_NIL) {
 			last = cons;
 			continue;
 		}
-		navi_type_check_list(fst, env);
+		navi_type_check_list(fst, scm_env);
 
 		/* flatten arg list */
 		navi_pair(last)->cdr = fst;
 		break;
 	}
-	return navi_eval(args, env);
+	return navi_eval(scm_args, scm_env);
 }
 
 navi_obj navi_call_escape(navi_obj escape, navi_obj arg)
@@ -79,12 +78,12 @@ navi_obj navi_call_escape(navi_obj escape, navi_obj arg)
 	longjmp(esc->state, 1);
 }
 
-DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
+DEFUN(call_ec, "call/ec", 1, 0, NAVI_PROCEDURE)
 {
 	struct navi_escape *escape;
-	navi_obj cont, call, proc = navi_car(args);
+	navi_obj cont, call, proc = scm_arg1;
 
-	navi_check_arity(proc, 1, env);
+	navi_check_arity(proc, 1, scm_env);
 
 	cont = navi_make_escape();
 	escape = navi_escape(cont);
@@ -93,68 +92,67 @@ DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
 		return escape->arg;
 
 	call = navi_make_pair(proc, navi_make_pair(cont, navi_make_nil()));
-	return navi_eval(call, env);
+	return navi_eval(call, scm_env);
 }
 
-DEFUN(values, args, env, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+DEFUN(values, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
-	navi_obj values = navi_list_to_vector(values);
+	navi_obj values = navi_list_to_vector(scm_args);
 	values.p->type = NAVI_VALUES;
 	return values;
 }
 
-DEFUN(call_with_values, args, env, "call-with-values", 2, 0,
-		NAVI_PROCEDURE, NAVI_PROCEDURE)
+DEFUN(call_with_values, "call-with-values", 2, 0, NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
 	navi_obj values, call_args;
-	navi_check_arity(navi_car(args), 0, env);
+	navi_check_arity(scm_arg1, 0, scm_env);
 
-	values = navi_eval(navi_make_pair(navi_car(args), navi_make_nil()), env);
+	values = navi_eval(navi_make_pair(scm_arg1, navi_make_nil()), scm_env);
 	if (navi_type(values) != NAVI_VALUES)
 		call_args = navi_make_pair(values, navi_make_nil());
 	else
 		call_args = navi_vector_to_list(values);
 
-	return navi_eval(navi_make_pair(navi_cadr(args), call_args), env);
+	return navi_eval(navi_make_pair(scm_arg2, call_args), scm_env);
 }
 
-DEFUN(with_exception_handler, args, env, "with-exception-handler", 2, 0,
+DEFUN(with_exception_handler, "with-exception-handler", 2, 0,
 		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
-	navi_check_arity(navi_car(args),  1, env);
-	navi_check_arity(navi_cadr(args), 0, env);
+	navi_check_arity(scm_arg1, 1, scm_env);
+	navi_check_arity(scm_arg2, 0, scm_env);
 
-	struct navi_procedure *thunk = navi_procedure(navi_cadr(args));
+	struct navi_procedure *thunk = navi_procedure(scm_arg2);
 	navi_env exn_env = navi_env_new_scope(thunk->env);
-	navi_scope_set(exn_env, navi_sym_exn, navi_car(args));
+	navi_scope_set(exn_env, navi_sym_exn, scm_arg1);
 
 	return navi_apply(thunk, navi_make_nil(), exn_env);
 }
 
-DEFUN(raise, args, env, "raise", 1, 0, NAVI_ANY)
+DEFUN(raise, "raise", 1, 0, NAVI_ANY)
 {
-	navi_raise(args, env);
+	navi_raise(scm_args, scm_env);
 }
 
-DEFUN(raise_continuable, args, env, "raise-continuable", 1, 0, NAVI_ANY)
+DEFUN(raise_continuable, "raise-continuable", 1, 0, NAVI_ANY)
 {
 	navi_obj handler, result;
 	struct navi_procedure *proc;
 
-	handler = navi_env_lookup(env, navi_sym_exn);
+	handler = navi_env_lookup(scm_env, navi_sym_exn);
 	if (navi_type(handler) != NAVI_PROCEDURE)
 		navi_die("no exception handler installed");
 
 	proc = navi_procedure(handler);
-	navi_scope_unset(env, navi_sym_exn);
-	result = navi_apply(proc, args, env);
-	navi_scope_set(env, navi_sym_exn, handler);
+	navi_scope_unset(scm_env, navi_sym_exn);
+	result = navi_apply(proc, scm_args, scm_env);
+	navi_scope_set(scm_env, navi_sym_exn, handler);
 	return result;
 }
 
-DEFUN(error, args, env, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
+DEFUN(error, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
-	navi_raise(navi_make_pair(args, navi_make_nil()), env);
+	navi_raise(navi_make_pair(scm_args, navi_make_nil()), scm_env);
 }
 
 static bool is_error_object(navi_obj object)
@@ -170,38 +168,38 @@ static navi_obj navi_type_check_error(navi_obj object, navi_env env)
 	return object;
 }
 
-DEFUN(error_objectp, args, env, "error-object?", 1, 0, NAVI_ANY)
+DEFUN(error_objectp, "error-object?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(is_error_object(navi_car(args)));
+	return navi_make_bool(is_error_object(scm_arg1));
 }
 
-DEFUN(error_object_message, args, env, "error-object-message", 1, 0, NAVI_ANY)
+DEFUN(error_object_message, "error-object-message", 1, 0, NAVI_ANY)
 {
-	navi_type_check_error(navi_car(args), env);
-	return navi_caar(args);
+	navi_type_check_error(scm_arg1, scm_env);
+	return navi_car(scm_arg1);
 }
 
-DEFUN(error_object_irritants, args, env, "error-object-irritants", 1, 0, NAVI_ANY)
+DEFUN(error_object_irritants, "error-object-irritants", 1, 0, NAVI_ANY)
 {
-	navi_type_check_error(navi_car(args), env);
-	return navi_cdar(args);
+	navi_type_check_error(scm_arg1, scm_env);
+	return navi_cdr(scm_arg1);
 }
 
-DEFUN(read_errorp, args, env, "read-error?", 1, 0, NAVI_ANY)
+DEFUN(read_errorp, "read-error?", 1, 0, NAVI_ANY)
 {
-	if (!navi_bool(scm_error_objectp(args, env)))
+	if (!navi_bool(scm_error_objectp(scm_args, scm_env)))
 		return navi_make_bool(false);
-	if (navi_list_length(navi_car(args)) < 2)
+	if (navi_list_length(scm_arg1) < 2)
 		return navi_make_bool(false);
-	return navi_make_bool(navi_symbol_eq(navi_cadr(navi_car(args)), navi_sym_read_error));
+	return navi_make_bool(navi_symbol_eq(navi_cadr(scm_arg1), navi_sym_read_error));
 }
 
-DEFUN(promisep, args, env, "promise?", 1, 0, NAVI_ANY)
+DEFUN(promisep, "promise?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PROMISE);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_PROMISE);
 }
 
-DEFUN(make_promise, args, env, "make-promise", 1, 0, NAVI_ANY)
+DEFUN(make_promise, "make-promise", 1, 0, NAVI_ANY)
 {
-	return navi_make_promise(navi_car(args), env);
+	return navi_make_promise(scm_arg1, scm_env);
 }

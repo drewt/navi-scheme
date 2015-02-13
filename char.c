@@ -22,15 +22,15 @@ static inline bool both_chars(navi_obj a, navi_obj b)
 	return navi_type(a) == NAVI_CHAR && navi_type(b) == NAVI_CHAR;
 }
 
-DEFUN(charp, args, env, "char?", 1, 0, NAVI_ANY)
+DEFUN(charp, "char?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_CHAR);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_CHAR);
 }
 
 #define CHAR_COMPARE(cname, scmname, op) \
-	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
+	DEFUN(cname, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
-		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
+		navi_obj fst = scm_arg1, snd = scm_arg2; \
 		return navi_make_bool(navi_char(fst) op navi_char(snd)); \
 	}
 
@@ -41,9 +41,9 @@ CHAR_COMPARE(char_lte, "char<=?", <=)
 CHAR_COMPARE(char_gte, "char>=?", >=)
 
 #define CHAR_CI_COMPARE(cname, scmname, op) \
-	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
+	DEFUN(cname, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
-		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
+		navi_obj fst = scm_arg1, snd = scm_arg2; \
 		return navi_make_bool(tolower(navi_char(fst)) op \
 				tolower(navi_char(snd))); \
 	}
@@ -64,12 +64,12 @@ navi_obj navi_char_downcase(navi_obj ch)
 	return navi_make_char(tolower(navi_char(ch)));
 }
 
-DEFUN(char_upcase, args, env, "char-upcase", 1, 0, NAVI_CHAR)
+DEFUN(char_upcase, "char-upcase", 1, 0, NAVI_CHAR)
 {
-	return navi_char_upcase(navi_car(args));
+	return navi_char_upcase(scm_arg1);
 }
 
-DEFUN(char_downcase, args, env, "char-downcase", 1, 0, NAVI_CHAR)
+DEFUN(char_downcase, "char-downcase", 1, 0, NAVI_CHAR)
 {
-	return navi_char_downcase(navi_car(args));
+	return navi_char_downcase(scm_arg1);
 }

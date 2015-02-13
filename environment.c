@@ -208,7 +208,7 @@ void navi_scope_free(struct navi_scope *scope)
 		navi_scope_unref(scope->next);
 }
 
-DEFUN(env_count, args, env, "env-count", 0, 0)
+DEFUN(env_count, "env-count", 0, 0)
 {
 	unsigned i = 0;
 	struct navi_clist_head *it;

@@ -26,58 +26,58 @@
 		} \
 	} while (0)
 
-DEFUN(add, args, env, "+", 0, NAVI_PROC_VARIADIC)
+DEFUN(add, "+", 0, NAVI_PROC_VARIADIC)
 {
 	navi_obj acc = navi_make_num(0);
-	if (navi_is_nil(args))
+	if (navi_is_nil(scm_args))
 		return navi_make_num(0);
-	if (navi_is_nil(navi_cdr(args)))
-		return navi_car(args);
-	ARITHMETIC_FOLD(navi_fixnum_plus, args, acc, env);
+	if (navi_is_nil(navi_cdr(scm_args)))
+		return scm_arg1;
+	ARITHMETIC_FOLD(navi_fixnum_plus, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(sub, args, env, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(sub, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	navi_obj acc;
-	if (navi_is_nil(navi_cdr(args))) {
-		acc.n = navi_fixnum_minus(navi_make_num(0).n, navi_car(args).n);
+	if (navi_is_nil(navi_cdr(scm_args))) {
+		acc.n = navi_fixnum_minus(navi_make_num(0).n, scm_arg1.n);
 		return acc;
 	}
-	ARITHMETIC_FOLD(navi_fixnum_minus, args, acc, env);
+	ARITHMETIC_FOLD(navi_fixnum_minus, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(mul, args, env, "*", 0, NAVI_PROC_VARIADIC)
+DEFUN(mul, "*", 0, NAVI_PROC_VARIADIC)
 {
 	navi_obj acc;
-	if (navi_is_nil(args))
+	if (navi_is_nil(scm_args))
 		return navi_make_num(1);
-	if (navi_is_nil(navi_cdr(args)))
-		return navi_car(args);
-	ARITHMETIC_FOLD(navi_fixnum_times, args, acc, env);
+	if (navi_is_nil(navi_cdr(scm_args)))
+		return scm_arg1;
+	ARITHMETIC_FOLD(navi_fixnum_times, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(div, args, env, "/", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(div, "/", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	navi_obj acc;
-	if (navi_is_nil(navi_cdr(args))) {
-		acc.n = navi_fixnum_divide(navi_make_num(1).n, navi_car(args).n);
+	if (navi_is_nil(navi_cdr(scm_args))) {
+		acc.n = navi_fixnum_divide(navi_make_num(1).n, scm_arg1.n);
 		return acc;
 	}
-	ARITHMETIC_FOLD(navi_fixnum_divide, args, acc, env);
+	ARITHMETIC_FOLD(navi_fixnum_divide, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(quotient, args, env, "quotient", 2, 0, NAVI_NUM, NAVI_NUM)
+DEFUN(quotient, "quotient", 2, 0, NAVI_NUM, NAVI_NUM)
 {
-	return navi_make_num(navi_num(navi_car(args)) / navi_num(navi_cadr(args)));
+	return navi_make_num(navi_num(scm_arg1) / navi_num(scm_arg2));
 }
 
-DEFUN(remainder, args, env, "remainder", 2, 0, NAVI_NUM, NAVI_NUM)
+DEFUN(remainder, "remainder", 2, 0, NAVI_NUM, NAVI_NUM)
 {
-	return navi_make_num(navi_num(navi_car(args)) % navi_num(navi_cadr(args)));
+	return navi_make_num(navi_num(scm_arg1) % navi_num(scm_arg2));
 }
 
 static bool fold_pairs(navi_obj list, bool (*compare)(navi_obj,navi_obj,navi_env),
@@ -102,9 +102,9 @@ static bool fold_pairs(navi_obj list, bool (*compare)(navi_obj,navi_obj,navi_env
 		navi_type_check(____MAP_B, NAVI_NUM, ____MAP_ENV); \
 		return navi_num(____MAP_A) op navi_num(____MAP_B); \
 	} \
-	DEFUN(cname, args, env, scmname, 1, NAVI_PROC_VARIADIC, NAVI_NUM) \
+	DEFUN(cname, scmname, 1, NAVI_PROC_VARIADIC, NAVI_NUM) \
 	{ \
-		return navi_make_bool(fold_pairs(args, _ ## cname, env)); \
+		return navi_make_bool(fold_pairs(scm_args, _ ## cname, scm_env)); \
 	}
 
 NUMERIC_COMPARISON(lt,    "<",  <)
@@ -114,10 +114,9 @@ NUMERIC_COMPARISON(gte,   ">=", >=)
 NUMERIC_COMPARISON(numeq, "=",  ==)
 
 #define NUMERIC_PREDICATE(cname, scmname, test) \
-	DEFUN(cname, args, env, scmname, 1, 0, NAVI_NUM) \
+	DEFUN(cname, scmname, 1, 0, NAVI_NUM) \
 	{ \
-		navi_type_check(navi_car(args), NAVI_NUM, env); \
-		return navi_make_bool(navi_num(navi_car(args)) test); \
+		return navi_make_bool(navi_num(scm_arg1) test); \
 	}
 
 NUMERIC_PREDICATE(zerop,     "zero?",     == 0)
@@ -126,29 +125,28 @@ NUMERIC_PREDICATE(negativep, "negative?", < 0)
 NUMERIC_PREDICATE(oddp,      "odd?",      % 2 != 0)
 NUMERIC_PREDICATE(evenp,     "even?",     % 2 == 0)
 
-DEFUN(number_to_string, args, env, "number->string", 1, NAVI_PROC_VARIADIC,
-		NAVI_NUM)
+DEFUN(number_to_string, "number->string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	char buf[64];
 	long radix = 10;
 
-	if (navi_type(navi_cdr(args)) != NAVI_NIL) {
-		navi_type_check(navi_cadr(args), NAVI_NUM, env);
-		radix = navi_num(navi_cadr(args));
+	if (navi_type(navi_cdr(scm_args)) != NAVI_NIL) {
+		navi_type_check(scm_arg2, NAVI_NUM, scm_env);
+		radix = navi_num(scm_arg2);
 	}
 
 	switch (radix) {
 	case 8:
-		snprintf(buf, 64, "%lo", navi_num(navi_car(args)));
+		snprintf(buf, 64, "%lo", navi_num(scm_arg1));
 		break;
 	case 10:
-		snprintf(buf, 64, "%ld", navi_num(navi_car(args)));
+		snprintf(buf, 64, "%ld", navi_num(scm_arg1));
 		break;
 	case 16:
-		snprintf(buf, 64, "%lx", navi_num(navi_car(args)));
+		snprintf(buf, 64, "%lx", navi_num(scm_arg1));
 		break;
 	default:
-		navi_error(env, "unsupported radix");
+		navi_error(scm_env, "unsupported radix");
 	}
 	return navi_cstr_to_string(buf);
 }
@@ -166,14 +164,13 @@ static int explicit_radix(const char *str)
 	return 0;
 }
 
-DEFUN(string_to_number, args, env, "string->number", 1, NAVI_PROC_VARIADIC,
-		NAVI_STRING)
+DEFUN(string_to_number, "string->number", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	char *string, *endptr;
 	long n, radix;
 
-	string = (char*) navi_string(navi_car(args))->data;
-	radix = navi_is_nil(navi_cdr(args)) ? 10 : navi_fixnum_cast(navi_cadr(args), env);
+	string = (char*) navi_string(scm_arg1)->data;
+	radix = navi_is_nil(navi_cdr(scm_args)) ? 10 : navi_fixnum_cast(scm_arg2, scm_env);
 
 	if ((n = explicit_radix(string)) != 0) {
 		string += 2;
@@ -186,24 +183,24 @@ DEFUN(string_to_number, args, env, "string->number", 1, NAVI_PROC_VARIADIC,
 	return navi_make_num(n);
 }
 
-DEFUN(not, args, env, "not", 1, 0, NAVI_ANY)
+DEFUN(not, "not", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(!navi_is_true(navi_car(args)));
+	return navi_make_bool(!navi_is_true(scm_arg1));
 }
 
-DEFUN(booleanp, args, env, "boolean?", 1, 0, NAVI_ANY)
+DEFUN(booleanp, "boolean?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_BOOL);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_BOOL);
 }
 
-DEFUN(boolean_eq, args, env, "boolean=?", 1, NAVI_PROC_VARIADIC, NAVI_BOOL)
+DEFUN(boolean_eq, "boolean=?", 1, NAVI_PROC_VARIADIC, NAVI_BOOL)
 {
 	navi_obj cons;
 	navi_obj bval;
 
-	bval = navi_car(args);
-	navi_list_for_each(cons, navi_cdr(args)) {
-		navi_type_check(navi_car(cons), NAVI_BOOL, env);
+	bval = scm_arg1;
+	navi_list_for_each(cons, navi_cdr(scm_args)) {
+		navi_type_check(navi_car(cons), NAVI_BOOL, scm_env);
 		if (navi_car(cons).n != bval.n)
 			return navi_make_bool(false);
 	}

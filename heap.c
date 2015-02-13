@@ -113,7 +113,7 @@ navi_obj navi_make_uninterned(const char *str)
 	return (navi_obj) object;
 }
 
-DEFUN(gensym, args, env, "gensym", 0, 0)
+DEFUN(gensym, "gensym", 0, 0)
 {
 	char buf[64];
 	static unsigned count = 0;
@@ -374,9 +374,9 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	navi_die("navi_eqvp: unknown type");
 }
 
-DEFUN(eqvp, args, env, "eqv?", 2, 0, NAVI_ANY, NAVI_ANY)
+DEFUN(eqvp, "eqv?", 2, 0, NAVI_ANY, NAVI_ANY)
 {
-	return navi_make_bool(navi_eqvp(navi_car(args), navi_cadr(args)));
+	return navi_make_bool(navi_eqvp(scm_arg1, scm_arg2));
 }
 
 static inline void gc_set_mark(navi_obj obj)
@@ -483,20 +483,20 @@ void navi_gc_collect(void)
 	gc_sweep();
 }
 
-DEFUN(gc_collect, args, env, "gc-collect", 0, 0)
+DEFUN(gc_collect, "gc-collect", 0, 0)
 {
 	navi_gc_collect();
 	return navi_unspecified();
 }
 
-DEFUN(gc_count, args, env, "gc-count", 0, 0)
+DEFUN(gc_count, "gc-count", 0, 0)
 {
 	struct navi_object *expr;
 	navi_clist_for_each_entry(expr, &heap, chain) {
 		if (navi_is_builtin((navi_obj)expr))
 			continue;
 		printf("<%p> ", expr);
-		navi_write((navi_obj)expr, env);
+		navi_write((navi_obj)expr, scm_env);
 		putchar('\n');
 	}
 	return navi_unspecified();

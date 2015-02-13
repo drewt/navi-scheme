@@ -18,9 +18,9 @@
 
 #include "types.h"
 
-#define DEFPROC(_type, cname, args, env, name, _arity, _flags, ...) \
+#define DEFPROC(_type, cname, name, _arity, _flags, ...) \
 	int scm_typedecl_##cname[_arity] = { __VA_ARGS__ }; \
-	navi_obj scm_##cname(navi_obj args, navi_env env); \
+	navi_obj scm_##cname(navi_obj, navi_env); \
 	struct navi_spec scm_decl_##cname = { \
 		.proc = { \
 			.flags = _flags | NAVI_PROC_BUILTIN, \
@@ -31,11 +31,17 @@
 		.ident = name, \
 		.type  = _type, \
 	}; \
-	navi_obj scm_##cname(navi_obj args, navi_env env)
+	navi_obj scm_##cname(navi_obj scm_args, navi_env scm_env)
 
 #define DEFUN(...)      DEFPROC(NAVI_PROCEDURE, __VA_ARGS__)
 #define DEFMACRO(...)   DEFPROC(NAVI_MACRO,     __VA_ARGS__)
 #define DEFSPECIAL(...) DEFPROC(NAVI_SPECIAL,   __VA_ARGS__)
+
+#define scm_arg1 navi_car(scm_args)
+#define scm_arg2 navi_cadr(scm_args)
+#define scm_arg3 navi_caddr(scm_args)
+#define scm_arg4 navi_cadddr(scm_args)
+#define scm_arg5 navi_caddddr(scm_args)
 
 /*
  * XXX: really, the functions should be declared static and not exposed here,

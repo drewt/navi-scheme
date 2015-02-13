@@ -76,29 +76,29 @@ navi_obj navi_map(navi_obj list, navi_leaf fn, void *data)
 	return head.cdr;
 }
 
-DEFUN(cons, args, env, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
+DEFUN(cons, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
 {
-	return navi_make_pair(navi_car((navi_obj)args), navi_cadr((navi_obj)args));
+	return navi_make_pair(scm_arg1, scm_arg2);
 }
 
-DEFUN(car, args, env, "car", 1, 0, NAVI_PAIR)
+DEFUN(car, "car", 1, 0, NAVI_PAIR)
 {
-	return navi_car(navi_car(args));
+	return navi_car(scm_arg1);
 }
 
-DEFUN(cdr, args, env, "cdr", 1, 0, NAVI_PAIR)
+DEFUN(cdr, "cdr", 1, 0, NAVI_PAIR)
 {
-	return navi_cdr(navi_car(args));
+	return navi_cdr(scm_arg1);
 }
 
-DEFUN(pairp, args, env, "pair?", 1, 0, NAVI_ANY)
+DEFUN(pairp, "pair?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_PAIR);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_PAIR);
 }
 
-DEFUN(listp, args, env, "list?", 1, 0, NAVI_ANY)
+DEFUN(listp, "list?", 1, 0, NAVI_ANY)
 {
-	navi_obj cons, list = navi_car(args);
+	navi_obj cons, list = scm_arg1;
 	enum navi_type type = navi_type(list);
 	if (type != NAVI_PAIR && type != NAVI_NIL)
 		return navi_make_bool(false);
@@ -106,19 +106,19 @@ DEFUN(listp, args, env, "list?", 1, 0, NAVI_ANY)
 	return navi_make_bool(navi_type(cons) == NAVI_NIL);
 }
 
-DEFUN(nullp, args, env, "null?", 1, 0, NAVI_ANY)
+DEFUN(nullp, "null?", 1, 0, NAVI_ANY)
 {
-	return navi_make_bool(navi_type(navi_car(args)) == NAVI_NIL);
+	return navi_make_bool(navi_type(scm_arg1) == NAVI_NIL);
 }
 
-DEFUN(length, args, env, "length", 1, 0, NAVI_LIST)
+DEFUN(length, "length", 1, 0, NAVI_LIST)
 {
-	return navi_make_num(navi_list_length(navi_car(args)));
+	return navi_make_num(navi_list_length(scm_arg1));
 }
 
-DEFUN(list, args, env, "list", 0, NAVI_PROC_VARIADIC)
+DEFUN(list, "list", 0, NAVI_PROC_VARIADIC)
 {
-	return args;
+	return scm_args;
 }
 
 struct map_apply_arg {
@@ -133,11 +133,11 @@ static navi_obj map_apply(navi_obj elm, void *data)
 			arg->env);
 }
 
-DEFUN(map, args, env, "map", 2, 0, NAVI_PROCEDURE, NAVI_LIST)
+DEFUN(map, "map", 2, 0, NAVI_PROCEDURE, NAVI_LIST)
 {
 	struct map_apply_arg arg;
-	navi_check_arity(navi_car(args), 1, env);
-	arg.proc = navi_car(args);
-	arg.env = env;
-	return navi_map(navi_cadr(args), map_apply, &arg);
+	navi_check_arity(scm_arg1, 1, scm_env);
+	arg.proc = scm_arg1;
+	arg.env = scm_env;
+	return navi_map(scm_arg2, map_apply, &arg);
 }

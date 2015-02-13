@@ -201,18 +201,18 @@ static struct navi_spec *default_bindings[] = {
 /*
  * The top-level exception handler: prints a message and returns to the REPL.
  */
-DEFUN(toplevel_exn, args, env, "#exn", 1, 0, NAVI_ANY)
+DEFUN(toplevel_exn, "#exn", 1, 0, NAVI_ANY)
 {
 	navi_obj cont;
 
-	navi_write(navi_car(args), env);
+	navi_write(scm_arg1, scm_env);
 	putchar('\n');
 
-	cont = navi_env_lookup(env, navi_sym_repl);
+	cont = navi_env_lookup(scm_env, navi_sym_repl);
 	if (navi_type(cont) != NAVI_ESCAPE)
 		navi_die("#repl not bound to continuation");
 
-	navi_scope_set(env, navi_sym_exn,
+	navi_scope_set(scm_env, navi_sym_exn,
 			navi_from_spec(default_bindings[TOPLEVEL_EXN_INDEX]));
 	longjmp(navi_escape(cont)->state, 1);
 }

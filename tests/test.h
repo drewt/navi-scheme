@@ -23,7 +23,7 @@
 #define $$(fn) fn(navi_make_nil(), env)
 #define $(fn, ...) fn(navi_list(__VA_ARGS__, navi_make_void()), env)
 
-navi_env_t env;
+navi_env env;
 
 TCase *arithmetic_tests(void);
 TCase *char_tests(void);

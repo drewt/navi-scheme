@@ -185,7 +185,7 @@ END_TEST
 /* number->string */
 START_TEST(test_number_to_string)
 {
-	navi_t r;
+	navi_obj r;
 
 #define nts_assert(str, ...) \
 	r = $(scm_number_to_string, __VA_ARGS__); \
@@ -203,7 +203,7 @@ END_TEST
 /* string->number */
 START_TEST(test_string_to_number)
 {
-	navi_t r;
+	navi_obj r;
 
 #define stn_assert(nr, str, ...) \
 	r = $(scm_string_to_number, navi_cstr_to_string(str), ## __VA_ARGS__); \

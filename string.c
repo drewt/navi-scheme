@@ -119,7 +119,7 @@ DEFUN(make_string, args, env, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	UChar32 ch = ' ';
 	int nr_args = navi_list_length(args);
-	int32_t length = navi_fixnum_cast(navi_car(args), env);
+	int32_t length = navi_num(navi_car(args));
 	if (length < 0)
 		navi_error(env, "invalid length");
 	if (nr_args > 1)
@@ -141,13 +141,13 @@ DEFUN(string, args, env, "string", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(string_length, args, env, "string-length", 1, 0, NAVI_STRING)
 {
-	return navi_make_num(navi_string_cast(navi_car(args), env)->length);
+	return navi_make_num(navi_string(navi_car(args))->length);
 }
 
 DEFUN(string_ref, args, env, "string-ref", 2, 0, NAVI_STRING, NAVI_NUM)
 {
 	UChar32 ch;
-	struct navi_string *str = navi_string_cast(navi_car(args), env);
+	struct navi_string *str = navi_string(navi_car(args));
 	int32_t k = navi_type_check_range(navi_cadr(args), 0, str->length, env);
 
 	u8_get(str->data, 0, k, str->size, ch);
@@ -197,10 +197,6 @@ DEFUN(string_set, args, env, "string-set!", 3, 0,
 	int32_t k;
 	struct navi_string *str;
 
-	navi_type_check(navi_car(args),   NAVI_STRING, env);
-	navi_type_check(navi_cadr(args),  NAVI_NUM,    env);
-	navi_type_check(navi_caddr(args), NAVI_CHAR,   env);
-
 	str = navi_string(navi_car(args));
 	k = navi_num(navi_cadr(args));
 
@@ -232,7 +228,7 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 	{ \
 		navi_obj cons; \
 		struct navi_string *fst, *snd; \
-		fst = navi_string_cast(navi_car(args), env); \
+		fst = navi_string(navi_car(args)); \
 		navi_list_for_each(cons, navi_cdr(args)) { \
 			snd = navi_string_cast(navi_car(cons), env); \
 			if (!(navi_strcoll(fst, snd, ci) op 0)) \
@@ -265,7 +261,7 @@ static int32_t count_length(struct navi_string *str)
 #define STRING_CASEMAP(cname, scmname, fun) \
 	DEFUN(cname, args, env, scmname, 1, 0, NAVI_STRING) \
 	{ \
-		struct navi_string *src = navi_string_cast(navi_car(args), env); \
+		struct navi_string *src = navi_string(navi_car(args)); \
 		navi_obj dst_obj = navi_make_string(src->size, src->size, src->length); \
 		struct navi_string *dst = navi_string(dst_obj); \
 		UErrorCode error = U_ZERO_ERROR; \
@@ -315,12 +311,12 @@ DEFUN(string_append, args, env, "string-append", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(string_to_list, args, env, "string->list", 1, 0, NAVI_STRING)
 {
-	return string_to_list(navi_type_check(navi_car(args), NAVI_STRING, env));
+	return string_to_list(navi_car(args));
 }
 
 DEFUN(list_to_string, args, env, "list->string", 1, 0, NAVI_LIST)
 {
-	return list_to_string(navi_type_check_list(navi_car(args), env), env);
+	return list_to_string(navi_car(args), env);
 }
 
 static navi_obj copy_to(navi_obj to, int32_t at, navi_obj from, int32_t start,
@@ -361,8 +357,8 @@ DEFUN(string_fill, args, env, "string-fill!", 2, NAVI_PROC_VARIADIC,
 	struct navi_string *str;
 	int nr_args = navi_list_length(args);
 
-	str = navi_string_cast(navi_car(args), env);
-	ch = navi_char_cast(navi_cadr(args), env);
+	str = navi_string(navi_car(args));
+	ch = navi_char(navi_cadr(args));
 	start = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : 0;
 	end = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : str->size;
 	navi_check_copy(str->length, start, end, env);
@@ -400,7 +396,7 @@ DEFUN(string_copy, args, env, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 	long start, end;
 	int nr_args = navi_list_length(args);
 
-	from = navi_type_check(navi_car(args), NAVI_STRING, env);
+	from = navi_car(args);
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
 	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env)
 			: navi_string(from)->size;
@@ -417,9 +413,9 @@ DEFUN(string_copy_to, args, env, "string-copy!", 3, NAVI_PROC_VARIADIC,
 	long at, start, end;
 	int nr_args = navi_list_length(args);
 
-	to = navi_type_check(navi_car(args), NAVI_STRING, env);
-	at = navi_fixnum_cast(navi_cadr(args), env);
-	from = navi_type_check(navi_caddr(args), NAVI_STRING, env);
+	to = navi_car(args);
+	at = navi_num(navi_cadr(args));
+	from = navi_caddr(args);
 	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
 	end = (nr_args > 4) ? navi_fixnum_cast(navi_caddddr(args), env)
 			: navi_string(from)->size;
@@ -448,8 +444,8 @@ DEFUN(string_map_ip, args, env, "string-map!", 2, 0, NAVI_PROCEDURE, NAVI_STRING
 	navi_obj vec_obj;
 	struct navi_vector *vec;
 	struct navi_string *str;
-	navi_type_check_proc(navi_car(args), 1, env);
-	str = navi_string_cast(navi_cadr(args), env);
+	navi_check_arity(navi_car(args), 1, env);
+	str = navi_string(navi_cadr(args));
 
 	vec_obj = string_map(navi_car(args), navi_cadr(args), env);
 	vec = navi_vector(vec_obj);
@@ -464,7 +460,6 @@ DEFUN(string_map_ip, args, env, "string-map!", 2, 0, NAVI_PROCEDURE, NAVI_STRING
 
 DEFUN(string_map, args, env, "string-map", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
 {
-	navi_type_check_proc(navi_car(args), 1, env);
-	navi_type_check(navi_cadr(args), NAVI_STRING, env);
+	navi_check_arity(navi_car(args), 1, env);
 	return vector_to_string(string_map(navi_car(args), navi_cadr(args), env));
 }

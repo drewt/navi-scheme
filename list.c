@@ -83,13 +83,11 @@ DEFUN(cons, args, env, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
 
 DEFUN(car, args, env, "car", 1, 0, NAVI_PAIR)
 {
-	navi_type_check(navi_car(args), NAVI_PAIR, env);
 	return navi_car(navi_car(args));
 }
 
 DEFUN(cdr, args, env, "cdr", 1, 0, NAVI_PAIR)
 {
-	navi_type_check(navi_car(args), NAVI_PAIR, env);
 	return navi_cdr(navi_car(args));
 }
 
@@ -113,9 +111,8 @@ DEFUN(nullp, args, env, "null?", 1, 0, NAVI_ANY)
 	return navi_make_bool(navi_type(navi_car(args)) == NAVI_NIL);
 }
 
-DEFUN(length, args, env, "length", 1, 0, NAVI_ANY)
+DEFUN(length, args, env, "length", 1, 0, NAVI_LIST)
 {
-	// XXX: this assumes we are given a list!
 	return navi_make_num(navi_list_length(navi_car(args)));
 }
 
@@ -139,12 +136,8 @@ static navi_obj map_apply(navi_obj elm, void *data)
 DEFUN(map, args, env, "map", 2, 0, NAVI_PROCEDURE, NAVI_LIST)
 {
 	struct map_apply_arg arg;
-
-	navi_type_check_proc(navi_car(args), 1, env);
-	navi_type_check_list(navi_cadr(args), env);
-
+	navi_check_arity(navi_car(args), 1, env);
 	arg.proc = navi_car(args);
 	arg.env = env;
-
 	return navi_map(navi_cadr(args), map_apply, &arg);
 }

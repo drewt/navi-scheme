@@ -79,7 +79,7 @@ static bool lambda_valid(navi_obj lambda)
 }
 
 DEFSPECIAL(lambda, lambda, env, "lambda", 2, NAVI_PROC_VARIADIC,
-		NAVI_LIST, NAVI_ANY)
+		NAVI_ANY, NAVI_ANY)
 {
 	if (!lambda_valid(lambda))
 		navi_error(env, "invalid lambda list");
@@ -163,23 +163,20 @@ static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, nav
 	}
 }
 
-DEFSPECIAL(define_values, defvals, env, "define-values", 2, NAVI_PROC_VARIADIC,
+DEFSPECIAL(define_values, defvals, env, "define-values", 2, 0,
 		NAVI_LIST, NAVI_ANY)
 {
-	if (navi_list_length(defvals) != 2)
-		navi_error(env, "invalid define-values list");
-
 	extend_with_values(navi_car(defvals), navi_eval(navi_cadr(defvals), env),
 			navi_make_symbol("define-values"), env);
 	return navi_unspecified();
 }
 
 DEFSPECIAL(defmacro, defmacro, env, "defmacro", 2, NAVI_PROC_VARIADIC,
-		NAVI_LIST, NAVI_ANY)
+		NAVI_PAIR, NAVI_ANY)
 {
 	navi_obj macro, name;
 
-	if (navi_list_length(defmacro) < 2 || !list_of(navi_car(defmacro), NAVI_SYMBOL, true))
+	if (!list_of(navi_car(defmacro), NAVI_SYMBOL, true))
 		navi_error(env, "invalid define-macro list");
 
 	name = navi_caar(defmacro);
@@ -282,7 +279,7 @@ static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
 
 #define DEFLET(name, scmname, validate, extend) \
 	DEFSPECIAL(name, let, env, scmname, 2, NAVI_PROC_VARIADIC, \
-			NAVI_LIST, NAVI_ANY) \
+			NAVI_ANY, NAVI_ANY) \
 	{ \
 		navi_obj result; \
 		navi_env new_env; \
@@ -300,20 +297,10 @@ DEFLET(let, "let", let_defs_valid, let_extend_env)
 DEFLET(sequential_let, "let*", let_defs_valid, sequential_let_extend_env)
 DEFLET(let_values, "let-values", letvals_defs_valid, letvals_extend_env)
 
-static inline bool set_valid(navi_obj set)
-{
-	return navi_type(navi_car(set)) == NAVI_SYMBOL &&
-		navi_type(navi_cdr(set)) == NAVI_PAIR &&
-		navi_type(navi_cddr(set)) == NAVI_NIL;
-}
-
-DEFSPECIAL(set, set, env, "set!", 2, 0, NAVI_ANY, NAVI_ANY)
+DEFSPECIAL(set, set, env, "set!", 2, 0, NAVI_SYMBOL, NAVI_ANY)
 {
 	struct navi_binding *binding;
 	navi_obj value;
-
-	if (!set_valid(set))
-		navi_error(env, "invalid set list");
 
 	binding = navi_env_binding(env, navi_car(set));
 	if (binding == NULL)
@@ -327,15 +314,11 @@ DEFSPECIAL(set, set, env, "set!", 2, 0, NAVI_ANY, NAVI_ANY)
 
 DEFSPECIAL(quote, quote, env, "quote", 1, 0, NAVI_ANY)
 {
-	if (navi_type(navi_cdr(quote)) != NAVI_NIL)
-		navi_error(env, "invalid argument to quote");
 	return navi_car(quote);
 }
 
 DEFSPECIAL(unquote, unquote, env, "unquote", 1, 0, NAVI_ANY)
 {
-	if (navi_list_length(unquote) != 1)
-		navi_arity_error(env, navi_make_symbol("unquote"));
 	return navi_eval(navi_car(unquote), env);
 }
 
@@ -379,8 +362,6 @@ static navi_obj eval_qq(navi_obj expr, navi_env env)
 
 DEFSPECIAL(quasiquote, quote, env, "quasiquote", 1, 0, NAVI_ANY)
 {
-	if (!navi_is_nil(navi_cdr(quote)))
-		navi_arity_error(env, navi_make_symbol("quasiquote"));
 	return eval_qq(navi_car(quote), env);	
 }
 
@@ -483,7 +464,7 @@ DEFSPECIAL(if, sif, env, "if", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 	navi_obj test;
 	int nr_args = navi_list_length(sif);
 
-	if (nr_args != 2 && nr_args != 3)
+	if (nr_args > 3)
 		navi_arity_error(env, navi_make_symbol("if"));
 
 	test = navi_eval(navi_car(sif), env);
@@ -527,7 +508,6 @@ DEFSPECIAL(delay, args, env, "delay", 1, 0, NAVI_ANY)
 
 DEFUN(force, args, env, "force", 1, 0, NAVI_PROCEDURE)
 {
-	// FIXME: type checking...
 	struct navi_procedure *proc = navi_procedure(navi_car(args));
 	navi_obj r = navi_eval(navi_make_pair(navi_sym_begin,
 				proc->body), proc->env);
@@ -541,6 +521,27 @@ navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
 	navi_env new_env;
 	if (!navi_arity_satisfied(proc, navi_list_length(args)))
 		navi_arity_error(env, proc->name);
+	if (proc->types) {
+		navi_obj cons;
+		unsigned i = 0;
+		navi_list_for_each(cons, args) {
+			if (i >= proc->arity)
+				break;
+			switch (proc->types[i]) {
+			case NAVI_LIST:
+				navi_type_check_list(navi_car(cons), env);
+				break;
+			case NAVI_BYTE:
+				navi_type_check_byte(navi_car(cons), env);
+				break;
+			case NAVI_ANY:
+				break;
+			default:
+				navi_type_check(navi_car(cons), proc->types[i], env);
+			}
+			i++;
+		}
+	}
 	if (proc->flags & NAVI_PROC_BUILTIN)
 		return proc->c_proc(args, env);
 	new_env = navi_extend_environment(proc->env, proc->args, args);

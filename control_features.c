@@ -56,7 +56,6 @@ DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
 		NAVI_PROCEDURE, NAVI_ANY)
 {
 	navi_obj cons, last = (navi_obj) args;
-
 	navi_list_for_each(cons, args) {
 		navi_obj fst = navi_car(cons);
 		/* walk to the last argument */
@@ -64,7 +63,6 @@ DEFUN(apply, args, env, "apply", 2, NAVI_PROC_VARIADIC,
 			last = cons;
 			continue;
 		}
-
 		navi_type_check_list(fst, env);
 
 		/* flatten arg list */
@@ -86,7 +84,7 @@ DEFUN(call_ec, args, env, "call/ec", 1, 0, NAVI_PROCEDURE)
 	struct navi_escape *escape;
 	navi_obj cont, call, proc = navi_car(args);
 
-	navi_type_check_proc(proc, 1, env);
+	navi_check_arity(proc, 1, env);
 
 	cont = navi_make_escape();
 	escape = navi_escape(cont);
@@ -109,8 +107,7 @@ DEFUN(call_with_values, args, env, "call-with-values", 2, 0,
 		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
 	navi_obj values, call_args;
-	navi_type_check_proc(navi_car(args), 0, env);
-	navi_type_check(navi_cadr(args), NAVI_PROCEDURE, env);
+	navi_check_arity(navi_car(args), 0, env);
 
 	values = navi_eval(navi_make_pair(navi_car(args), navi_make_nil()), env);
 	if (navi_type(values) != NAVI_VALUES)
@@ -124,8 +121,8 @@ DEFUN(call_with_values, args, env, "call-with-values", 2, 0,
 DEFUN(with_exception_handler, args, env, "with-exception-handler", 2, 0,
 		NAVI_PROCEDURE, NAVI_PROCEDURE)
 {
-	navi_type_check_proc(navi_car(args),  1, env);
-	navi_type_check_proc(navi_cadr(args), 0, env);
+	navi_check_arity(navi_car(args),  1, env);
+	navi_check_arity(navi_cadr(args), 0, env);
 
 	struct navi_procedure *thunk = navi_procedure(navi_cadr(args));
 	navi_env exn_env = navi_env_new_scope(thunk->env);
@@ -157,7 +154,6 @@ DEFUN(raise_continuable, args, env, "raise-continuable", 1, 0, NAVI_ANY)
 
 DEFUN(error, args, env, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
-	navi_type_check(navi_car(args), NAVI_STRING, env);
 	navi_raise(navi_make_pair(args, navi_make_nil()), env);
 }
 

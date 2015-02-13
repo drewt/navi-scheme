@@ -31,8 +31,6 @@ DEFUN(charp, args, env, "char?", 1, 0, NAVI_ANY)
 	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
 		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
-		navi_type_check(fst, NAVI_CHAR, env); \
-		navi_type_check(snd, NAVI_CHAR, env); \
 		return navi_make_bool(navi_char(fst) op navi_char(snd)); \
 	}
 
@@ -46,8 +44,6 @@ CHAR_COMPARE(char_gte, "char>=?", >=)
 	DEFUN(cname, args, env, scmname, 2, 0, NAVI_CHAR, NAVI_CHAR) \
 	{ \
 		navi_obj fst = navi_car(args), snd = navi_cadr(args); \
-		navi_type_check(fst, NAVI_CHAR, env); \
-		navi_type_check(snd, NAVI_CHAR, env); \
 		return navi_make_bool(tolower(navi_char(fst)) op \
 				tolower(navi_char(snd))); \
 	}
@@ -70,10 +66,10 @@ navi_obj navi_char_downcase(navi_obj ch)
 
 DEFUN(char_upcase, args, env, "char-upcase", 1, 0, NAVI_CHAR)
 {
-	return navi_char_upcase(navi_type_check(navi_car(args), NAVI_CHAR, env));
+	return navi_char_upcase(navi_car(args));
 }
 
 DEFUN(char_downcase, args, env, "char-downcase", 1, 0, NAVI_CHAR)
 {
-	return navi_char_downcase(navi_type_check(navi_car(args), NAVI_CHAR, env));
+	return navi_char_downcase(navi_car(args));
 }

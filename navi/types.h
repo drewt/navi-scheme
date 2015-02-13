@@ -76,9 +76,9 @@ enum navi_type {
 };
 
 enum {
-	NAVI_LIST,
-	NAVI_BYTE,
-	NAVI_ANY,
+	NAVI_LIST = -1,
+	NAVI_BYTE = -2,
+	NAVI_ANY  = -3,
 };
 
 struct navi_escape {
@@ -104,6 +104,7 @@ struct navi_procedure {
 		};
 		navi_builtin c_proc;
 	};
+	int *types;
 };
 
 struct navi_vector {

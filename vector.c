@@ -61,10 +61,9 @@ DEFUN(make_vector, args, env, "make-vector", 1, NAVI_PROC_VARIADIC,
 	navi_obj vec;
 	int nr_args = navi_list_length(args);
 
-	if (nr_args != 1 && nr_args != 2)
+	if (nr_args > 2)
 		navi_arity_error(env, navi_make_symbol("make-vector"));
 
-	navi_type_check(navi_car(args), NAVI_NUM, env);
 	vec = navi_make_vector(navi_num(navi_car(args)));
 	navi_vector_fill(vec, (nr_args < 2) ? navi_make_bool(false) : navi_cadr(args));
 	return vec;
@@ -77,15 +76,11 @@ DEFUN(vector, args, env, "vector", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(vector_length, args, env, "vector-length", 1, 0, NAVI_VECTOR)
 {
-	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	return navi_make_num(navi_vector(navi_car(args))->size);
 }
 
 DEFUN(vector_ref, args, env, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_NUM)
 {
-	navi_type_check(navi_car(args), NAVI_VECTOR, env);
-	navi_type_check(navi_cadr(args), NAVI_NUM, env);
-
 	if (navi_num(navi_cadr(args)) >= (long) navi_vector(navi_car(args))->size)
 		navi_error(env, "vector index out of bounds");
 
@@ -94,9 +89,6 @@ DEFUN(vector_ref, args, env, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_NUM)
 
 DEFUN(vector_set, args, env, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_NUM, NAVI_ANY)
 {
-	navi_type_check(navi_car(args), NAVI_VECTOR, env);
-	navi_type_check(navi_cadr(args), NAVI_NUM, env);
-
 	if (navi_num(navi_cadr(args)) >= (long) navi_vector(navi_car(args))->size)
 		navi_error(env, "vector index out of bounds");
 
@@ -106,13 +98,11 @@ DEFUN(vector_set, args, env, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_NUM, NAVI_AN
 
 DEFUN(vector_to_list, args, env, "vector->list", 1, 0, NAVI_VECTOR)
 {
-	navi_type_check(navi_car(args), NAVI_VECTOR, env);
 	return navi_vector_to_list(navi_car(args));
 }
 
 DEFUN(list_to_vector, args, env, "list->vector", 1, 0, NAVI_LIST)
 {
-	navi_type_check_list(navi_car(args), env);
 	return navi_list_to_vector(navi_car(args));
 }
 
@@ -133,7 +123,7 @@ DEFUN(vector_fill, args, env, "vector-fill!", 2, NAVI_PROC_VARIADIC,
 	struct navi_vector *vec;
 	int nr_args = navi_list_length(args);
 
-	vec = navi_vector_cast(navi_car(args), NAVI_VECTOR, env);
+	vec = navi_vector(navi_car(args));
 	fill = navi_cadr(args);
 	start = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : 0;
 	end = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : (long) vec->size;
@@ -153,7 +143,7 @@ DEFUN(vector_copy, args, env, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 	struct navi_vector *vec;
 	int nr_args = navi_list_length(args);
 
-	from = navi_type_check(navi_car(args), NAVI_VECTOR, env);
+	from = navi_car(args);
 	vec = navi_vector(from);
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
 	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
@@ -171,9 +161,9 @@ DEFUN(vector_copy_to, args, env, "vector-copy!", 3, NAVI_PROC_VARIADIC,
 	struct navi_vector *fromv, *tov;
 	int nr_args = navi_list_length(args);
 
-	to = navi_type_check(navi_car(args), NAVI_VECTOR, env);
-	at = navi_fixnum_cast(navi_cadr(args), env);
-	from = navi_type_check(navi_caddr(args), NAVI_VECTOR, env);
+	to = navi_car(args);
+	at = navi_num(navi_cadr(args));
+	from = navi_caddr(args);
 	tov = navi_vector(to);
 	fromv = navi_vector(from);
 	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
@@ -200,15 +190,13 @@ navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env
 
 DEFUN(vector_map_ip, args, env, "vector-map!", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 {
-	navi_type_check_proc(navi_car(args), 1, env);
-	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
+	navi_check_arity(navi_car(args), 1, env);
 	return navi_vector_map(navi_car(args), navi_cadr(args), navi_cadr(args), env);
 }
 
 DEFUN(vector_map, args, env, "vector-map", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 {
-	navi_type_check_proc(navi_car(args), 1, env);
-	navi_type_check(navi_cadr(args), NAVI_VECTOR, env);
+	navi_check_arity(navi_car(args), 1, env);
 	return navi_vector_map(navi_car(args),
 			navi_make_vector(navi_vector_length(navi_cadr(args))),
 			navi_cadr(args), env);

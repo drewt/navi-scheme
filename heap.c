@@ -261,6 +261,7 @@ navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_e
 	proc->env = env;
 	proc->arity = count_pairs((navi_obj)args);
 	proc->flags = 0;
+	proc->types = NULL;
 	if (!navi_is_proper_list(args))
 		proc->flags |= NAVI_PROC_VARIADIC;
 	navi_scope_ref(env);

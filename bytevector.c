@@ -48,10 +48,8 @@ DEFUN(make_bytevector, args, env, "make-bytevector", 1, NAVI_PROC_VARIADIC,
 	navi_obj obj;
 	int nr_args = navi_list_length(args);
 
-	if (nr_args != 1 && nr_args != 2)
+	if (nr_args > 2)
 		navi_arity_error(env, navi_make_symbol("bytevector"));
-
-	navi_type_check(navi_car(args), NAVI_NUM, env);
 
 	obj = navi_make_bytevec(navi_num(navi_car(args)));
 	if (nr_args == 2) {
@@ -68,26 +66,20 @@ DEFUN(bytevector, args, env, "bytevector", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(bytevector_length, args, env, "bytevector-length", 1, 0, NAVI_BYTEVEC)
 {
-	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
 	return navi_make_num(navi_bytevec(navi_car(args))->size);
 }
 
 DEFUN(bytevector_u8_ref, args, env, "bytevector-u8-ref", 2, 0,
 		NAVI_BYTEVEC, NAVI_NUM)
 {
-	navi_type_check(navi_car(args),  NAVI_BYTEVEC, env);
 	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
-
 	return navi_bytevec_ref(navi_car(args), navi_num(navi_cadr(args)));
 }
 
 DEFUN(bytevector_u8_set, args, env, "bytevector-u8-set!", 3, 0,
 		NAVI_BYTEVEC, NAVI_NUM, NAVI_BYTE)
 {
-	navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
 	navi_type_check_range(navi_cadr(args), 0, navi_bytevec(navi_car(args))->size, env);
-	navi_type_check_byte(navi_caddr(args), env);
-
 	navi_bytevec(navi_car(args))->data[navi_num(navi_cadr(args))] = navi_num(navi_caddr(args));
 	return navi_unspecified();
 }
@@ -131,7 +123,7 @@ DEFUN(bytevector_copy, args, env, "bytevector-copy", 1, NAVI_PROC_VARIADIC,
 	struct navi_bytevec *vec;
 	int nr_args = navi_list_length(args);
 
-	from = navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
+	from = navi_car(args);
 	vec = navi_bytevec(from);
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
 	end = (nr_args > 2) ? navi_fixnum_cast(navi_caddr(args), env) : (long) vec->size;
@@ -149,9 +141,9 @@ DEFUN(bytevector_copy_to, args, env, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
 	struct navi_bytevec *from_vec, *to_vec;
 	int nr_args = navi_list_length(args);
 
-	to = navi_type_check(navi_car(args), NAVI_BYTEVEC, env);
-	at = navi_fixnum_cast(navi_cadr(args), env);
-	from = navi_type_check(navi_caddr(args), NAVI_BYTEVEC, env);
+	to = navi_car(args);
+	at = navi_num(navi_cadr(args));
+	from = navi_caddr(args);
 	to_vec = navi_bytevec(to);
 	from_vec = navi_bytevec(from);
 	start = (nr_args > 3) ? navi_fixnum_cast(navi_cadddr(args), env) : 0;
@@ -181,7 +173,7 @@ DEFUN(utf8_to_string, args, env, "utf8->string", 1, NAVI_PROC_VARIADIC,
 {
 	navi_obj str;
 	int32_t start, end, size, length;
-	struct navi_bytevec *vec = navi_bytevec_cast(navi_car(args), env);
+	struct navi_bytevec *vec = navi_bytevec(navi_car(args));
 	int nr_args = navi_list_length(args);
 
 	start = (nr_args > 1) ? navi_fixnum_cast(navi_cadr(args), env) : 0;
@@ -204,7 +196,7 @@ DEFUN(string_to_utf8, args, env, "string->utf8", 1, NAVI_PROC_VARIADIC,
 {
 	navi_obj r;
 	int32_t start, end;
-	struct navi_string *str = navi_string_cast(navi_car(args), env);
+	struct navi_string *str = navi_string(navi_car(args));
 	int nr_args = navi_list_length(args);
 	int32_t end_i, start_i = 0;
 

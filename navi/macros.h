@@ -26,6 +26,7 @@
 			.flags = _flags | NAVI_PROC_BUILTIN, \
 			.arity = _arity, \
 			.c_proc = scm_##cname, \
+			.types = scm_typedecl_##cname, \
 		}, \
 		.ident = name, \
 		.type  = _type, \

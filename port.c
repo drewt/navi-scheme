@@ -365,14 +365,14 @@ DEFUN(portp, args, env, "port?", 1, 0, NAVI_ANY)
 
 DEFUN(input_port_openp, args, env, "input-port-open?", 1, 0, NAVI_PORT)
 {
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 	check_input_port(p, env);
 	return navi_make_bool(!(p->flags & INPUT_CLOSED));
 }
 
 DEFUN(output_port_openp, args, env, "output-port-open?", 1, 0, NAVI_PORT)
 {
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 	check_output_port(p, env);
 	return navi_make_bool(!(p->flags & OUTPUT_CLOSED));
 }
@@ -395,32 +395,24 @@ DEFUN(current_error_port, args, env, "current-error-port", 0, 0)
 DEFUN(open_input_file, args, env, "open-input-file", 1, 0, NAVI_STRING)
 {
 	FILE *f;
-
-	navi_type_check(navi_car(args), NAVI_STRING, env);
-
 	if ((f = fopen((char*)navi_string(navi_car(args))->data, "r")) == NULL) {
 		navi_file_error(env, "unable to open file");
 	}
-
 	return navi_make_file_input_port(f);
 }
 
 DEFUN(open_output_file, args, env, "open-output-file", 1, 0, NAVI_STRING)
 {
 	FILE *f;
-
-	navi_type_check(navi_car(args), NAVI_STRING, env);
-
 	if ((f = fopen((char*)navi_string(navi_car(args))->data, "w")) == NULL) {
 		navi_file_error(env, "unable to open file");
 	}
-
 	return navi_make_file_output_port(f);
 }
 
 DEFUN(open_input_string, args, env, "open-input-string", 1, 0, NAVI_STRING)
 {
-	return make_string_input_port(navi_type_check(navi_car(args), NAVI_STRING, env));
+	return make_string_input_port(navi_car(args));
 }
 
 DEFUN(open_output_string, args, env, "open-output-string", 0, 0)
@@ -432,7 +424,7 @@ DEFUN(get_output_string, args, env, "get-output-string", 1, 0, NAVI_PORT)
 {
 	navi_obj expr;
 	struct navi_string *str;
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 
 	if (!(p->flags & STRING_OUTPUT))
 		navi_error(env, "not a string output port");
@@ -459,7 +451,7 @@ static void close_output_port(struct navi_port *p, navi_env env)
 
 DEFUN(close_port, args, env, "close-port", 1, 0, NAVI_PORT)
 {
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 	if (p->read_u8 || p->read_char)
 		close_input_port(p, env);
 	if (p->write_u8 || p->write_char)
@@ -469,7 +461,7 @@ DEFUN(close_port, args, env, "close-port", 1, 0, NAVI_PORT)
 
 DEFUN(close_input_port, args, env, "close-input-port", 1, 0, NAVI_PORT)
 {
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 	check_input_port(p, env);
 	close_input_port(p, env);
 	return navi_unspecified();
@@ -477,7 +469,7 @@ DEFUN(close_input_port, args, env, "close-input-port", 1, 0, NAVI_PORT)
 
 DEFUN(close_output_port, args, env, "close-output-port", 1, 0, NAVI_PORT)
 {
-	struct navi_port *p = navi_port_cast(navi_car(args), env);
+	struct navi_port *p = navi_port(navi_car(args));
 	check_output_port(p, env);
 	close_output_port(p, env);
 	return navi_unspecified();
@@ -523,24 +515,23 @@ DEFUN(read, args, env, "read", 0, NAVI_PROC_VARIADIC)
 	return navi_read(p, env);
 }
 
-DEFUN(write_u8, args, env, "write-u8", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(write_u8, args, env, "write-u8", 1, NAVI_PROC_VARIADIC, NAVI_BYTE)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
-	navi_port_write_char(navi_type_check_byte(navi_car(args), env), p, env);
+	navi_port_write_char(navi_num(navi_car(args)), p, env);
 	return navi_unspecified();
 }
 
 DEFUN(write_char, args, env, "write-char", 1, NAVI_PROC_VARIADIC, NAVI_CHAR)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
-	navi_port_write_char(navi_char_cast(navi_car(args), env), p, env);
+	navi_port_write_char(navi_char(navi_car(args)), p, env);
 	return navi_unspecified();
 }
 
 DEFUN(write_string, args, env, "write-string", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	struct navi_port *p = get_output_port(navi_cdr(args), env);
-	navi_type_check(navi_car(args), NAVI_STRING, env);
 	navi_port_write_cstr((char*)navi_string(navi_car(args))->data, p, env);
 	return navi_unspecified();
 }

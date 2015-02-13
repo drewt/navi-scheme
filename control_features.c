@@ -187,7 +187,7 @@ DEFUN(error_object_irritants, "error-object-irritants", 1, 0, NAVI_ANY)
 
 DEFUN(read_errorp, "read-error?", 1, 0, NAVI_ANY)
 {
-	if (!navi_bool(scm_error_objectp(scm_args, scm_env)))
+	if (!is_error_object(scm_arg1))
 		return navi_make_bool(false);
 	if (navi_list_length(scm_arg1) < 2)
 		return navi_make_bool(false);

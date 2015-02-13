@@ -48,7 +48,7 @@ struct navi_scope {
 };
 typedef struct navi_scope *navi_env;
 
-typedef navi_obj (*navi_builtin)(navi_obj,navi_env);
+typedef navi_obj (*navi_builtin)(unsigned, navi_obj, navi_env);
 typedef navi_obj (*navi_leaf)(navi_obj, void*);
 
 enum navi_type {

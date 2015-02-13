@@ -18,9 +18,9 @@
 
 #include "types.h"
 
-#define DEFPROC(_type, cname, name, _arity, _flags, ...) \
+#define DEFPROC(_type, cname, scmname, _arity, _flags, ...) \
 	int scm_typedecl_##cname[_arity] = { __VA_ARGS__ }; \
-	navi_obj scm_##cname(navi_obj, navi_env); \
+	navi_obj scm_##cname(unsigned, navi_obj, navi_env); \
 	struct navi_spec scm_decl_##cname = { \
 		.proc = { \
 			.flags = _flags | NAVI_PROC_BUILTIN, \
@@ -28,10 +28,10 @@
 			.c_proc = scm_##cname, \
 			.types = scm_typedecl_##cname, \
 		}, \
-		.ident = name, \
+		.ident = scmname, \
 		.type  = _type, \
 	}; \
-	navi_obj scm_##cname(navi_obj scm_args, navi_env scm_env)
+	navi_obj scm_##cname(unsigned scm_nr_args, navi_obj scm_args, navi_env scm_env)
 
 #define DEFUN(...)      DEFPROC(NAVI_PROCEDURE, __VA_ARGS__)
 #define DEFMACRO(...)   DEFPROC(NAVI_MACRO,     __VA_ARGS__)
@@ -49,7 +49,7 @@
  */
 #define DECLARE(name) \
 	extern struct navi_spec scm_decl_##name; \
-	navi_obj scm_##name(navi_obj, navi_env)
+	navi_obj scm_##name(unsigned, navi_obj, navi_env)
 
 #define navi_list_for_each(cons, head) \
 	for (cons = (navi_obj) (head); navi_type(cons) == NAVI_PAIR; \

@@ -20,8 +20,10 @@
 #include <check.h>
 #include "../navi.h"
 
-#define $$(fn) fn(navi_make_nil(), env)
-#define $(fn, ...) fn(navi_list(__VA_ARGS__, navi_make_void()), env)
+#define $$(fn) fn(0, navi_make_nil(), env)
+#define $(fn, ...) \
+	fn(navi_list_length(navi_list(__VA_ARGS__, navi_make_void())), \
+			navi_list(__VA_ARGS__, navi_make_void()), env)
 
 navi_env env;
 

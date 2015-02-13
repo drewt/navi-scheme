@@ -58,13 +58,12 @@ DEFUN(vectorp, "vector?", 1, 0, NAVI_ANY)
 DEFUN(make_vector, "make-vector", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	navi_obj vec;
-	int nr_args = navi_list_length(scm_args);
 
-	if (nr_args > 2)
+	if (scm_nr_args > 2)
 		navi_arity_error(scm_env, navi_make_symbol("make-vector"));
 
 	vec = navi_make_vector(navi_num(scm_arg1));
-	navi_vector_fill(vec, (nr_args < 2) ? navi_make_bool(false) : scm_arg2);
+	navi_vector_fill(vec, (scm_nr_args < 2) ? navi_make_bool(false) : scm_arg2);
 	return vec;
 }
 
@@ -119,12 +118,11 @@ DEFUN(vector_fill, "vector-fill!", 2, NAVI_PROC_VARIADIC, NAVI_VECTOR, NAVI_ANY)
 	navi_obj fill;
 	long end, start;
 	struct navi_vector *vec;
-	int nr_args = navi_list_length(scm_args);
 
 	vec = navi_vector(scm_arg1);
 	fill = scm_arg2;
-	start = (nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : 0;
-	end = (nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : (long) vec->size;
+	start = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : 0;
+	end = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : (long) vec->size;
 
 	navi_check_copy(vec->size, start, end, scm_env);
 
@@ -139,12 +137,11 @@ DEFUN(vector_copy, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 	navi_obj from;
 	long start, end;
 	struct navi_vector *vec;
-	int nr_args = navi_list_length(scm_args);
 
 	from = scm_arg1;
 	vec = navi_vector(from);
-	start = (nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
-	end = (nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : (long) vec->size;
+	start = (scm_nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
+	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : (long) vec->size;
 
 	navi_check_copy(vec->size, start, end, scm_env);
 
@@ -157,15 +154,14 @@ DEFUN(vector_copy_to, "vector-copy!", 3, NAVI_PROC_VARIADIC,
 	navi_obj to, from;
 	long at, start, end;
 	struct navi_vector *fromv, *tov;
-	int nr_args = navi_list_length(scm_args);
 
 	to = scm_arg1;
 	at = navi_num(scm_arg2);
 	from = scm_arg3;
 	tov = navi_vector(to);
 	fromv = navi_vector(from);
-	start = (nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
-	end = (nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env) : (long) fromv->size;
+	start = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
+	end = (scm_nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env) : (long) fromv->size;
 
 	navi_check_copy_to(tov->size, at, fromv->size, start, end, scm_env);
 

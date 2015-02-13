@@ -118,11 +118,10 @@ DEFUN(stringp, "string?", 1, 0, NAVI_ANY)
 DEFUN(make_string, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
 {
 	UChar32 ch = ' ';
-	int nr_args = navi_list_length(scm_args);
 	int32_t length = navi_num(scm_arg1);
 	if (length < 0)
 		navi_error(scm_env, "invalid length");
-	if (nr_args > 1)
+	if (scm_nr_args > 1)
 		ch = navi_char_cast(scm_arg2, scm_env);
 
 	int32_t size = length * u8_length(ch);
@@ -352,12 +351,11 @@ DEFUN(string_fill, "string-fill!", 2, NAVI_PROC_VARIADIC, NAVI_STRING, NAVI_CHAR
 	int32_t start, end, k, j, i = 0;
 	int32_t new_size, old_size;
 	struct navi_string *str;
-	int nr_args = navi_list_length(scm_args);
 
 	str = navi_string(scm_arg1);
 	ch = navi_char(scm_arg2);
-	start = (nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : 0;
-	end = (nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : str->size;
+	start = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : 0;
+	end = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : str->size;
 	navi_check_copy(str->length, start, end, scm_env);
 
 	// determine old_size/new_size
@@ -391,11 +389,10 @@ DEFUN(string_copy, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	navi_obj from, to;
 	long start, end;
-	int nr_args = navi_list_length(scm_args);
 
 	from = scm_arg1;
-	start = (nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
-	end = (nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env)
+	start = (scm_nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
+	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env)
 			: navi_string(from)->size;
 	navi_check_copy(navi_string(from)->length, start, end, scm_env);
 
@@ -408,13 +405,12 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 {
 	navi_obj to, from;
 	long at, start, end;
-	int nr_args = navi_list_length(scm_args);
 
 	to = scm_arg1;
 	at = navi_num(scm_arg2);
 	from = scm_arg3;
-	start = (nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
-	end = (nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env)
+	start = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
+	end = (scm_nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env)
 			: navi_string(from)->size;
 	navi_check_copy_to(navi_string(to)->length, at,
 			navi_string(from)->length, start, end, scm_env);
@@ -425,7 +421,7 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 
 DEFUN(substring, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
 {
-	return scm_string_copy(scm_args, scm_env);
+	return scm_string_copy(3, scm_args, scm_env);
 }
 
 static navi_obj string_map(navi_obj proc, navi_obj str, navi_env env)

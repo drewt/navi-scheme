@@ -558,7 +558,7 @@ DEFUN(write, "write", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 
 DEFUN(newline, "newline", 0, NAVI_PROC_VARIADIC)
 {
-	struct navi_port *p = get_output_port(navi_cdr(scm_args), scm_env);
+	struct navi_port *p = get_output_port(scm_args, scm_env);
 	navi_port_write_char('\n', p, scm_env);
 	return navi_unspecified();
 }

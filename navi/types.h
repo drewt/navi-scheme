@@ -104,7 +104,7 @@ struct navi_procedure {
 		};
 		navi_builtin c_proc;
 	};
-	int *types;
+	const int *types;
 };
 
 struct navi_vector {
@@ -233,7 +233,6 @@ static inline void navi_scope_ref(navi_env env)
 }
 /* Memory Management }}} */
 /* Accessors {{{ */
-
 static inline long navi_num(navi_obj obj)
 {
 	return obj.n >> 1;
@@ -366,7 +365,7 @@ static inline navi_obj navi_caddddr(navi_obj obj)
 
 /* Accessors }}} */
 /* Constructors {{{ */
-navi_obj navi_from_spec(struct navi_spec *spec);
+navi_obj navi_from_spec(const struct navi_spec *spec);
 navi_obj navi_cstr_to_string(const char *str);
 navi_obj navi_cstr_to_bytevec(const char *str);
 navi_obj navi_make_symbol(const char *sym);
@@ -610,6 +609,7 @@ static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
 /* Lists {{{ */
 navi_obj navi_vlist(navi_obj first, va_list ap);
 navi_obj navi_list(navi_obj first, ...);
+int navi_list_length(navi_obj list);
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 static inline navi_obj navi_last_cons(navi_obj list)
@@ -624,18 +624,22 @@ static inline bool navi_is_last_pair(navi_obj pair)
 	return navi_type(navi_cdr(pair)) == NAVI_NIL;
 }
 
-static inline int navi_list_length(navi_obj list)
-{
-	int i;
+#define navi_list_for_each(cons, head)                                     \
+	for (cons = (navi_obj) (head); navi_type(cons) == NAVI_PAIR;       \
+			cons = navi_pair(cons)->cdr)
 
-	for (i = 0; navi_type(list) == NAVI_PAIR; i++)
-		list = navi_cdr(list);
+#define navi_list_for_each_safe(cons, n, head)                             \
+	for (cons = (navi_obj) (head), n = navi_cdr(head);                 \
+			navi_type(cons) == NAVI_PAIR;                      \
+			cons = n,                                          \
+			n = (navi_type(n) == NAVI_PAIR) ? navi_cdr(n) : n)
 
-	if (navi_type(list) != NAVI_NIL)
-		navi_die("navi_list_length: not a proper list");
-
-	return i;
-}
+#define navi_list_for_each_zipped(cons_a, cons_b, head_a, head_b)          \
+	for (cons_a = (navi_obj) (head_a), cons_b = (navi_obj) (head_b);   \
+			navi_type(cons_a) == NAVI_PAIR &&                  \
+			navi_type(cons_b) == NAVI_PAIR;                    \
+			cons_a = navi_pair(cons_a)->cdr,                   \
+			cons_b = navi_pair(cons_b)->cdr)
 /* Lists }}} */
 /* Characters {{{ */
 navi_obj navi_char_upcase(navi_obj ch);
@@ -678,17 +682,7 @@ static inline void navi_write(navi_obj obj, navi_env env)
 /* Ports }}} */
 /* Strings {{{ */
 navi_obj navi_string_copy(navi_obj str);
-
-static inline bool navi_string_equal(navi_obj a, navi_obj b)
-{
-	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
-	if (sa->size != sb->size || sa->length != sb->length)
-		return false;
-	for (int32_t i = 0; i < sa->size; i++)
-		if (sa->data[i] != sb->data[i])
-			return false;
-	return true;
-}
+bool navi_string_equal(navi_obj a, navi_obj b);
 /* Strings }}} */
 /* Vectors {{{ */
 static inline navi_obj navi_vector_ref(navi_obj vec, size_t i)
@@ -704,18 +698,11 @@ static inline size_t navi_vector_length(navi_obj vec)
 navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env);
 /* Vectors }}} */
 /* Bytevectors {{{ */
+bool navi_bytevec_equal(navi_obj obj, const char *cstr);
+
 static inline navi_obj navi_bytevec_ref(navi_obj vec, size_t i)
 {
 	return navi_make_num(navi_bytevec(vec)->data[i]);
-}
-
-static inline bool navi_bytevec_equal(navi_obj obj, const char *cstr)
-{
-	struct navi_bytevec *vec = navi_bytevec(obj);
-	for (size_t i = 0; i < vec->size; i++)
-		if (vec->data[i] != (unsigned char) cstr[i])
-			return false;
-	return true;
 }
 /* Bytevectors }}} */
 /* Conversion {{{ */

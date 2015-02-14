@@ -16,6 +16,17 @@
 #include "navi.h"
 #include "navi/unicode.h"
 
+bool navi_string_equal(navi_obj a, navi_obj b)
+{
+	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
+	if (sa->size != sb->size || sa->length != sb->length)
+		return false;
+	for (int32_t i = 0; i < sa->size; i++)
+		if (sa->data[i] != sb->data[i])
+			return false;
+	return true;
+}
+
 static navi_obj list_to_string(navi_obj list, navi_env env)
 {
 	navi_obj cons;

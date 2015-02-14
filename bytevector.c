@@ -16,6 +16,15 @@
 #include "navi.h"
 #include "navi/unicode.h"
 
+bool navi_bytevec_equal(navi_obj obj, const char *cstr)
+{
+	struct navi_bytevec *vec = navi_bytevec(obj);
+	for (size_t i = 0; i < vec->size; i++)
+		if (vec->data[i] != (unsigned char) cstr[i])
+			return false;
+	return true;
+}
+
 static void bytevec_fill(navi_obj vector, unsigned char fill)
 {
 	struct navi_bytevec *vec = navi_bytevec(vector);

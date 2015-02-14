@@ -49,6 +49,19 @@ navi_obj navi_list(navi_obj first, ...)
 	return list;
 }
 
+int navi_list_length(navi_obj list)
+{
+	int i;
+
+	for (i = 0; navi_type(list) == NAVI_PAIR; i++)
+		list = navi_cdr(list);
+
+	if (navi_type(list) != NAVI_NIL)
+		navi_die("navi_list_length: not a proper list");
+
+	return i;
+}
+
 bool navi_is_proper_list(navi_obj list)
 {
 	navi_obj cons;

@@ -19,7 +19,7 @@ DECLARE(toplevel_exn);
 #define TOPLEVEL_EXN_INDEX 0
 
 #define DECL_SPEC(name) &scm_decl_##name
-static struct navi_spec *default_bindings[] = {
+static const struct navi_spec *default_bindings[] = {
 	[TOPLEVEL_EXN_INDEX] = DECL_SPEC(toplevel_exn),
 	DECL_SPEC(lambda),
 	DECL_SPEC(caselambda),

@@ -290,7 +290,7 @@ navi_obj navi_capture_env(navi_env env)
 	return (navi_obj) obj;
 }
 
-navi_obj navi_from_spec(struct navi_spec *spec)
+navi_obj navi_from_spec(const struct navi_spec *spec)
 {
 	struct navi_object *obj;
 	struct navi_procedure *proc;

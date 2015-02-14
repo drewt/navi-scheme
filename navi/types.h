@@ -168,7 +168,8 @@ struct navi_object {
 struct navi_spec {
 	enum navi_type type;
 	union {
-		long num;
+		void *ptr;
+		int32_t num;
 		char *str;
 		struct navi_procedure proc;
 		struct navi_vector vec;
@@ -176,6 +177,7 @@ struct navi_spec {
 	};
 	size_t size;
 	const char *ident;
+	navi_obj (*init)(const struct navi_spec*);
 };
 
 struct navi_binding {
@@ -480,7 +482,7 @@ navi_env navi_env_new_scope(navi_env env);
 void navi_scope_set(navi_env env, navi_obj symbol, navi_obj object);
 int navi_scope_unset(navi_env env, navi_obj symbol);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
-navi_env navi_make_default_environment(void);
+struct navi_scope *navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
 
 static inline navi_obj navi_env_lookup(navi_env env, navi_obj symbol)

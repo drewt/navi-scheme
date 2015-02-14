@@ -295,6 +295,8 @@ navi_obj navi_from_spec(const struct navi_spec *spec)
 	struct navi_object *obj;
 	struct navi_procedure *proc;
 
+	if (spec->init)
+		return spec->init(spec);
 	switch (spec->type) {
 	case NAVI_EOF:
 		return navi_make_eof();

@@ -18,9 +18,42 @@
 DECLARE(toplevel_exn);
 #define TOPLEVEL_EXN_INDEX 0
 
+static navi_obj init_input_port(const struct navi_spec *spec)
+{
+	return navi_make_file_input_port(*((FILE**)spec->ptr));
+}
+
+static navi_obj init_output_port(const struct navi_spec *spec)
+{
+	return navi_make_file_output_port(*((FILE**)spec->ptr));
+}
+
+static struct navi_spec stdin_spec = {
+	.ident = "#current-input-port",
+	.ptr = &stdin,
+	.init = init_input_port,
+};
+
+static struct navi_spec stdout_spec = {
+	.ident = "#current-output-port",
+	.ptr = &stdout,
+	.init = init_output_port,
+};
+
+static struct navi_spec stderr_spec = {
+	.ident = "#current-error-port",
+	.ptr = &stderr,
+	.init = init_output_port,
+};
+
 #define DECL_SPEC(name) &scm_decl_##name
 static const struct navi_spec *default_bindings[] = {
 	[TOPLEVEL_EXN_INDEX] = DECL_SPEC(toplevel_exn),
+
+	&stdin_spec,
+	&stdout_spec,
+	&stderr_spec,
+
 	DECL_SPEC(lambda),
 	DECL_SPEC(caselambda),
 	DECL_SPEC(define),

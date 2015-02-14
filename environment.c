@@ -168,27 +168,24 @@ struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_obj vars
 	return new;
 }
 
-struct navi_scope *navi_make_default_environment(void)
+struct navi_scope *navi_make_environment(const struct navi_spec *bindings[])
 {
-	navi_obj std_in, std_out, std_err;
 	struct navi_scope *env = make_scope();
 	if (!env)
 		return NULL;
 	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
-		navi_obj symbol = navi_make_symbol(default_bindings[i]->ident);
-		navi_obj object = navi_from_spec(default_bindings[i]);
+		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
+		navi_obj object = navi_from_spec(bindings[i]);
 		if (navi_type(object) == NAVI_PROCEDURE)
 			navi_procedure(object)->env = env;
 		env_set(env, symbol, object);
 	}
-
-	std_in = navi_make_file_input_port(stdin);
-	std_out = navi_make_file_output_port(stdout);
-	std_err = navi_make_file_output_port(stderr);
-	env_set(env, navi_sym_current_input, std_in);
-	env_set(env, navi_sym_current_output, std_out);
-	env_set(env, navi_sym_current_error, std_err);
 	return env;
+}
+
+struct navi_scope *navi_interaction_environment(void)
+{
+	return navi_make_environment(default_bindings);
 }
 
 void navi_scope_free(struct navi_scope *scope)

@@ -27,7 +27,7 @@ static navi_obj call_read(navi_env env)
 
 static _Noreturn void repl(void)
 {
-	navi_env env = navi_make_default_environment();
+	navi_env env = navi_interaction_environment();
 	navi_obj cont = navi_make_escape();
 	struct navi_escape *escape = navi_escape(cont);
 
@@ -54,7 +54,7 @@ static _Noreturn void repl(void)
 
 static _Noreturn void script(void)
 {
-	navi_env env = navi_make_default_environment();
+	navi_env env = navi_interaction_environment();
 
 	for (;;) {
 		navi_obj expr = call_read(env);

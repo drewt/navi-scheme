@@ -163,7 +163,7 @@ navi_env navi_make_environment(const struct navi_spec *bindings[])
 	navi_env env = { .lexical = lex, .dynamic = dyn };
 	if (!lex || !dyn)
 		return (navi_env) {0};
-	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
+	for (unsigned i = 0; bindings[i]; i++) {
 		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
 		navi_obj object = navi_from_spec(bindings[i], env);
 		if (navi_type(object) == NAVI_PROCEDURE)

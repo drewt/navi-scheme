@@ -227,9 +227,8 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(env_count),
 	DECL_SPEC(gc_collect),
 	DECL_SPEC(gc_count),
+	NULL
 };
-#define _NR_DEFAULT_BINDINGS \
-	(sizeof(default_bindings) / sizeof(*default_bindings))
 
 /*
  * The top-level exception handler: prints a message and returns to the REPL.

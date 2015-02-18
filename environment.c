@@ -36,9 +36,7 @@ static struct navi_hlist_head *get_bucket(struct navi_scope *scope,
 
 static struct navi_binding *make_binding(navi_obj symbol, navi_obj object)
 {
-	struct navi_binding *binding = malloc(sizeof(struct navi_binding));
-	if (!binding)
-		return NULL;
+	struct navi_binding *binding = navi_critical_malloc(sizeof(struct navi_binding));
 	binding->symbol = symbol;
 	binding->object = object;
 	return binding;
@@ -62,16 +60,15 @@ struct navi_binding *navi_scope_lookup(struct navi_scope *scope, navi_obj symbol
 	return scope_lookup(scope, symbol, ptr_hash(symbol));
 }
 
-struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
+struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
-	while (env != NULL) {
-		binding = scope_lookup(env, symbol, hashcode);
+	for (struct navi_scope *s = env.lexical; s; s = s->next) {
+		binding = scope_lookup(s, symbol, hashcode);
 		if (binding != NULL)
 			return binding;
-		env = env->next;
 	}
 	return NULL;
 }
@@ -89,17 +86,17 @@ static inline struct navi_scope *make_scope(void)
 	return scope;
 }
 
-struct navi_scope *navi_env_new_scope(struct navi_scope *env)
+navi_env navi_env_new_scope(navi_env env)
 {
 	struct navi_scope *scope = make_scope();
 	if (!scope)
-		return NULL;
-	scope->next = env;
-	navi_scope_ref(env);
-	return scope;
+		return (navi_env) {0};
+	navi_scope_ref(env.lexical);
+	scope->next = env.lexical;
+	return (navi_env) { .lexical = scope, .dynamic = env.dynamic };
 }
 
-static int env_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
+void env_set(navi_env env, navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding;
 	struct navi_hlist_head *head;
@@ -108,40 +105,27 @@ static int env_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 	if (binding) {
 		//navi_free(binding->object);
 		binding->object = object;
-		return 0;
+		return;
 	}
 
 	/* FIXME: hash() already computed in navi_env_binding */
-	head = get_bucket(env, ptr_hash(symbol));
+	head = get_bucket(env.lexical, ptr_hash(symbol));
 	binding = make_binding(symbol, object);
-	if (!binding)
-		return -1;
 	navi_hlist_add_head(&binding->chain, head);
-	return 0;
 }
 
-static int _navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
+void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
 	if ((binding = scope_lookup(env, symbol, hashcode)) != NULL) {
 		binding->object = object;
-		return 0;
+		return;
 	}
 
 	binding = make_binding(symbol, object);
-	if (!binding)
-		return -1;
 	navi_hlist_add_head(&binding->chain, get_bucket(env, hashcode));
-	return 0;
-}
-
-/* XXX: assumes we're executing in env */
-void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
-{
-	if (_navi_scope_set(env, symbol, object) < 0)
-		navi_enomem(env);
 }
 
 int navi_scope_unset(struct navi_scope *env, navi_obj symbol)
@@ -157,27 +141,28 @@ int navi_scope_unset(struct navi_scope *env, navi_obj symbol)
 }
 
 /* XXX: assumes we're executing in env */
-struct navi_scope *navi_extend_environment(struct navi_scope *env, navi_obj vars,
-		navi_obj args)
+navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args)
 {
 	navi_obj vcons, acons;
-	struct navi_scope *new = navi_env_new_scope(env);
+	navi_env new = navi_env_new_scope(env);
 
 	navi_list_for_each_zipped(vcons, acons, vars, args) {
-		navi_scope_set(new, navi_car(vcons), navi_car(acons));
+		navi_scope_set(new.lexical, navi_car(vcons), navi_car(acons));
 	}
 	/* dotted tail */
 	if (!navi_is_nil(vcons)) {
-		navi_scope_set(new, vcons, acons);
+		navi_scope_set(new.lexical, vcons, acons);
 	}
 	return new;
 }
 
-struct navi_scope *navi_make_environment(const struct navi_spec *bindings[])
+navi_env navi_make_environment(const struct navi_spec *bindings[])
 {
-	struct navi_scope *env = make_scope();
-	if (!env)
-		return NULL;
+	struct navi_scope *lex = make_scope();
+	struct navi_scope *dyn = make_scope();
+	navi_env env = { .lexical = lex, .dynamic = dyn };
+	if (!lex || !dyn)
+		return (navi_env) {0};
 	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
 		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
 		navi_obj object = navi_from_spec(bindings[i], env);
@@ -188,7 +173,7 @@ struct navi_scope *navi_make_environment(const struct navi_spec *bindings[])
 	return env;
 }
 
-struct navi_scope *navi_interaction_environment(void)
+navi_env navi_interaction_environment(void)
 {
 	return navi_make_environment(default_bindings);
 }

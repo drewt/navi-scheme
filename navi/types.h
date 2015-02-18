@@ -46,7 +46,11 @@ struct navi_scope {
 	unsigned int refs;
 	struct navi_hlist_head bindings[NAVI_ENV_HT_SIZE];
 };
-typedef struct navi_scope *navi_env;
+
+typedef struct {
+	struct navi_scope *lexical;
+	struct navi_scope *dynamic;
+} navi_env;
 
 typedef navi_obj (*navi_builtin)(unsigned, navi_obj, navi_env);
 typedef navi_obj (*navi_leaf)(navi_obj, void*);
@@ -153,7 +157,7 @@ struct navi_object {
 	enum navi_type type;
 	bool gc_mark;
 	union {
-		struct navi_scope *env;
+		navi_env env;
 		struct navi_escape esc;
 		struct navi_procedure proc;
 		struct navi_vector vec;
@@ -221,17 +225,17 @@ void navi_init(void);
 
 /* Memory Management {{{ */
 void navi_free(struct navi_object *obj);
-void navi_scope_free(navi_env scope);
+void navi_scope_free(struct navi_scope *scope);
 
-static inline void navi_scope_unref(navi_env env)
+static inline void navi_scope_unref(struct navi_scope *scope)
 {
-	if (--env->refs == 0)
-		navi_scope_free(env);
+	if (--scope->refs == 0)
+		navi_scope_free(scope);
 }
 
-static inline void navi_scope_ref(navi_env env)
+static inline void navi_scope_ref(struct navi_scope *scope)
 {
-	env->refs++;
+	scope->refs++;
 }
 /* Memory Management }}} */
 /* Accessors {{{ */
@@ -466,7 +470,7 @@ static inline navi_obj navi_make_bounce(navi_obj object, navi_obj env)
 {
 	navi_obj ret = navi_make_pair(object, env);
 	ret.p->type = NAVI_BOUNCE;
-	navi_scope_ref(navi_environment(env));
+	navi_scope_ref(navi_environment(env).lexical);
 	return ret;
 }
 
@@ -477,14 +481,12 @@ static inline navi_obj navi_unspecified(void)
 
 /* Constructors }}} */
 /* Environments/Evaluation {{{ */
-struct navi_binding *navi_scope_lookup(struct navi_scope *scope,
-		navi_obj symbol);
 struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol);
+void navi_scope_set(struct navi_scope *scope, navi_obj symbol, navi_obj object);
+int navi_scope_unset(struct navi_scope *scope, navi_obj symbol);
 navi_env navi_env_new_scope(navi_env env);
-void navi_scope_set(navi_env env, navi_obj symbol, navi_obj object);
-int navi_scope_unset(navi_env env, navi_obj symbol);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
-struct navi_scope *navi_interaction_environment(void);
+navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
 
 static inline navi_obj navi_env_lookup(navi_env env, navi_obj symbol)

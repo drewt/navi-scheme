@@ -264,7 +264,7 @@ navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_e
 	proc->types = NULL;
 	if (!navi_is_proper_list(args))
 		proc->flags |= NAVI_PROC_VARIADIC;
-	navi_scope_ref(env);
+	navi_scope_ref(env.lexical);
 	return (navi_obj) obj;
 }
 

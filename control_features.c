@@ -29,7 +29,7 @@ _Noreturn void navi_raise(navi_obj args, navi_env env)
 
 		/* set up environment and run handler */
 		proc = navi_procedure(expr);
-		navi_scope_unset(env, navi_sym_exn);
+		navi_scope_unset(env.lexical, navi_sym_exn);
 		navi_force_tail(navi_apply(proc, args, env), env);
 		/* handler returned: raise again */
 	}
@@ -128,7 +128,7 @@ DEFUN(with_exception_handler, "with-exception-handler", 2, 0,
 
 	struct navi_procedure *thunk = navi_procedure(scm_arg2);
 	navi_env exn_env = navi_env_new_scope(thunk->env);
-	navi_scope_set(exn_env, navi_sym_exn, scm_arg1);
+	navi_scope_set(exn_env.lexical, navi_sym_exn, scm_arg1);
 
 	// FIXME: completely broken, need dynamic environment
 	return _navi_apply(thunk, navi_make_nil(), exn_env, scm_env);
@@ -149,9 +149,9 @@ DEFUN(raise_continuable, "raise-continuable", 1, 0, NAVI_ANY)
 		navi_die("no exception handler installed");
 
 	proc = navi_procedure(handler);
-	navi_scope_unset(scm_env, navi_sym_exn);
+	navi_scope_unset(scm_env.lexical, navi_sym_exn);
 	result = navi_apply(proc, scm_args, scm_env);
-	navi_scope_set(scm_env, navi_sym_exn, handler);
+	navi_scope_set(scm_env.lexical, navi_sym_exn, handler);
 	return result;
 }
 

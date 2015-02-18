@@ -108,7 +108,7 @@ static navi_obj eval_defvar(navi_obj sym, navi_obj rest, navi_env env)
 	if (navi_type(navi_cdr(rest)) != NAVI_NIL)
 		navi_arity_error(env, navi_make_symbol("define"));
 
-	navi_scope_set(env, sym, navi_eval(navi_car(rest), env));
+	navi_scope_set(env.lexical, sym, navi_eval(navi_car(rest), env));
 	return navi_unspecified();
 }
 
@@ -121,7 +121,7 @@ static navi_obj eval_defun(navi_obj fundecl, navi_obj rest, navi_env env)
 
 	name = navi_car(fundecl);
 	proc = navi_make_procedure(navi_cdr(fundecl), rest, name, env);
-	navi_scope_set(env, name, proc);
+	navi_scope_set(env.lexical, name, proc);
 	return navi_unspecified();
 }
 
@@ -148,7 +148,7 @@ static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, nav
 	if (navi_type(vals) != NAVI_VALUES) {
 		if (navi_list_length(vars) != 1)
 			navi_arity_error(env, which);
-		navi_scope_set(env, navi_car(vars), vals);
+		navi_scope_set(env.lexical, navi_car(vars), vals);
 		return;
 	}
 
@@ -156,7 +156,7 @@ static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, nav
 		navi_arity_error(env, which);
 
 	navi_list_for_each(cons, vars) {
-		navi_scope_set(env, navi_car(cons), navi_vector_ref(vals, i++));
+		navi_scope_set(env.lexical, navi_car(cons), navi_vector_ref(vals, i++));
 	}
 }
 
@@ -176,7 +176,7 @@ DEFSPECIAL(defmacro, "defmacro", 2, NAVI_PROC_VARIADIC, NAVI_PAIR, NAVI_ANY)
 
 	name = navi_car(scm_arg1);
 	macro = navi_make_macro(navi_cdr(scm_arg1), navi_cdr(scm_args), name, scm_env);
-	navi_scope_set(scm_env, name, macro);
+	navi_scope_set(scm_env.lexical, name, macro);
 	return navi_unspecified();
 }
 
@@ -238,7 +238,7 @@ static navi_env let_extend_env(navi_obj def_list, navi_env env)
 	navi_list_for_each(cons, def_list) {
 		navi_obj defn = navi_car(cons);
 		navi_obj val = navi_eval(navi_cadr(defn), env);
-		navi_scope_set(new, navi_car(defn), val);
+		navi_scope_set(new.lexical, navi_car(defn), val);
 	}
 
 	return new;
@@ -252,7 +252,7 @@ static navi_env sequential_let_extend_env(navi_obj def_list, navi_env env)
 	navi_list_for_each(cons, def_list) {
 		navi_obj defn = navi_car(cons);
 		navi_obj val = navi_eval(navi_cadr(defn), new);
-		navi_scope_set(new, navi_car(defn), val);
+		navi_scope_set(new.lexical, navi_car(defn), val);
 	}
 
 	return new;
@@ -284,7 +284,7 @@ static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
 		\
 		new_env = extend(scm_arg1, scm_env); \
 		result = scm_begin(0, navi_cdr(scm_args), new_env); \
-		navi_scope_unref(new_env); \
+		navi_scope_unref(new_env.lexical); \
 		return result; \
 	}
 
@@ -554,14 +554,14 @@ navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args,
 
 static navi_obj map_eval(navi_obj obj, void *data)
 {
-	return navi_eval(obj, data);
+	return navi_eval(obj, *((navi_env*)data));
 }
 
 static inline navi_obj make_args(navi_obj args, navi_env env)
 {
 	if (navi_type(args) == NAVI_NIL)
 		return navi_make_nil();
-	return navi_map(args, map_eval, env);
+	return navi_map(args, map_eval, &env);
 }
 
 static navi_obj map_quote(navi_obj obj, void *data)
@@ -662,16 +662,16 @@ navi_obj navi_eval(navi_obj expr, navi_env env)
 {
 	navi_obj result;
 
-	navi_scope_ref(env);
+	navi_scope_ref(env.lexical);
 	for (;;) {
 		result = _eval(expr, env);
 		if (navi_type(result) != NAVI_BOUNCE)
 			break;
-		navi_scope_unref(env); // unref for previous bounce
+		navi_scope_unref(env.lexical); // unref for previous bounce
 		expr = bounce_object(result);
 		env = bounce_env(result);
 	}
-	navi_scope_unref(env);
+	navi_scope_unref(env.lexical);
 	return result;
 }
 

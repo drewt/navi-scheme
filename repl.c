@@ -31,7 +31,7 @@ static _Noreturn void repl(void)
 	navi_obj cont = navi_make_escape();
 	struct navi_escape *escape = navi_escape(cont);
 
-	navi_scope_set(env, navi_sym_repl, cont);
+	navi_scope_set(env.lexical, navi_sym_repl, cont);
 
 	for (volatile int i = 0;; i++) {
 		navi_obj expr;

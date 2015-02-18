@@ -246,7 +246,7 @@ DEFUN(toplevel_exn, "#exn", 1, 0, NAVI_ANY)
 		navi_die("#repl not bound to continuation");
 
 	navi_scope_set(scm_env, navi_sym_exn,
-			navi_from_spec(default_bindings[TOPLEVEL_EXN_INDEX]));
+			navi_from_spec(default_bindings[TOPLEVEL_EXN_INDEX], scm_env));
 	longjmp(navi_escape(cont)->state, 1);
 }
 

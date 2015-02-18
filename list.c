@@ -142,8 +142,9 @@ struct map_apply_arg {
 static navi_obj map_apply(navi_obj elm, void *data)
 {
 	struct map_apply_arg *arg = data;
-	return  navi_eval(navi_make_pair(arg->proc, navi_make_pair(elm, navi_make_nil())),
-			arg->env);
+	struct navi_procedure *p = navi_procedure(arg->proc);
+	navi_obj args = navi_make_pair(elm, navi_make_nil());
+	return navi_force_tail(navi_apply(p, args, arg->env), arg->env);
 }
 
 DEFUN(map, "map", 2, 0, NAVI_PROCEDURE, NAVI_LIST)

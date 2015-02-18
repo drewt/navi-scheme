@@ -57,6 +57,11 @@ static struct navi_binding *scope_lookup(struct navi_scope *scope,
 	return NULL;
 }
 
+struct navi_binding *navi_scope_lookup(struct navi_scope *scope, navi_obj symbol)
+{
+	return scope_lookup(scope, symbol, ptr_hash(symbol));
+}
+
 struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding;
@@ -175,7 +180,7 @@ struct navi_scope *navi_make_environment(const struct navi_spec *bindings[])
 		return NULL;
 	for (unsigned i = 0; i < _NR_DEFAULT_BINDINGS; i++) {
 		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
-		navi_obj object = navi_from_spec(bindings[i]);
+		navi_obj object = navi_from_spec(bindings[i], env);
 		if (navi_type(object) == NAVI_PROCEDURE)
 			navi_procedure(object)->env = env;
 		env_set(env, symbol, object);

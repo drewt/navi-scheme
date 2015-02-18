@@ -290,7 +290,7 @@ navi_obj navi_capture_env(navi_env env)
 	return (navi_obj) obj;
 }
 
-navi_obj navi_from_spec(const struct navi_spec *spec)
+navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 {
 	struct navi_object *obj;
 	struct navi_procedure *proc;
@@ -322,9 +322,10 @@ navi_obj navi_from_spec(const struct navi_spec *spec)
 	case NAVI_SPECIAL:
 	case NAVI_PROCEDURE:
 		obj = make_object(spec->type, sizeof(struct navi_procedure));
-		proc = (void*) obj->data;
+		proc = &obj->data->proc;
 		memcpy(proc, &spec->proc, sizeof(struct navi_procedure));
 		proc->name = navi_make_symbol(spec->ident);
+		proc->env = env;
 		return (navi_obj) obj;
 	case NAVI_VOID:
 	case NAVI_PORT:

@@ -506,9 +506,19 @@ DEFUN(force, "force", 1, 0, NAVI_PROCEDURE)
 	return r;
 }
 
-navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
+static navi_obj do_apply(struct navi_procedure *proc, unsigned nr_args,
+		navi_obj args, navi_env env)
 {
 	navi_env new_env;
+	if (proc->flags & NAVI_PROC_BUILTIN)
+		return proc->c_proc(nr_args, args, env);
+	new_env = navi_extend_environment(env, proc->args, args);
+	return scm_begin(0, proc->body, new_env);
+}
+
+static unsigned check_apply(struct navi_procedure *proc, navi_obj args,
+		navi_env env)
+{
 	unsigned nr_args = navi_list_length(args);
 	if (!navi_arity_satisfied(proc, nr_args))
 		navi_arity_error(env, proc->name);
@@ -533,10 +543,13 @@ navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
 			i++;
 		}
 	}
-	if (proc->flags & NAVI_PROC_BUILTIN)
-		return proc->c_proc(nr_args, args, env);
-	new_env = navi_extend_environment(proc->env, proc->args, args);
-	return scm_begin(0, proc->body, new_env);
+	return nr_args;
+}
+
+navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args,
+		navi_env in_env, navi_env out_env)
+{
+	return do_apply(proc, check_apply(proc, args, out_env), args, in_env);
 }
 
 static navi_obj map_eval(navi_obj obj, void *data)
@@ -584,7 +597,7 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	switch (navi_type(proc)) {
 	/* special: pass args unevaluated, return result */
 	case NAVI_SPECIAL:
-		return navi_apply(navi_procedure(proc), navi_cdr(call), env);
+		return _navi_apply(navi_procedure(proc), navi_cdr(call), env, env);
 	/* procedure: pass args evaluated, return result */
 	case NAVI_PROCEDURE:
 		expr = make_args(navi_cdr(call), env);
@@ -596,7 +609,7 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	/* escape: magic */
 	case NAVI_ESCAPE:
 		expr = navi_list_length(call) < 2 ? navi_make_nil() : navi_cadr(call);
-		return navi_call_escape(proc, expr);
+		return navi_call_escape(proc, expr, env);
 	/* caselambda: magic */
 	case NAVI_CASELAMBDA:
 		return caselambda_call(proc, navi_cdr(call), env);

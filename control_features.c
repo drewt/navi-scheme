@@ -18,6 +18,7 @@
 
 #include "navi.h"
 
+// FIXME: broken, need to do lookup in dynamic environment
 _Noreturn void navi_raise(navi_obj args, navi_env env)
 {
 	for (;;) {
@@ -29,7 +30,7 @@ _Noreturn void navi_raise(navi_obj args, navi_env env)
 		/* set up environment and run handler */
 		proc = navi_procedure(expr);
 		navi_scope_unset(env, navi_sym_exn);
-		navi_apply(proc, args, env);
+		navi_force_tail(navi_apply(proc, args, env), env);
 		/* handler returned: raise again */
 	}
 }
@@ -71,28 +72,31 @@ DEFUN(apply, "apply", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 	return navi_eval(scm_args, scm_env);
 }
 
-navi_obj navi_call_escape(navi_obj escape, navi_obj arg)
+navi_obj navi_call_escape(navi_obj escape, navi_obj arg, navi_env env)
 {
 	struct navi_escape *esc = navi_escape(escape);
 	esc->arg = arg;
+
+	// TODO: swap dynamic environment
 	longjmp(esc->state, 1);
 }
 
 DEFUN(call_ec, "call/ec", 1, 0, NAVI_PROCEDURE)
 {
+	navi_obj cont;
 	struct navi_escape *escape;
-	navi_obj cont, call, proc = scm_arg1;
+	struct navi_procedure *proc = navi_procedure(scm_arg1);
 
-	navi_check_arity(proc, 1, scm_env);
+	navi_check_arity(scm_arg1, 1, scm_env);
 
 	cont = navi_make_escape();
 	escape = navi_escape(cont);
+	escape->env = scm_env;
 
 	if (setjmp(escape->state))
 		return escape->arg;
 
-	call = navi_make_pair(proc, navi_make_pair(cont, navi_make_nil()));
-	return navi_eval(call, scm_env);
+	return navi_force_tail(navi_apply(proc, navi_make_pair(cont, navi_make_nil()), scm_env), scm_env);
 }
 
 DEFUN(values, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
@@ -126,7 +130,8 @@ DEFUN(with_exception_handler, "with-exception-handler", 2, 0,
 	navi_env exn_env = navi_env_new_scope(thunk->env);
 	navi_scope_set(exn_env, navi_sym_exn, scm_arg1);
 
-	return navi_apply(thunk, navi_make_nil(), exn_env);
+	// FIXME: completely broken, need dynamic environment
+	return _navi_apply(thunk, navi_make_nil(), exn_env, scm_env);
 }
 
 DEFUN(raise, "raise", 1, 0, NAVI_ANY)

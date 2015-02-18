@@ -367,7 +367,7 @@ static inline navi_obj navi_caddddr(navi_obj obj)
 
 /* Accessors }}} */
 /* Constructors {{{ */
-navi_obj navi_from_spec(const struct navi_spec *spec);
+navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env);
 navi_obj navi_cstr_to_string(const char *str);
 navi_obj navi_cstr_to_bytevec(const char *str);
 navi_obj navi_make_symbol(const char *sym);
@@ -477,6 +477,8 @@ static inline navi_obj navi_unspecified(void)
 
 /* Constructors }}} */
 /* Environments/Evaluation {{{ */
+struct navi_binding *navi_scope_lookup(struct navi_scope *scope,
+		navi_obj symbol);
 struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol);
 navi_env navi_env_new_scope(navi_env env);
 void navi_scope_set(navi_env env, navi_obj symbol, navi_obj object);
@@ -492,8 +494,15 @@ static inline navi_obj navi_env_lookup(navi_env env, navi_obj symbol)
 }
 
 navi_obj navi_eval(navi_obj expr, navi_env env);
-navi_obj navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env);
-navi_obj navi_call_escape(navi_obj escape, navi_obj arg);
+navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args,
+		navi_env in_env, navi_env out_env);
+navi_obj navi_call_escape(navi_obj escape, navi_obj arg, navi_env env);
+
+static inline navi_obj navi_apply(struct navi_procedure *proc, navi_obj args,
+		navi_env env)
+{
+	return _navi_apply(proc, args, proc->env, env);
+}
 /* Environments/Evaluation }}} */
 /* Types {{{ */
 static inline enum navi_type navi_immediate_type(navi_obj obj)
@@ -626,21 +635,22 @@ static inline bool navi_is_last_pair(navi_obj pair)
 	return navi_type(navi_cdr(pair)) == NAVI_NIL;
 }
 
-#define navi_list_for_each(cons, head)                                     \
-	for (cons = (navi_obj) (head); navi_type(cons) == NAVI_PAIR;       \
+#define navi_list_for_each(cons, head)                                      \
+	for (cons = (navi_obj) (head); navi_type(cons) == NAVI_PAIR;        \
 			cons = navi_pair(cons)->cdr)
 
-#define navi_list_for_each_safe(cons, n, head)                             \
-	for (cons = (navi_obj) (head), n = navi_cdr(head);                 \
-			navi_type(cons) == NAVI_PAIR;                      \
-			cons = n,                                          \
-			n = (navi_type(n) == NAVI_PAIR) ? navi_cdr(n) : n)
+#define navi_list_for_each_safe(cons, n, head)                              \
+	for (cons = (navi_obj) (head),                                      \
+		n = (navi_type(head) == NAVI_PAIR) ? navi_cdr(head) : head; \
+		navi_type(cons) == NAVI_PAIR;                               \
+		cons = n,                                                   \
+		n = (navi_type(n) == NAVI_PAIR) ? navi_cdr(n) : n)
 
-#define navi_list_for_each_zipped(cons_a, cons_b, head_a, head_b)          \
-	for (cons_a = (navi_obj) (head_a), cons_b = (navi_obj) (head_b);   \
-			navi_type(cons_a) == NAVI_PAIR &&                  \
-			navi_type(cons_b) == NAVI_PAIR;                    \
-			cons_a = navi_pair(cons_a)->cdr,                   \
+#define navi_list_for_each_zipped(cons_a, cons_b, head_a, head_b)           \
+	for (cons_a = (navi_obj) (head_a), cons_b = (navi_obj) (head_b);    \
+			navi_type(cons_a) == NAVI_PAIR &&                   \
+			navi_type(cons_b) == NAVI_PAIR;                     \
+			cons_a = navi_pair(cons_a)->cdr,                    \
 			cons_b = navi_pair(cons_b)->cdr)
 /* Lists }}} */
 /* Characters {{{ */
@@ -724,6 +734,13 @@ static inline bool navi_is_true(navi_obj expr)
 static inline bool navi_symbol_eq(navi_obj expr, navi_obj symbol)
 {
 	return navi_is_symbol(expr) && expr.p == symbol.p;
+}
+
+static inline navi_obj navi_force_tail(navi_obj obj, navi_env env)
+{
+	if (navi_type(obj) == NAVI_BOUNCE)
+		return navi_eval(obj, env);
+	return obj;
 }
 
 /* Misc }}} */

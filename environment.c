@@ -60,12 +60,12 @@ struct navi_binding *navi_scope_lookup(struct navi_scope *scope, navi_obj symbol
 	return scope_lookup(scope, symbol, ptr_hash(symbol));
 }
 
-struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol)
+struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);
 
-	for (struct navi_scope *s = env.lexical; s; s = s->next) {
+	for (struct navi_scope *s = env; s; s = s->next) {
 		binding = scope_lookup(s, symbol, hashcode);
 		if (binding != NULL)
 			return binding;
@@ -75,9 +75,7 @@ struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol)
 
 static inline struct navi_scope *make_scope(void)
 {
-	struct navi_scope *scope = malloc(sizeof(struct navi_scope));
-	if (!scope)
-		return NULL;
+	struct navi_scope *scope = navi_critical_malloc(sizeof(struct navi_scope));
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++)
 		NAVI_INIT_HLIST_HEAD(&scope->bindings[i]);
 	navi_clist_add(&scope->chain, &active_environments);
@@ -89,11 +87,17 @@ static inline struct navi_scope *make_scope(void)
 navi_env navi_env_new_scope(navi_env env)
 {
 	struct navi_scope *scope = make_scope();
-	if (!scope)
-		return (navi_env) {0};
-	navi_scope_ref(env.lexical);
+	navi_env_ref(env);
 	scope->next = env.lexical;
 	return (navi_env) { .lexical = scope, .dynamic = env.dynamic };
+}
+
+navi_env navi_dynamic_env_new_scope(navi_env env)
+{
+	struct navi_scope *scope = make_scope();
+	navi_env_ref(env);
+	scope->next = env.dynamic;
+	return (navi_env) { .lexical = env.lexical, .dynamic = scope };
 }
 
 void env_set(navi_env env, navi_obj symbol, navi_obj object)
@@ -101,9 +105,8 @@ void env_set(navi_env env, navi_obj symbol, navi_obj object)
 	struct navi_binding *binding;
 	struct navi_hlist_head *head;
 
-	binding = navi_env_binding(env, symbol);
+	binding = navi_env_binding(env.lexical, symbol);
 	if (binding) {
-		//navi_free(binding->object);
 		binding->object = object;
 		return;
 	}
@@ -156,18 +159,25 @@ navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args)
 	return new;
 }
 
-navi_env navi_make_environment(const struct navi_spec *bindings[])
+navi_env navi_empty_environment(void)
 {
 	struct navi_scope *lex = make_scope();
 	struct navi_scope *dyn = make_scope();
-	navi_env env = { .lexical = lex, .dynamic = dyn };
 	if (!lex || !dyn)
+		return (navi_env) {0};
+	return (navi_env) { .lexical = lex, .dynamic = dyn };
+}
+
+navi_env navi_make_environment(const struct navi_spec *bindings[])
+{
+	navi_env env = navi_empty_environment();
+	if (!env.lexical)
 		return (navi_env) {0};
 	for (unsigned i = 0; bindings[i]; i++) {
 		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
 		navi_obj object = navi_from_spec(bindings[i], env);
 		if (navi_type(object) == NAVI_PROCEDURE)
-			navi_procedure(object)->env = env;
+			navi_procedure(object)->env = env.lexical;
 		env_set(env, symbol, object);
 	}
 	return env;
@@ -192,7 +202,100 @@ void navi_scope_free(struct navi_scope *scope)
 	}
 
 	if (scope->next != NULL)
-		navi_scope_unref(scope->next);
+		_navi_scope_unref(scope->next);
+}
+
+static struct navi_scope *get_global_scope(struct navi_scope *s)
+{
+	for (; s->next; s = s->next);
+	return s;
+}
+
+navi_obj navi_parameter_lookup(navi_obj param, navi_env env)
+{
+	struct navi_binding *binding;
+	binding = navi_env_binding(env.dynamic, navi_parameter_key(param));
+	if (!binding)
+		// XXX: this is a critical error and should never happen
+		navi_error(env, "unbound parameter object");
+	return binding->object;
+}
+
+navi_obj navi_parameter_convert(navi_obj param, navi_obj obj, navi_env env)
+{
+	navi_obj args = navi_make_pair(obj, navi_make_nil());
+	navi_obj converter = navi_parameter_converter(param);
+	if (navi_is_void(converter))
+		return obj;
+	return navi_force_tail(navi_apply(navi_procedure(converter), args, env), env);
+}
+
+navi_obj navi_make_parameter(navi_obj value, navi_obj converter, navi_env env)
+{
+	navi_obj param = _navi_make_parameter(converter);
+	navi_scope_set(get_global_scope(env.dynamic), navi_parameter_key(param),
+			navi_parameter_convert(param, value, env));
+	return param;
+}
+
+navi_obj navi_make_named_parameter(navi_obj symbol, navi_obj value,
+		navi_obj converter, navi_env env)
+{
+	navi_obj param = _navi_make_named_parameter(symbol, converter);
+	navi_scope_set(get_global_scope(env.dynamic), navi_parameter_key(param),
+			navi_parameter_convert(param, value, env));
+	return param;
+}
+
+DEFUN(make_parameter, "make-parameter", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+{
+	navi_obj converter = navi_make_void();
+	if (scm_nr_args > 2)
+		navi_arity_error(scm_env, navi_make_symbol("make-parameter"));
+	if (scm_nr_args == 2)
+		converter = scm_arg2;
+	return navi_make_parameter(scm_arg1, converter, scm_env);
+}
+
+static navi_env parameterize_extend_env(navi_obj defs, navi_env env)
+{
+	navi_env new;
+	navi_obj cons, params = navi_make_nil();
+	if (!navi_is_pair(defs))
+		navi_error(env, "invalid syntax in parameterize");
+
+	// first, eval the params and make sure they're actually parameters
+	navi_list_for_each(cons, defs) {
+		navi_obj param, def = navi_car(cons);
+		if (navi_list_length_safe(def) != 2)
+			navi_error(env, "invalid syntax in parameterize");
+		param = navi_eval(navi_car(def), env);
+		if (!navi_is_parameter(param))
+			navi_error(env, "non-parameter in parameterize");
+		params = navi_make_pair(navi_make_pair(param, navi_cadr(def)), params);
+	}
+	if (!navi_is_nil(cons))
+		navi_error(env, "not a proper list");
+
+	// then evaluate the values and bind them to the parameters
+	new = navi_dynamic_env_new_scope(env);
+	navi_list_for_each(cons, params) {
+		navi_obj def = navi_car(cons);
+		navi_obj param = navi_car(def);
+		navi_obj val = navi_eval(navi_cdr(def), env);
+		val = navi_parameter_convert(param, val, env);
+		navi_scope_set(new.dynamic, navi_parameter_key(param), val);
+	}
+	return new;
+}
+
+DEFSPECIAL(parameterize, "parameterize", 2, NAVI_PROC_VARIADIC,
+		NAVI_ANY, NAVI_ANY)
+{
+	navi_env new_env = parameterize_extend_env(scm_arg1, scm_env);
+	navi_obj result = scm_begin(0, navi_cdr(scm_args), new_env);
+	navi_env_unref(new_env);
+	return result;
 }
 
 DEFUN(env_count, "env-count", 0, 0)

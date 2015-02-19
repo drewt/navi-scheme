@@ -1,5 +1,6 @@
 CC        = gcc
-CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-empty-body -g -O2
+CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-empty-body \
+	    -Wno-missing-field-initializers -g -O2
 ALLCFLAGS = $(CFLAGS) -std=gnu11 -D NAVI_COMPILE -include assert.h
 AR        = ar
 ARFLAGS   = rcs

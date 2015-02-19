@@ -75,6 +75,7 @@ enum navi_type {
 	NAVI_PROCEDURE,
 	NAVI_CASELAMBDA,
 	NAVI_ESCAPE,
+	NAVI_PARAMETER,
 	NAVI_BOUNCE,
 	NAVI_ENVIRONMENT,
 };
@@ -100,7 +101,7 @@ struct navi_procedure {
 	uint32_t flags;
 	unsigned arity;
 	navi_obj name;
-	navi_env env;
+	struct navi_scope *env;
 	union {
 		struct {
 			navi_obj args;
@@ -178,6 +179,10 @@ struct navi_spec {
 		struct navi_procedure proc;
 		struct navi_vector vec;
 		struct navi_pair pair;
+		struct {
+			const struct navi_spec *param_value;
+			const struct navi_spec *param_converter;
+		};
 	};
 	size_t size;
 	const char *ident;
@@ -189,7 +194,7 @@ struct navi_binding {
 	navi_obj symbol;
 	navi_obj object;
 };
-
+//
 /* C types }}} */
 
 #define navi_die(msg, ...) \
@@ -227,15 +232,27 @@ void navi_init(void);
 void navi_free(struct navi_object *obj);
 void navi_scope_free(struct navi_scope *scope);
 
-static inline void navi_scope_unref(struct navi_scope *scope)
+static inline void _navi_scope_unref(struct navi_scope *scope)
 {
 	if (--scope->refs == 0)
 		navi_scope_free(scope);
 }
 
-static inline void navi_scope_ref(struct navi_scope *scope)
+static inline void _navi_scope_ref(struct navi_scope *scope)
 {
 	scope->refs++;
+}
+
+static inline void navi_env_ref(navi_env env)
+{
+	_navi_scope_ref(env.lexical);
+	_navi_scope_ref(env.dynamic);
+}
+
+static inline void navi_env_unref(navi_env env)
+{
+	_navi_scope_unref(env.lexical);
+	_navi_scope_unref(env.dynamic);
 }
 /* Memory Management }}} */
 /* Accessors {{{ */
@@ -406,6 +423,11 @@ void navi_string_grow_storage(struct navi_string *str, long need);
 navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_env env);
 navi_obj navi_make_lambda(navi_obj args, navi_obj body, navi_env env);
 navi_obj navi_make_escape(void);
+navi_obj _navi_make_parameter(navi_obj converter);
+navi_obj navi_make_parameter(navi_obj value, navi_obj converter, navi_env env);
+navi_obj _navi_make_named_parameter(navi_obj symbol, navi_obj converter);
+navi_obj navi_make_named_parameter(navi_obj symbol, navi_obj value,
+		navi_obj converter, navi_env env);
 
 static inline navi_obj navi_make_void(void)
 {
@@ -470,7 +492,7 @@ static inline navi_obj navi_make_bounce(navi_obj object, navi_obj env)
 {
 	navi_obj ret = navi_make_pair(object, env);
 	ret.p->type = NAVI_BOUNCE;
-	navi_scope_ref(navi_environment(env).lexical);
+	navi_env_ref(navi_environment(env));
 	return ret;
 }
 
@@ -481,29 +503,35 @@ static inline navi_obj navi_unspecified(void)
 
 /* Constructors }}} */
 /* Environments/Evaluation {{{ */
-struct navi_binding *navi_env_binding(navi_env env, navi_obj symbol);
+struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol);
 void navi_scope_set(struct navi_scope *scope, navi_obj symbol, navi_obj object);
 int navi_scope_unset(struct navi_scope *scope, navi_obj symbol);
 navi_env navi_env_new_scope(navi_env env);
+navi_env navi_dynamic_env_new_scope(navi_env env);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
+navi_env navi_make_environment(const struct navi_spec *bindings[]);
+navi_env navi_empty_environment(void);
 navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
 
-static inline navi_obj navi_env_lookup(navi_env env, navi_obj symbol)
+static inline navi_obj navi_env_lookup(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding = navi_env_binding(env, symbol);
 	return binding == NULL ? navi_make_void() : binding->object;
 }
 
 navi_obj navi_eval(navi_obj expr, navi_env env);
-navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args,
-		navi_env in_env, navi_env out_env);
+navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env);
 navi_obj navi_call_escape(navi_obj escape, navi_obj arg, navi_env env);
 
 static inline navi_obj navi_apply(struct navi_procedure *proc, navi_obj args,
 		navi_env env)
 {
-	return _navi_apply(proc, args, proc->env, env);
+	navi_env proc_env = {
+		.lexical = proc->env,
+		.dynamic = env.dynamic
+	};
+	return _navi_apply(proc, args, proc_env);
 }
 /* Environments/Evaluation }}} */
 /* Types {{{ */
@@ -557,6 +585,7 @@ static inline const char *navi_strtype(enum navi_type type)
 	case NAVI_PROCEDURE:   return "procedure";
 	case NAVI_CASELAMBDA:  return "case-lambda";
 	case NAVI_ESCAPE:      return "escape";
+	case NAVI_PARAMETER:   return "parameter";
 	case NAVI_ENVIRONMENT: return "environment";
 	case NAVI_BOUNCE:      return "bounce";
 	}
@@ -582,6 +611,7 @@ NAVI_TYPE_PREDICATE(navi_is_bool, NAVI_BOOL)
 NAVI_TYPE_PREDICATE(navi_is_char, NAVI_CHAR)
 NAVI_TYPE_PREDICATE(navi_is_values, NAVI_VALUES)
 NAVI_TYPE_PREDICATE(navi_is_pair, NAVI_PAIR)
+NAVI_TYPE_PREDICATE(navi_is_port, NAVI_PORT)
 NAVI_TYPE_PREDICATE(navi_is_string, NAVI_STRING)
 NAVI_TYPE_PREDICATE(navi_is_symbol, NAVI_SYMBOL)
 NAVI_TYPE_PREDICATE(navi_is_vector, NAVI_VECTOR)
@@ -590,6 +620,7 @@ NAVI_TYPE_PREDICATE(navi_is_macro, NAVI_MACRO)
 NAVI_TYPE_PREDICATE(navi_is_procedure, NAVI_PROCEDURE)
 NAVI_TYPE_PREDICATE(navi_is_caselambda, NAVI_CASELAMBDA)
 NAVI_TYPE_PREDICATE(navi_is_escape, NAVI_ESCAPE)
+NAVI_TYPE_PREDICATE(navi_is_parameter, NAVI_PARAMETER)
 NAVI_TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
 NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 #undef NAVI_TYPE_PREDICATE
@@ -623,6 +654,7 @@ static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
 navi_obj navi_vlist(navi_obj first, va_list ap);
 navi_obj navi_list(navi_obj first, ...);
 int navi_list_length(navi_obj list);
+int navi_list_length_safe(navi_obj list);
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 static inline navi_obj navi_last_cons(navi_obj list)
@@ -693,6 +725,26 @@ static inline void navi_write(navi_obj obj, navi_env env)
 	navi_port_write(navi_port(navi_current_output_port(env)), obj, env);
 }
 
+static inline bool navi_port_is_input_port(struct navi_port *p)
+{
+	return p->read_u8 || p->read_char;
+}
+
+static inline bool navi_port_is_output_port(struct navi_port *p)
+{
+	return p->write_u8 || p->write_char;
+}
+
+static inline bool navi_is_input_port(navi_obj obj)
+{
+	return navi_is_port(obj) && navi_port_is_input_port(navi_port(obj));
+}
+
+static inline bool navi_is_output_port(navi_obj obj)
+{
+	return navi_is_port(obj) && navi_port_is_output_port(navi_port(obj));
+}
+
 /* Ports }}} */
 /* Strings {{{ */
 navi_obj navi_string_copy(navi_obj str);
@@ -719,6 +771,11 @@ static inline navi_obj navi_bytevec_ref(navi_obj vec, size_t i)
 	return navi_make_num(navi_bytevec(vec)->data[i]);
 }
 /* Bytevectors }}} */
+/* Parameters {{{ */
+#define navi_parameter_key navi_car
+#define navi_parameter_converter navi_cdr
+navi_obj navi_parameter_lookup(navi_obj param, navi_env env);
+/* Parameters }}} */
 /* Conversion {{{ */
 navi_obj navi_list_to_vector(navi_obj list);
 navi_obj navi_vector_to_list(navi_obj vector);

@@ -125,7 +125,7 @@ static navi_obj eval_defun(navi_obj fundecl, navi_obj rest, navi_env env)
 	return navi_unspecified();
 }
 
-DEFSPECIAL(define, "define", 2, NAVI_PROC_VARIADIC, NAVI_LIST, NAVI_ANY)
+DEFSPECIAL(define, "define", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
 	enum navi_type type;
 
@@ -284,7 +284,7 @@ static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
 		\
 		new_env = extend(scm_arg1, scm_env); \
 		result = scm_begin(0, navi_cdr(scm_args), new_env); \
-		navi_scope_unref(new_env.lexical); \
+		navi_env_unref(new_env); \
 		return result; \
 	}
 
@@ -297,7 +297,7 @@ DEFSPECIAL(set, "set!", 2, 0, NAVI_SYMBOL, NAVI_ANY)
 	struct navi_binding *binding;
 	navi_obj value;
 
-	binding = navi_env_binding(scm_env, scm_arg1);
+	binding = navi_env_binding(scm_env.lexical, scm_arg1);
 	if (binding == NULL)
 		unbound_identifier(scm_arg1, scm_env);
 
@@ -501,7 +501,8 @@ DEFSPECIAL(delay, "delay", 1, 0, NAVI_ANY)
 DEFUN(force, "force", 1, 0, NAVI_PROCEDURE)
 {
 	struct navi_procedure *proc = navi_procedure(scm_arg1);
-	navi_obj r = navi_eval(navi_make_pair(navi_sym_begin, proc->body), proc->env);
+	navi_env env = { .lexical = proc->env, .dynamic = scm_env.dynamic };
+	navi_obj r = navi_eval(navi_make_pair(navi_sym_begin, proc->body), env);
 	proc->body = navi_make_pair(navi_sym_quote, navi_make_pair(r, navi_make_nil()));
 	return r;
 }
@@ -510,10 +511,13 @@ static navi_obj do_apply(struct navi_procedure *proc, unsigned nr_args,
 		navi_obj args, navi_env env)
 {
 	navi_env new_env;
+	navi_obj result;
 	if (proc->flags & NAVI_PROC_BUILTIN)
 		return proc->c_proc(nr_args, args, env);
 	new_env = navi_extend_environment(env, proc->args, args);
-	return scm_begin(0, proc->body, new_env);
+	result = scm_begin(0, proc->body, new_env);
+	navi_env_unref(new_env);
+	return result;
 }
 
 static unsigned check_apply(struct navi_procedure *proc, navi_obj args,
@@ -546,10 +550,9 @@ static unsigned check_apply(struct navi_procedure *proc, navi_obj args,
 	return nr_args;
 }
 
-navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args,
-		navi_env in_env, navi_env out_env)
+navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
 {
-	return do_apply(proc, check_apply(proc, args, out_env), args, in_env);
+	return do_apply(proc, check_apply(proc, args, env), args, env);
 }
 
 static navi_obj map_eval(navi_obj obj, void *data)
@@ -597,7 +600,7 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	switch (navi_type(proc)) {
 	/* special: pass args unevaluated, return result */
 	case NAVI_SPECIAL:
-		return _navi_apply(navi_procedure(proc), navi_cdr(call), env, env);
+		return _navi_apply(navi_procedure(proc), navi_cdr(call), env);
 	/* procedure: pass args evaluated, return result */
 	case NAVI_PROCEDURE:
 		expr = make_args(navi_cdr(call), env);
@@ -613,6 +616,10 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	/* caselambda: magic */
 	case NAVI_CASELAMBDA:
 		return caselambda_call(proc, navi_cdr(call), env);
+	case NAVI_PARAMETER:
+		if (!navi_is_nil(navi_cdr(call)))
+			navi_arity_error(env, navi_car(proc));
+		return navi_parameter_lookup(proc, env);
 	default: break;
 	}
 	navi_error(env, "call of non-procedure", navi_make_apair("value", proc));
@@ -639,13 +646,14 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 	case NAVI_PROMISE:
 	case NAVI_CASELAMBDA:
 	case NAVI_ESCAPE:
+	case NAVI_PARAMETER:
 	case NAVI_ENVIRONMENT:
 	case NAVI_BOUNCE:
 		return expr;
 	case NAVI_VALUES:
 		return navi_vector_ref(expr, 0);
 	case NAVI_SYMBOL:
-		val = navi_env_lookup(env, expr);
+		val = navi_env_lookup(env.lexical, expr);
 		if (navi_type(val) == NAVI_VOID)
 			unbound_identifier(expr, env);
 		return val;
@@ -662,16 +670,16 @@ navi_obj navi_eval(navi_obj expr, navi_env env)
 {
 	navi_obj result;
 
-	navi_scope_ref(env.lexical);
+	navi_env_ref(env);
 	for (;;) {
 		result = _eval(expr, env);
 		if (navi_type(result) != NAVI_BOUNCE)
 			break;
-		navi_scope_unref(env.lexical); // unref for previous bounce
+		navi_env_unref(env); // unref for previous bounce
 		expr = bounce_object(result);
 		env = bounce_env(result);
 	}
-	navi_scope_unref(env.lexical);
+	navi_env_unref(env);
 	return result;
 }
 

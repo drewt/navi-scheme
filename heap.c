@@ -30,7 +30,7 @@ navi_obj navi_sym_unquote;
 navi_obj navi_sym_splice;
 navi_obj navi_sym_else;
 navi_obj navi_sym_eq_lt;
-navi_obj navi_sym_exn;
+navi_obj navi_sym_current_exn;
 navi_obj navi_sym_current_input;
 navi_obj navi_sym_current_output;
 navi_obj navi_sym_current_error;
@@ -66,10 +66,10 @@ static void symbol_table_init(void)
 	intern(navi_sym_splice,         "unquote-splice");
 	intern(navi_sym_else,           "else");
 	intern(navi_sym_eq_lt,          "=>");
-	intern(navi_sym_exn,            "#exn");
-	intern(navi_sym_current_input,  "#current-input-port");
-	intern(navi_sym_current_output, "#current-output-port");
-	intern(navi_sym_current_error,  "#current-error-port");
+	intern(navi_sym_current_exn,    "#current-exception-handler");
+	intern(navi_sym_current_input,  "current-input-port");
+	intern(navi_sym_current_output, "current-output-port");
+	intern(navi_sym_current_error,  "current-error-port");
 	intern(navi_sym_read_error,     "#read-error");
 	intern(navi_sym_file_error,     "#file-error");
 	intern(navi_sym_repl,           "#repl");
@@ -121,6 +121,27 @@ DEFUN(gensym, "gensym", 0, 0)
 	snprintf(buf, 64, "g%u", count++);
 	buf[63] = '\0';
 	return navi_make_uninterned(buf);
+}
+
+navi_obj _navi_make_named_parameter(navi_obj symbol, navi_obj converter)
+{
+	navi_obj param = navi_make_pair(symbol, converter);
+	param.p->type = NAVI_PARAMETER;
+	return param;
+}
+
+/*
+ * XXX: this is only half of the Scheme make-parameter procedure.  It is still
+ * necessary to bind something to 'key' in the dynamic environment after
+ * calling this procedure.
+ */
+navi_obj _navi_make_parameter(navi_obj converter)
+{
+	char buf[64];
+	static unsigned count = 0;
+	snprintf(buf, 64, "param%u", count++);
+	buf[63] = '\0';
+	return _navi_make_named_parameter(navi_make_uninterned(buf), converter);
 }
 
 /* Only called if symbol doesn't already exist */
@@ -258,13 +279,13 @@ navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_e
 	proc->name = name;
 	proc->args = args;
 	proc->body = body;
-	proc->env = env;
+	proc->env = env.lexical;
 	proc->arity = count_pairs((navi_obj)args);
 	proc->flags = 0;
 	proc->types = NULL;
 	if (!navi_is_proper_list(args))
 		proc->flags |= NAVI_PROC_VARIADIC;
-	navi_scope_ref(env.lexical);
+	navi_env_ref(env);
 	return (navi_obj) obj;
 }
 
@@ -284,17 +305,32 @@ navi_obj navi_make_escape(void)
 
 navi_obj navi_capture_env(navi_env env)
 {
-	struct navi_object *obj = make_object(NAVI_ENVIRONMENT,
-			sizeof(struct navi_scope*));
+	struct navi_object *obj = make_object(NAVI_ENVIRONMENT, sizeof(navi_env));
 	obj->data->env = env;
 	return (navi_obj) obj;
 }
 
+static navi_obj proc_from_spec(const struct navi_spec *spec, navi_env env)
+{
+	struct navi_object *obj = make_object(spec->type, sizeof(struct navi_procedure));
+	struct navi_procedure *proc = &obj->data->proc;
+	memcpy(proc, &spec->proc, sizeof(*proc));
+	proc->name = navi_make_symbol(spec->ident);
+	proc->env = env.lexical;
+	return (navi_obj) obj;
+}
+
+static navi_obj parameter_from_spec(const struct navi_spec *spec, navi_env env)
+{
+	navi_obj name = navi_make_symbol(spec->ident);
+	navi_obj value = navi_from_spec(spec->param_value, env);
+	navi_obj converter = navi_from_spec(spec->param_converter, env);
+	navi_obj param = navi_make_named_parameter(name, value, converter, env);
+	return param;
+}
+
 navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 {
-	struct navi_object *obj;
-	struct navi_procedure *proc;
-
 	if (spec->init)
 		return spec->init(spec);
 	switch (spec->type) {
@@ -321,20 +357,10 @@ navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
 	case NAVI_PROCEDURE:
-		obj = make_object(spec->type, sizeof(struct navi_procedure));
-		proc = &obj->data->proc;
-		memcpy(proc, &spec->proc, sizeof(struct navi_procedure));
-		proc->name = navi_make_symbol(spec->ident);
-		proc->env = env;
-		return (navi_obj) obj;
-	case NAVI_VOID:
-	case NAVI_PORT:
-	case NAVI_VALUES:
-	case NAVI_PROMISE:
-	case NAVI_CASELAMBDA:
-	case NAVI_ESCAPE:
-	case NAVI_ENVIRONMENT:
-	case NAVI_BOUNCE:
+		return proc_from_spec(spec, env);
+	case NAVI_PARAMETER:
+		return parameter_from_spec(spec, env);
+	default:
 		break;
 	}
 	navi_die("navi_from_spec: unknown or unsupported type");
@@ -368,6 +394,7 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	case NAVI_PROCEDURE:
 	case NAVI_CASELAMBDA:
 	case NAVI_ESCAPE:
+	case NAVI_PARAMETER:
 	case NAVI_ENVIRONMENT:
 	case NAVI_BOUNCE:
 		return fst.p == snd.p;
@@ -404,6 +431,7 @@ static void gc_mark_obj(navi_obj obj)
 		break;
 	case NAVI_PAIR:
 	case NAVI_BOUNCE:
+	case NAVI_PARAMETER:
 		gc_set_mark(obj);
 		gc_mark_obj(navi_car(obj));
 		gc_mark_obj(navi_cdr(obj));

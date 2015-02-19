@@ -62,6 +62,16 @@ int navi_list_length(navi_obj list)
 	return i;
 }
 
+int navi_list_length_safe(navi_obj list)
+{
+	int i;
+	for (i = 0; navi_is_pair(list); i++)
+		list = navi_cdr(list);
+	if (navi_type(list) != NAVI_NIL)
+		return -1;
+	return i;
+}
+
 bool navi_is_proper_list(navi_obj list)
 {
 	navi_obj cons;

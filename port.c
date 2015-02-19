@@ -29,13 +29,13 @@ enum {
 
 static inline void check_input_port(struct navi_port *p, navi_env env)
 {
-	if (!p->read_u8 && !p->read_char)
+	if (!navi_port_is_input_port(p))
 		navi_error(env, "not an input port");
 }
 
 static inline void check_output_port(struct navi_port *p, navi_env env)
 {
-	if (!p->write_u8 && !p->write_char)
+	if (!navi_port_is_output_port(p))
 		navi_error(env, "not an output port");
 }
 
@@ -306,29 +306,34 @@ void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env env)
 
 void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 {
-	while (*str != '\0')
-		navi_port_write_byte(*str++, port, env);
+	if (port->write_u8) {
+		while (*str != '\0')
+			navi_port_write_byte(*str++, port, env);
+	} else {
+		while (*str != '\0')
+			navi_port_write_char(*str++, port, env);
+	}
 }
 
 navi_obj navi_current_input_port(navi_env env)
 {
-	return navi_env_lookup(env, navi_sym_current_input);
+	return navi_env_lookup(env.dynamic, navi_sym_current_input);
 }
 
 navi_obj navi_current_output_port(navi_env env)
 {
-	return navi_env_lookup(env, navi_sym_current_output);
+	return navi_env_lookup(env.dynamic, navi_sym_current_output);
 }
 
 navi_obj navi_current_error_port(navi_env env)
 {
-	return navi_env_lookup(env, navi_sym_current_error);
+	return navi_env_lookup(env.dynamic, navi_sym_current_error);
 }
 
 static struct navi_port *get_port(navi_obj fallback, navi_obj args, navi_env env)
 {
 	if (navi_is_nil(args))
-		return navi_port_cast(navi_env_lookup(env, fallback), env);
+		return navi_port_cast(navi_env_lookup(env.dynamic, fallback), env);
 	return navi_port_cast(navi_car(args), env);
 }
 
@@ -383,20 +388,51 @@ DEFUN(output_port_openp, "output-port-open?", 1, 0, NAVI_PORT)
 	return navi_make_bool(!(p->flags & OUTPUT_CLOSED));
 }
 
-DEFUN(current_input_port, "current-input-port", 0, 0)
+static navi_obj init_input_port(const struct navi_spec *spec)
 {
-	return navi_current_input_port(scm_env);
+	return navi_make_file_input_port(*((FILE**)spec->ptr));
 }
 
-DEFUN(current_output_port, "current-output-port", 0, 0)
+static navi_obj init_output_port(const struct navi_spec *spec)
 {
-	return navi_current_output_port(scm_env);
+	return navi_make_file_output_port(*((FILE**)spec->ptr));
 }
 
-DEFUN(current_error_port, "current-error-port", 0, 0)
+static struct navi_spec SCM_DECL(stdin) = {
+	.ident = "#current-input-port",
+	.ptr = &stdin,
+	.init = init_input_port,
+};
+
+static struct navi_spec SCM_DECL(stdout) = {
+	.ident = "#current-output-port",
+	.ptr = &stdout,
+	.init = init_output_port,
+};
+
+static struct navi_spec SCM_DECL(stderr) = {
+	.ident = "#current-error-port",
+	.ptr = &stderr,
+	.init = init_output_port,
+};
+
+DEFUN(check_input_port, "#check-input-port", 1, 0, NAVI_PORT)
 {
-	return navi_current_error_port(scm_env);
+	if (!navi_is_input_port(scm_arg1))
+		navi_error(scm_env, "not an input port");
+	return scm_arg1;
 }
+
+DEFUN(check_output_port, "#check-output-port", 1, 0, NAVI_PORT)
+{
+	if (!navi_is_output_port(scm_arg1))
+		navi_error(scm_env, "not an output port");
+	return scm_arg1;
+}
+
+DEFPARAM(current_input_port,  "current-input-port",  stdin,  check_input_port);
+DEFPARAM(current_output_port, "current-output-port", stdout, check_output_port);
+DEFPARAM(current_error_port,  "current-error-port",  stderr, check_output_port);
 
 DEFUN(open_input_file, "open-input-file", 1, 0, NAVI_STRING)
 {

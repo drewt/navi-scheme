@@ -38,6 +38,8 @@ DECLARE(if);
 DECLARE(and);
 DECLARE(or);
 DECLARE(delay);
+DECLARE(make_parameter);
+DECLARE(parameterize);
 
 DECLARE(gensym);
 

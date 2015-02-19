@@ -173,6 +173,11 @@ void _navi_display(struct navi_port *port, navi_obj obj, bool write, navi_env en
 	case NAVI_ESCAPE:
 		navi_port_write_cstr("#<escape continuation>", port, env);
 		break;
+	case NAVI_PARAMETER:
+		navi_port_write_cstr("#<parameter ", port, env);
+		display_symbol(port, navi_parameter_key(obj), env);
+		navi_port_write_cstr(">", port, env);
+		break;
 	case NAVI_ENVIRONMENT:
 		navi_port_write_cstr("#<environment>", port, env);
 		break;

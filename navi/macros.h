@@ -18,12 +18,14 @@
 
 #include "types.h"
 
+#define SCM_DECL(name) scm_decl_##name
+
 #define DEFPROC(_type, cname, scmname, _arity, _flags, ...)                \
 	static const int scm_typedecl_##cname[] = { __VA_ARGS__ };         \
 	_Static_assert(sizeof(scm_typedecl_##cname)/sizeof(int) == _arity, \
 			"DEFPROC: too few types for given arity");         \
 	navi_obj scm_##cname(unsigned, navi_obj, navi_env);                \
-	const struct navi_spec scm_decl_##cname = {                        \
+	const struct navi_spec SCM_DECL(cname) = {                         \
 		.proc = {                                                  \
 			.flags  = _flags | NAVI_PROC_BUILTIN,              \
 			.arity  = _arity,                                  \
@@ -46,12 +48,20 @@
 #define scm_arg4 navi_cadddr(scm_args)
 #define scm_arg5 navi_caddddr(scm_args)
 
+#define DEFPARAM(cname, scmname, value, converter) \
+	const struct navi_spec SCM_DECL(cname) = { \
+		.type = NAVI_PARAMETER, \
+		.param_value = &SCM_DECL(value), \
+		.param_converter = &SCM_DECL(converter), \
+		.ident = scmname, \
+	}
+
 /*
  * XXX: really, the functions should be declared static and not exposed here,
  *      but it's useful to call them directly for unit testing.
  */
 #define DECLARE(name)                                                      \
-	extern const struct navi_spec scm_decl_##name;                     \
+	extern const struct navi_spec SCM_DECL(name);                      \
 	navi_obj scm_##name(unsigned, navi_obj, navi_env)
 
 /* Stolen from chicken.h

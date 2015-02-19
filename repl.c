@@ -36,7 +36,8 @@ static _Noreturn void repl(void)
 	for (volatile int i = 0;; i++) {
 		navi_obj expr;
 
-		setjmp(escape->state);
+		if (setjmp(escape->state))
+			i++;
 
 		printf("#;%d> ", i);
 		if ((expr = call_read(env)).n == 0)

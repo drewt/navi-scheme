@@ -16,43 +16,38 @@
 #include "navi.h"
 
 DECLARE(toplevel_exn);
-#define TOPLEVEL_EXN_INDEX 0
 
-static navi_obj init_input_port(const struct navi_spec *spec)
+/*
+ * The top-level exception handler: prints a message and returns to the REPL.
+ */
+DEFUN(toplevel_exn, "#exn", 1, 0, NAVI_ANY)
 {
-	return navi_make_file_input_port(*((FILE**)spec->ptr));
+	navi_obj cont;
+
+	navi_write(scm_arg1, scm_env);
+	putchar('\n');
+
+	cont = navi_env_lookup(scm_env.lexical, navi_sym_repl);
+	if (navi_type(cont) != NAVI_ESCAPE)
+		navi_die("#repl not bound to continuation");
+
+	navi_scope_set(scm_env.dynamic, navi_sym_current_exn,
+			navi_from_spec(&SCM_DECL(toplevel_exn), scm_env));
+	longjmp(navi_escape(cont)->state, 1);
 }
 
-static navi_obj init_output_port(const struct navi_spec *spec)
+DEFUN(check_exception_handler, "#check-exception-handler", 1, 0, NAVI_PROCEDURE)
 {
-	return navi_make_file_output_port(*((FILE**)spec->ptr));
+	navi_check_arity(scm_arg1, 1, scm_env);
+	return scm_arg1;
 }
 
-static struct navi_spec stdin_spec = {
-	.ident = "#current-input-port",
-	.ptr = &stdin,
-	.init = init_input_port,
-};
+DEFPARAM(current_exception_handler, "#current-exception-handler",
+		toplevel_exn, check_exception_handler);
 
-static struct navi_spec stdout_spec = {
-	.ident = "#current-output-port",
-	.ptr = &stdout,
-	.init = init_output_port,
-};
-
-static struct navi_spec stderr_spec = {
-	.ident = "#current-error-port",
-	.ptr = &stderr,
-	.init = init_output_port,
-};
-
-#define DECL_SPEC(name) &scm_decl_##name
+#define DECL_SPEC(name) &SCM_DECL(name)
 static const struct navi_spec *default_bindings[] = {
-	[TOPLEVEL_EXN_INDEX] = DECL_SPEC(toplevel_exn),
-
-	&stdin_spec,
-	&stdout_spec,
-	&stderr_spec,
+	DECL_SPEC(current_exception_handler),
 
 	DECL_SPEC(lambda),
 	DECL_SPEC(caselambda),
@@ -73,6 +68,8 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(and),
 	DECL_SPEC(or),
 	DECL_SPEC(delay),
+	DECL_SPEC(make_parameter),
+	DECL_SPEC(parameterize),
 
 	DECL_SPEC(eqvp),
 	DECL_SPEC(eval),
@@ -229,24 +226,3 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(gc_count),
 	NULL
 };
-
-/*
- * The top-level exception handler: prints a message and returns to the REPL.
- */
-DEFUN(toplevel_exn, "#exn", 1, 0, NAVI_ANY)
-{
-	navi_obj cont;
-
-	navi_write(scm_arg1, scm_env);
-	putchar('\n');
-
-	cont = navi_env_lookup(scm_env, navi_sym_repl);
-	if (navi_type(cont) != NAVI_ESCAPE)
-		navi_die("#repl not bound to continuation");
-
-	navi_scope_set(scm_env.lexical, navi_sym_exn,
-			navi_from_spec(default_bindings[TOPLEVEL_EXN_INDEX], scm_env));
-	longjmp(navi_escape(cont)->state, 1);
-}
-
-

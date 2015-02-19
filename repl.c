@@ -38,15 +38,17 @@ static _Noreturn void repl(void)
 
 		setjmp(escape->state);
 
-		printf("\n#;%d> ", i);
+		printf("#;%d> ", i);
 		if ((expr = call_read(env)).n == 0)
 			continue;
-		printf("read: "); navi_write(expr, env); putchar('\n');
+		//printf("read: "); navi_write(expr, env); putchar('\n');
 		if (navi_is_eof(expr))
 			break;
 		if ((expr = navi_eval(expr, env)).n == 0)
 			continue;
 		navi_write(expr, env);
+		if (!navi_is_void(expr))
+			putchar('\n');
 	}
 	putchar('\n');
 	exit(0);

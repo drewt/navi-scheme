@@ -29,13 +29,24 @@
 #define STR_BUF_LEN  64
 #define STR_BUF_STEP 64
 
-#define fold_case tolower
+static int fold_case(int c)
+{
+	return tolower(c);
+}
+
 static int no_fold_case(int c)
 {
 	return c;
 }
 
 static int (*handle_case)(int) = no_fold_case;
+
+bool navi_read_set_fold_case(bool fold)
+{
+	bool old = handle_case == no_fold_case ? false : true;
+	handle_case = fold ? fold_case : no_fold_case;
+	return old;
+}
 
 static inline void unexpected_eof(navi_env env)
 {

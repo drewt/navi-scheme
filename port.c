@@ -434,22 +434,32 @@ DEFPARAM(current_input_port,  "current-input-port",  stdin,  check_input_port);
 DEFPARAM(current_output_port, "current-output-port", stdout, check_output_port);
 DEFPARAM(current_error_port,  "current-error-port",  stderr, check_output_port);
 
-DEFUN(open_input_file, "open-input-file", 1, 0, NAVI_STRING)
+navi_obj navi_open_input_file(navi_obj filename, navi_env env)
 {
 	FILE *f;
-	if ((f = fopen((char*)navi_string(scm_arg1)->data, "r")) == NULL) {
-		navi_file_error(scm_env, "unable to open file");
+	if ((f = fopen((char*)navi_string(filename)->data, "r")) == NULL) {
+		navi_file_error(env, "unable to open file");
 	}
 	return navi_make_file_input_port(f);
 }
 
-DEFUN(open_output_file, "open-output-file", 1, 0, NAVI_STRING)
+navi_obj navi_open_output_file(navi_obj filename, navi_env env)
 {
 	FILE *f;
-	if ((f = fopen((char*)navi_string(scm_arg1)->data, "w")) == NULL) {
-		navi_file_error(scm_env, "unable to open file");
+	if ((f = fopen((char*)navi_string(filename)->data, "w")) == NULL) {
+		navi_file_error(env, "unable to open file");
 	}
 	return navi_make_file_output_port(f);
+}
+
+DEFUN(open_input_file, "open-input-file", 1, 0, NAVI_STRING)
+{
+	return navi_open_input_file(scm_arg1, scm_env);
+}
+
+DEFUN(open_output_file, "open-output-file", 1, 0, NAVI_STRING)
+{
+	return navi_open_output_file(scm_arg1, scm_env);
 }
 
 DEFUN(open_input_string, "open-input-string", 1, 0, NAVI_STRING)
@@ -477,14 +487,14 @@ DEFUN(get_output_string, "get-output-string", 1, 0, NAVI_PORT)
 	return expr;
 }
 
-static void close_input_port(struct navi_port *p, navi_env env)
+void navi_close_input_port(struct navi_port *p, navi_env env)
 {
 	p->close_in(p, env);
 	p->close_in = void_close;
 	p->flags |= INPUT_CLOSED;
 }
 
-static void close_output_port(struct navi_port *p, navi_env env)
+void navi_close_output_port(struct navi_port *p, navi_env env)
 {
 	p->close_out(p, env);
 	p->close_out = void_close;
@@ -495,9 +505,9 @@ DEFUN(close_port, "close-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port(scm_arg1);
 	if (p->read_u8 || p->read_char)
-		close_input_port(p, scm_env);
+		navi_close_input_port(p, scm_env);
 	if (p->write_u8 || p->write_char)
-		close_output_port(p, scm_env);
+		navi_close_output_port(p, scm_env);
 	return navi_unspecified();
 }
 
@@ -505,7 +515,7 @@ DEFUN(close_input_port, "close-input-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port(scm_arg1);
 	check_input_port(p, scm_env);
-	close_input_port(p, scm_env);
+	navi_close_input_port(p, scm_env);
 	return navi_unspecified();
 }
 
@@ -513,7 +523,7 @@ DEFUN(close_output_port, "close-output-port", 1, 0, NAVI_PORT)
 {
 	struct navi_port *p = navi_port(scm_arg1);
 	check_output_port(p, scm_env);
-	close_output_port(p, scm_env);
+	navi_close_output_port(p, scm_env);
 	return navi_unspecified();
 }
 

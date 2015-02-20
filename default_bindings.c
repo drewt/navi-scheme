@@ -55,6 +55,8 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(define_values),
 	DECL_SPEC(defmacro),
 	DECL_SPEC(begin),
+	DECL_SPEC(include),
+	DECL_SPEC(include_ci),
 	DECL_SPEC(let),
 	DECL_SPEC(sequential_let),
 	DECL_SPEC(let_values),

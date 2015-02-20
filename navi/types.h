@@ -693,6 +693,7 @@ navi_obj navi_char_upcase(navi_obj ch);
 navi_obj navi_char_downcase(navi_obj ch);
 /* Characters }}} */
 /* Ports {{{ */
+bool navi_read_set_fold_case(bool fold);
 navi_obj navi_read(struct navi_port *port, navi_env env);
 void _navi_display(struct navi_port *port, navi_obj expr, bool write, navi_env env);
 navi_obj navi_port_read_byte(struct navi_port *port, navi_env env);
@@ -705,6 +706,10 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 navi_obj navi_current_input_port(navi_env env);
 navi_obj navi_current_output_port(navi_env env);
 navi_obj navi_current_error_port(navi_env env);
+navi_obj navi_open_input_file(navi_obj filename, navi_env env);
+navi_obj navi_open_output_file(navi_obj filename, navi_env env);
+void navi_close_input_port(struct navi_port *p, navi_env env);
+void navi_close_output_port(struct navi_port *p, navi_env env);
 
 static inline void navi_port_display(struct navi_port *port, navi_obj obj, navi_env env)
 {

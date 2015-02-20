@@ -25,6 +25,8 @@ DECLARE(define);
 DECLARE(define_values);
 DECLARE(defmacro);
 DECLARE(begin);
+DECLARE(include);
+DECLARE(include_ci);
 DECLARE(let);
 DECLARE(sequential_let);
 DECLARE(let_values);

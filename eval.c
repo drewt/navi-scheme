@@ -94,6 +94,53 @@ DEFSPECIAL(begin, "begin", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 	return result;
 }
 
+/*
+ * Load the given file into the given environment.
+ * XXX: The function may return a bounce object--take care not to bounce with
+ *      the wrong environment.
+ */
+navi_obj navi_load(navi_obj filename, navi_env in_env, navi_env out_env)
+{
+	navi_obj fst, snd;
+	// FIXME: need to protect unbound object from gc somehow...
+	navi_obj port_obj = navi_open_input_file(filename, out_env);
+	struct navi_port *port = navi_port(port_obj);
+
+	// read/eval until EOF with 1 expr lookahead for tail call
+	fst = navi_read(port, in_env);
+	// special case: if the file is empty, return void and not #!eof
+	if (navi_is_eof(fst))
+		return navi_make_void();
+	while (!navi_is_eof((snd = navi_read(port, in_env)))) {
+		navi_eval(fst, in_env);
+		fst = snd;
+	}
+	navi_close_input_port(port, out_env);
+	return eval_tail(fst, in_env);
+}
+
+DEFSPECIAL(include, "include", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+{
+	navi_obj cons, result;
+	navi_list_for_each(cons, scm_args) {
+		navi_type_check(navi_car(cons), NAVI_STRING, scm_env);
+	}
+	navi_list_for_each(cons, scm_args) {
+		result = navi_load(navi_car(cons), scm_env, scm_env);
+		if (!navi_is_last_pair(cons))
+			result = navi_force_tail(result, scm_env);
+	}
+	return result;
+}
+
+DEFSPECIAL(include_ci, "include-ci", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+{
+	bool restore = navi_read_set_fold_case(true);
+	navi_obj result = scm_include(scm_nr_args, scm_args, scm_env);
+	navi_read_set_fold_case(restore);
+	return result;
+}
+
 DEFSPECIAL(quote, "quote", 1, 0, NAVI_ANY)
 {
 	return scm_arg1;

@@ -31,5 +31,6 @@ extern navi_obj navi_sym_current_error;
 extern navi_obj navi_sym_read_error;
 extern navi_obj navi_sym_file_error;
 extern navi_obj navi_sym_repl;
+extern navi_obj navi_sym_internal;
 
 #endif

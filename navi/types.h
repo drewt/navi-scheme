@@ -38,6 +38,7 @@
 typedef union {
 	long n;
 	struct navi_object *p;
+	const struct navi_spec *s;
 } navi_obj;
 
 struct navi_scope {
@@ -153,23 +154,6 @@ struct navi_port {
 	void *specific;
 };
 
-struct navi_object {
-	struct navi_clist_head chain;
-	enum navi_type type;
-	bool gc_mark;
-	union {
-		navi_env env;
-		struct navi_escape esc;
-		struct navi_procedure proc;
-		struct navi_vector vec;
-		struct navi_bytevec bvec;
-		struct navi_string str;
-		struct navi_symbol sym;
-		struct navi_pair pair;
-		struct navi_port port;
-	} data[];
-};
-
 struct navi_spec {
 	enum navi_type type;
 	union {
@@ -187,6 +171,24 @@ struct navi_spec {
 	size_t size;
 	const char *ident;
 	navi_obj (*init)(const struct navi_spec*);
+};
+
+struct navi_object {
+	struct navi_clist_head chain;
+	enum navi_type type;
+	bool gc_mark;
+	union {
+		navi_env env;
+		struct navi_escape esc;
+		struct navi_procedure proc;
+		struct navi_vector vec;
+		struct navi_bytevec bvec;
+		struct navi_string str;
+		struct navi_symbol sym;
+		struct navi_pair pair;
+		struct navi_port port;
+		struct navi_spec *spec;
+	} data[];
 };
 
 struct navi_binding {
@@ -227,6 +229,7 @@ static inline void *navi_critical_realloc(void *p, size_t size)
 }
 
 void navi_init(void);
+void navi_internal_init(void);
 
 /* Memory Management {{{ */
 void navi_free(struct navi_object *obj);

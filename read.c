@@ -430,6 +430,11 @@ static navi_obj read_sharp_bang(struct navi_port *port, navi_env env)
 			navi_make_apair("directive", navi_cstr_to_string(str)));
 }
 
+static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
+{
+	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
+}
+
 static navi_obj read_sharp(struct navi_port *port, navi_env env)
 {
 	char c, n;
@@ -456,6 +461,8 @@ static navi_obj read_sharp(struct navi_port *port, navi_env env)
 		return read_hex(port, env);
 	case '!':
 		return read_sharp_bang(port, env);
+	case '#':
+		return navi_sym_wrap(navi_sym_internal, navi_read(port, env));
 	case ';':
 		navi_read(port, env);
 		return navi_make_void();
@@ -473,11 +480,6 @@ static navi_obj read_sharp(struct navi_port *port, navi_env env)
 	}
 	navi_read_error(env, "unknown disciminator",
 			navi_make_apair("discriminator", navi_make_char(c)));
-}
-
-static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
-{
-	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
 }
 
 navi_obj navi_read(struct navi_port *port, navi_env env)

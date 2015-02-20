@@ -15,7 +15,16 @@
 
 #include "navi.h"
 
-DECLARE(toplevel_exn);
+static navi_env internal_env = {0};
+
+DEFSPECIAL(internal, "#internal", 1, 0, NAVI_SYMBOL)
+{
+	struct navi_binding *binding = navi_env_binding(internal_env.lexical, scm_arg1);
+	if (!binding)
+		navi_error(scm_env, "no internal binding",
+				navi_make_apair("symbol", scm_arg1));
+	return navi_from_spec(binding->object.s, scm_env);
+}
 
 /*
  * The top-level exception handler: prints a message and returns to the REPL.
@@ -47,6 +56,7 @@ DEFPARAM(current_exception_handler, "#current-exception-handler",
 
 #define DECL_SPEC(name) &SCM_DECL(name)
 static const struct navi_spec *default_bindings[] = {
+	DECL_SPEC(internal),
 	DECL_SPEC(current_exception_handler),
 
 	DECL_SPEC(lambda),
@@ -228,3 +238,13 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(gc_count),
 	NULL
 };
+
+void navi_internal_init(void)
+{
+	internal_env = navi_empty_environment();
+	for (int i = 0; default_bindings[i]; i++) {
+		navi_obj symbol = navi_make_symbol(default_bindings[i]->ident);
+		navi_obj object = (navi_obj)default_bindings[i];
+		navi_scope_set(internal_env.lexical, symbol, object);
+	}
+}

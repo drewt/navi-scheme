@@ -37,6 +37,7 @@ navi_obj navi_sym_current_error;
 navi_obj navi_sym_read_error;
 navi_obj navi_sym_file_error;
 navi_obj navi_sym_repl;
+navi_obj navi_sym_internal;
 
 void navi_free(struct navi_object *obj)
 {
@@ -73,12 +74,14 @@ static void symbol_table_init(void)
 	intern(navi_sym_read_error,     "#read-error");
 	intern(navi_sym_file_error,     "#file-error");
 	intern(navi_sym_repl,           "#repl");
+	intern(navi_sym_internal,       "#internal");
 	#undef intern
 }
 
 void navi_init(void)
 {
 	symbol_table_init();
+	navi_internal_init();
 }
 
 static navi_obj symbol_lookup(const char *str, unsigned long hashcode)

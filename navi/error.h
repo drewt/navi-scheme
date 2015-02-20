@@ -31,6 +31,8 @@ _Noreturn void _navi_error(navi_env env, const char *msg, ...);
 	navi_error(env, "not enough memory")
 #define navi_arity_error(env, name) \
 	navi_error(env, "wrong number of arguments", navi_make_apair("target", name))
+#define navi_unbound_identifier_error(env, ident) \
+	navi_error(env, "unbound identifier", navi_make_apair("identifier", ident))
 
 static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_env env)
 {

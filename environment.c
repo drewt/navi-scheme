@@ -211,6 +211,201 @@ static struct navi_scope *get_global_scope(struct navi_scope *s)
 	return s;
 }
 
+/* Lexical Bindings {{{ */
+static navi_obj eval_defvar(navi_obj sym, navi_obj rest, navi_env env)
+{
+	if (navi_type(navi_cdr(rest)) != NAVI_NIL)
+		navi_arity_error(env, navi_make_symbol("define"));
+
+	navi_scope_set(env.lexical, sym, navi_eval(navi_car(rest), env));
+	return navi_unspecified();
+}
+
+static navi_obj eval_defun(navi_obj fundecl, navi_obj rest, navi_env env)
+{
+	navi_obj proc, name;
+
+	if (!navi_is_list_of(fundecl, NAVI_SYMBOL, true))
+		navi_error(env, "invalid defun list");
+
+	name = navi_car(fundecl);
+	proc = navi_make_procedure(navi_cdr(fundecl), rest, name, env);
+	navi_scope_set(env.lexical, name, proc);
+	return navi_unspecified();
+}
+
+DEFSPECIAL(define, "define", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
+{
+	enum navi_type type;
+
+	if (navi_list_length(scm_args) < 2)
+		navi_error(scm_env, "invalid define list");
+
+	type = navi_type(scm_arg1);
+	if (type == NAVI_SYMBOL)
+		return eval_defvar(scm_arg1, navi_cdr(scm_args), scm_env);
+	if (type == NAVI_PAIR)
+		return eval_defun(scm_arg1, navi_cdr(scm_args), scm_env);
+	navi_error(scm_env, "invalid define list");
+}
+
+static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, navi_env env)
+{
+	navi_obj cons;
+	size_t i = 0;
+
+	if (navi_type(vals) != NAVI_VALUES) {
+		if (navi_list_length(vars) != 1)
+			navi_arity_error(env, which);
+		navi_scope_set(env.lexical, navi_car(vars), vals);
+		return;
+	}
+
+	if ((size_t)navi_list_length(vars) != navi_vector_length(vals))
+		navi_arity_error(env, which);
+
+	navi_list_for_each(cons, vars) {
+		navi_scope_set(env.lexical, navi_car(cons), navi_vector_ref(vals, i++));
+	}
+}
+
+DEFSPECIAL(define_values, "define-values", 2, 0, NAVI_LIST, NAVI_ANY)
+{
+	extend_with_values(scm_arg1, navi_eval(scm_arg2, scm_env),
+			navi_make_symbol("define-values"), scm_env);
+	return navi_unspecified();
+}
+
+DEFSPECIAL(defmacro, "defmacro", 2, NAVI_PROC_VARIADIC, NAVI_PAIR, NAVI_ANY)
+{
+	navi_obj macro, name;
+
+	if (!navi_is_list_of(scm_arg1, NAVI_SYMBOL, true))
+		navi_error(scm_env, "invalid define-macro list");
+
+	name = navi_car(scm_arg1);
+	macro = navi_make_macro(navi_cdr(scm_arg1), navi_cdr(scm_args), name, scm_env);
+	navi_scope_set(scm_env.lexical, name, macro);
+	return navi_unspecified();
+}
+
+static bool let_def_valid(navi_obj def)
+{
+	return navi_type(def) == NAVI_PAIR &&
+		navi_type(navi_cdr(def)) == NAVI_PAIR &&
+		navi_type(navi_cddr(def)) == NAVI_NIL &&
+		navi_type(navi_car(def)) == NAVI_SYMBOL;
+}
+
+static bool let_defs_valid(navi_obj list)
+{
+	navi_obj cons;
+
+	navi_list_for_each(cons, list) {
+		if (!let_def_valid(navi_car(cons)))
+			return false;
+	}
+	return navi_type(cons) == NAVI_NIL;
+}
+
+static bool let_values_def_valid(navi_obj def)
+{
+	return navi_type(def) == NAVI_PAIR &&
+		navi_type(navi_cdr(def)) == NAVI_PAIR &&
+		navi_type(navi_cddr(def)) == NAVI_NIL &&
+		navi_is_list_of(navi_car(def), NAVI_SYMBOL, false);
+}
+
+static bool letvals_defs_valid(navi_obj list)
+{
+	navi_obj cons;
+
+	navi_list_for_each(cons, list) {
+		if (!let_values_def_valid(navi_car(cons)))
+			return false;
+	}
+	return navi_type(cons) == NAVI_NIL;
+}
+
+static navi_env let_extend_env(navi_obj def_list, navi_env env)
+{
+	navi_obj cons;
+	navi_env new = navi_env_new_scope(env);
+
+	navi_list_for_each(cons, def_list) {
+		navi_obj defn = navi_car(cons);
+		navi_obj val = navi_eval(navi_cadr(defn), env);
+		navi_scope_set(new.lexical, navi_car(defn), val);
+	}
+
+	return new;
+}
+
+static navi_env sequential_let_extend_env(navi_obj def_list, navi_env env)
+{
+	navi_obj cons;
+	navi_env new = navi_env_new_scope(env);
+
+	navi_list_for_each(cons, def_list) {
+		navi_obj defn = navi_car(cons);
+		navi_obj val = navi_eval(navi_cadr(defn), new);
+		navi_scope_set(new.lexical, navi_car(defn), val);
+	}
+
+	return new;
+}
+
+static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
+{
+	navi_obj cons;
+	navi_env new = navi_env_new_scope(env);
+
+	navi_list_for_each(cons, def_list) {
+		navi_obj vals = navi_eval(navi_cadar(cons), env);
+		extend_with_values(navi_caar(cons), vals,
+				navi_make_symbol("let-values"), env);
+	}
+
+	return new;
+}
+
+#define DEFLET(name, scmname, validate, extend) \
+	DEFSPECIAL(name, scmname, 2, NAVI_PROC_VARIADIC, \
+			NAVI_ANY, NAVI_ANY) \
+	{ \
+		navi_obj result; \
+		navi_env new_env; \
+		\
+		if (!validate(scm_arg1)) \
+			navi_error(scm_env, "invalid " scmname " list"); \
+		\
+		new_env = extend(scm_arg1, scm_env); \
+		result = scm_begin(0, navi_cdr(scm_args), new_env); \
+		navi_env_unref(new_env); \
+		return result; \
+	}
+
+DEFLET(let, "let", let_defs_valid, let_extend_env)
+DEFLET(sequential_let, "let*", let_defs_valid, sequential_let_extend_env)
+DEFLET(let_values, "let-values", letvals_defs_valid, letvals_extend_env)
+
+DEFSPECIAL(set, "set!", 2, 0, NAVI_SYMBOL, NAVI_ANY)
+{
+	struct navi_binding *binding;
+	navi_obj value;
+
+	binding = navi_env_binding(scm_env.lexical, scm_arg1);
+	if (binding == NULL)
+		navi_unbound_identifier_error(scm_env, scm_arg1);
+
+	value = navi_eval(scm_arg1, scm_env);
+	binding->object = value;
+
+	return navi_unspecified();
+}
+/* Lexical Bindings }}} */
+/* Dynamic Bindings {{{ */
+
 navi_obj navi_parameter_lookup(navi_obj param, navi_env env)
 {
 	struct navi_binding *binding;
@@ -297,6 +492,8 @@ DEFSPECIAL(parameterize, "parameterize", 2, NAVI_PROC_VARIADIC,
 	navi_env_unref(new_env);
 	return result;
 }
+
+/* Dynamic Bindings }}} */
 
 DEFUN(env_count, "env-count", 0, 0)
 {

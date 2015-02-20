@@ -84,6 +84,22 @@ bool navi_is_proper_list(navi_obj list)
 	return navi_is_nil(cons);
 }
 
+bool navi_is_list_of(navi_obj list, unsigned type, bool allow_dotted_tail)
+{
+	navi_obj cons;
+
+	navi_list_for_each(cons, list) {
+		if (navi_type(navi_car(cons)) != type)
+			return false;
+	}
+	if (!allow_dotted_tail && navi_type(cons) != NAVI_NIL)
+		return false;
+	if (allow_dotted_tail && navi_type(cons) != NAVI_NIL
+			&& navi_type(cons) != type)
+		return false;
+	return true;
+}
+
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data)
 {
 	navi_obj cons;

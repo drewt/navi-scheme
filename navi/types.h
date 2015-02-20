@@ -655,6 +655,7 @@ navi_obj navi_vlist(navi_obj first, va_list ap);
 navi_obj navi_list(navi_obj first, ...);
 int navi_list_length(navi_obj list);
 int navi_list_length_safe(navi_obj list);
+bool navi_is_list_of(navi_obj list, unsigned type, bool allow_dotted_tail);
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 static inline navi_obj navi_last_cons(navi_obj list)

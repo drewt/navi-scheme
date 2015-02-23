@@ -57,7 +57,7 @@ DEFPARAM(current_exception_handler, "#current-exception-handler",
 		toplevel_exn, check_exception_handler);
 
 #define DECL_SPEC(name) &SCM_DECL(name)
-static const struct navi_spec *default_bindings[] = {
+static const struct navi_spec *internal_objects[] = {
 	DECL_SPEC(current_exception_handler),
 
 	DECL_SPEC(lambda),
@@ -245,9 +245,9 @@ static const struct navi_spec *default_bindings[] = {
 void navi_internal_init(void)
 {
 	internal_env = navi_empty_environment();
-	for (int i = 0; default_bindings[i]; i++) {
-		navi_obj symbol = navi_make_symbol(default_bindings[i]->ident);
-		navi_obj object = (navi_obj)default_bindings[i];
+	for (int i = 0; internal_objects[i]; i++) {
+		navi_obj symbol = navi_make_symbol(internal_objects[i]->ident);
+		navi_obj object = (navi_obj)internal_objects[i];
 		navi_scope_set(internal_env.lexical, symbol, object);
 	}
 }

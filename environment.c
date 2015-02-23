@@ -159,7 +159,7 @@ navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args)
 	return new;
 }
 
-static void _navi_import_all(struct navi_scope *dst, struct navi_scope *src)
+static void navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 {
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
 		struct navi_binding *binding;
@@ -167,12 +167,6 @@ static void _navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 			navi_scope_set(dst, binding->symbol, binding->object);
 		}
 	}
-}
-
-void navi_import_all(navi_env dst, navi_env src)
-{
-	_navi_import_all(dst.lexical, src.lexical);
-	_navi_import_all(dst.dynamic, src.dynamic);
 }
 
 /*
@@ -197,44 +191,28 @@ static navi_env new_lexical_environment(navi_env env)
 	};
 }
 
-navi_env navi_make_environment(const struct navi_spec *bindings[])
-{
-	navi_env env = navi_empty_environment();
-	if (!env.lexical)
-		return (navi_env) {0};
-	for (unsigned i = 0; bindings[i]; i++) {
-		navi_obj symbol = navi_make_symbol(bindings[i]->ident);
-		navi_obj object = navi_from_spec(bindings[i], env);
-		if (navi_type(object) == NAVI_PROCEDURE)
-			navi_procedure(object)->env = env.lexical;
-		env_set(env, symbol, object);
-	}
-	return env;
-}
+#define navi_scope_for_each(binding, scope) \
+	for (unsigned _navi_i_ = 0; _navi_i_ < NAVI_ENV_HT_SIZE; _navi_i_++) \
+		navi_hlist_for_each_entry(binding, &scope->bindings[_navi_i_], chain)
 
-navi_env navi_interaction_environment(void)
-{
-	return navi_make_environment(default_bindings);
-}
+#define navi_scope_for_each_safe(binding, n, scope) \
+	for (unsigned _navi_i_ = 0; _navi_i_ < NAVI_ENV_HT_SIZE; _navi_i_++) \
+		navi_hlist_for_each_entry_safe(binding, n, &scope->bindings[_navi_i_], chain)
 
 void navi_scope_free(struct navi_scope *scope)
 {
+	struct navi_binding *binding;
+	struct navi_hlist_node *n;
 	navi_clist_del(&scope->chain);
-
-	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
-		struct navi_binding *bind;
-		struct navi_hlist_node *t;
-		navi_hlist_for_each_entry_safe(bind, t, &scope->bindings[i], chain) {
-			navi_hlist_del(&bind->chain);
-			free(bind);
-		}
+	navi_scope_for_each_safe(binding, n, scope) {
+		navi_hlist_del(&binding->chain);
+		free(binding);
 	}
-
 	if (scope->next != NULL)
 		_navi_scope_unref(scope->next);
 }
 
-struct navi_scope *get_global_scope(struct navi_scope *s)
+static struct navi_scope *get_global_scope(struct navi_scope *s)
 {
 	for (; s->next; s = s->next);
 	return s;
@@ -637,44 +615,50 @@ static bool exports_valid(navi_obj exports)
 	return true;
 }
 
-static bool import_only_valid(navi_obj args)
-{
-	if (!navi_is_pair(args))
-		return false;
-	return false; // TODO
-}
+static bool import_valid(navi_obj import);
 
-static bool import_except_valid(navi_obj args)
+static bool import_only_except_valid(navi_obj args)
 {
 	if (!navi_is_pair(args))
 		return false;
-	return false; // TODO
+	return import_valid(navi_car(args))
+		&& navi_is_list_of(navi_cdr(args), NAVI_SYMBOL, false);
 }
 
 static bool import_prefix_valid(navi_obj args)
 {
-	if (!navi_is_pair(args))
+	if (navi_list_length(args) != 2)
 		return false;
-	return false; // TODO
+	return import_valid(navi_car(args)) && navi_is_symbol(navi_cadr(args));
 }
 
 static bool import_rename_valid(navi_obj args)
 {
+	navi_obj cons;
 	if (!navi_is_pair(args))
 		return false;
-	return false; // TODO
+	if (!import_valid(navi_car(args)))
+		return false;
+	navi_list_for_each(cons, navi_cdr(args)) {
+		if (!navi_is_list_of(navi_car(cons), NAVI_SYMBOL, false))
+			return false;
+		if (navi_list_length(navi_car(cons)) != 2)
+			return false;
+	}
+	return true;
 }
 
 static bool import_valid(navi_obj import)
 {
-	navi_obj sym = navi_car(import);
-	navi_obj rest = navi_cdr(import);
+	navi_obj sym, rest;
+	if (navi_is_nil(import) || !navi_is_proper_list(import))
+		return false;
+	sym = navi_car(import);
+	rest = navi_cdr(import);
 	if (!navi_is_symbol(sym))
 		return false;
-	if (sym.p == navi_sym_only.p)
-		return import_only_valid(rest);
-	if (sym.p == navi_sym_except.p)
-		return import_except_valid(rest);
+	if (sym.p == navi_sym_only.p || sym.p == navi_sym_except.p)
+		return import_only_except_valid(rest);
 	if (sym.p == navi_sym_prefix.p)
 		return import_prefix_valid(rest);
 	if (sym.p == navi_sym_rename.p)
@@ -902,9 +886,10 @@ static void import_binding(struct navi_library *lib, navi_obj lib_name,
 /*
  * Import all bindings from @lib into @env, respecting any renames.
  */
-static void import_library(struct navi_library *lib, navi_env env)
+static navi_env do_import_library(struct navi_library *lib, navi_env env)
 {
 	navi_obj cons;
+	navi_env import_env = new_lexical_environment(env);
 	navi_list_for_each(cons, lib->exports) {
 		navi_obj lib_name, export_name, export;
 		lib_name = export_name = export = navi_car(cons);
@@ -912,38 +897,135 @@ static void import_library(struct navi_library *lib, navi_env env)
 			lib_name = navi_cadr(export);
 			export_name = navi_caddr(export);
 		}
-		import_binding(lib, lib_name, export_name, env);
+		import_binding(lib, lib_name, export_name, import_env);
 	}
+	return import_env;
+}
+
+static navi_env import_library(navi_obj name, navi_env env)
+{
+	struct navi_library *lib = load_library(name, env);
+	if (!lib)
+		navi_error(env, "no such library",
+				navi_make_apair("library", name));
+	return do_import_library(lib, env);
+}
+
+static navi_env get_import_env(navi_obj set, navi_env env);
+
+static navi_env import_only(navi_obj set, navi_obj includes, navi_env env)
+{
+	struct navi_binding *binding;
+	struct navi_hlist_node *n;
+	navi_env import_env = get_import_env(set, env);
+	navi_scope_for_each_safe(binding, n, import_env.lexical) {
+		navi_obj cons;
+		navi_list_for_each(cons, includes) {
+			if (navi_car(cons).p == binding->symbol.p)
+				goto pass;
+		}
+		navi_hlist_del(&binding->chain);
+pass:
+		continue;
+	}
+	return import_env;
+}
+
+static navi_env import_except(navi_obj set, navi_obj excludes, navi_env env)
+{
+	struct navi_binding *binding;
+	struct navi_hlist_node *n;
+	navi_env import_env = get_import_env(set, env);
+	navi_scope_for_each_safe(binding, n, import_env.lexical) {
+		navi_obj cons;
+		navi_list_for_each(cons, excludes) {
+			if (navi_car(cons).p == binding->symbol.p)
+				goto remove;
+		}
+		continue;
+remove:
+		navi_hlist_del(&binding->chain);
+	}
+	return import_env;
+}
+
+static navi_obj add_prefix(char *prefix_str, size_t prefix_len, navi_obj symbol)
+{
+	navi_obj result;
+	char *symbol_str = navi_symbol(symbol)->data;
+	size_t symbol_len = strlen(symbol_str);
+	char *prefixed = navi_critical_malloc(prefix_len + symbol_len + 1);
+	memcpy(prefixed, prefix_str, prefix_len);
+	memcpy(prefixed+prefix_len, symbol_str, symbol_len);
+	prefixed[prefix_len+symbol_len] = '\0';
+	result = navi_make_symbol(prefixed);
+	free(prefixed);
+	return result;
+}
+
+static navi_env import_prefix(navi_obj set, navi_obj prefix, navi_env env)
+{
+	struct navi_binding *binding;
+	char *prefix_str = navi_symbol(prefix)->data;
+	size_t prefix_len = strlen(prefix_str);
+	navi_env import_env = get_import_env(set, env);
+	navi_env prefix_env = new_lexical_environment(import_env);
+	navi_scope_for_each(binding, import_env.lexical) {
+		navi_obj prefixed = add_prefix(prefix_str, prefix_len, binding->symbol);
+		navi_scope_set(prefix_env.lexical, prefixed, binding->object);
+	}
+	navi_env_unref(import_env);
+	return prefix_env;
+}
+
+static navi_env import_rename(navi_obj set, navi_obj renames, navi_env env)
+{
+	navi_obj cons;
+	navi_env import_env = get_import_env(set, env);
+	navi_list_for_each(cons, renames) {
+		navi_obj libname = navi_caar(cons);
+		navi_obj newname = navi_cadar(cons);
+		struct navi_binding *b = navi_scope_lookup(import_env.lexical, libname);
+		if (!b) {
+			navi_env_unref(import_env);
+			navi_error(env, "unbound identifier",
+					navi_make_apair("identifier", libname));
+		}
+		navi_scope_set(import_env.lexical, newname, b->object);
+		navi_scope_unset(import_env.lexical, libname);
+	}
+	return import_env;
 }
 
 /*
- * Import the bindings given by the import set @set into @env.
+ * Returns a fresh environment containing bindings for the identifiers given by
+ * the import set @set.
  */
-static void _navi_import(navi_obj set, navi_env env)
+static navi_env get_import_env(navi_obj set, navi_env env)
 {
-	struct navi_library *lib;
-	if (!navi_is_proper_list(set) || navi_is_nil(set)
-			|| !navi_is_symbol(navi_car(set)))
+	navi_obj sym, rest;
+	if (!import_valid(set))
 		navi_error(env, "invalid import set");
-	// TODO: only, except, prefix, rename
-	lib = load_library(set, env);
-	if (!lib)
-		navi_error(env, "no such library", navi_make_apair("library", set));
-	import_library(lib, env);
+	sym = navi_car(set), rest = navi_cdr(set);
+	if (sym.p == navi_sym_only.p)
+		return import_only(navi_car(rest), navi_cdr(rest), env);
+	if (sym.p == navi_sym_except.p)
+		return import_except(navi_car(rest), navi_cdr(rest), env);
+	if (sym.p == navi_sym_prefix.p)
+		return import_prefix(navi_car(rest), navi_cadr(rest), env);
+	if (sym.p == navi_sym_rename.p)
+		return import_rename(navi_car(rest), navi_cdr(rest), env);
+	return import_library(set, env);
 }
 
 void navi_import(navi_obj imports, navi_env env)
 {
-	// import into an empty environment, so that identifiers in scm_env
-	// aren't overwritten at intermediate stages of the import process
 	navi_obj cons;
-	navi_env tmp_env = new_lexical_environment(env);
 	navi_list_for_each(cons, imports) {
-		_navi_import(navi_car(cons), tmp_env);
+		navi_env import_env = get_import_env(navi_car(cons), env);
+		navi_import_all(get_global_scope(env.lexical), import_env.lexical);
+		navi_env_unref(import_env);
 	}
-	navi_import_all(navi_get_global_env(env), tmp_env);
-	navi_env_unref(tmp_env);
-
 }
 
 DEFSPECIAL(import, "import", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
@@ -954,6 +1036,44 @@ DEFSPECIAL(import, "import", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 	return navi_unspecified();
 }
 /* Libraries }}} */
+
+static navi_obj sym_pair(const char *str)
+{
+	return navi_make_pair(navi_make_symbol(str), navi_make_nil());
+}
+
+static navi_obj _make_libname(const char *str, ...)
+{
+	va_list ap;
+	navi_obj head, cons;
+	va_start(ap, str);
+	head = cons = sym_pair(str);
+	while ((str = va_arg(ap, const char*))) {
+		navi_set_cdr(cons, sym_pair(str));
+		cons = navi_cdr(cons);
+	}
+	return head;
+}
+
+#define make_libname(...) \
+	_make_libname(__VA_ARGS__, (void*) NULL)
+
+navi_env navi_interaction_environment(void)
+{
+	navi_obj exn;
+	navi_env env = navi_empty_environment();
+	navi_obj libs = navi_list(
+			make_libname("scheme", "base"),
+			make_libname("scheme", "case-lambda"),
+			make_libname("scheme", "char"),
+			make_libname("scheme", "lazy"),
+			make_libname("scheme", "read"),
+			make_libname("scheme", "write"));
+	navi_import(libs, env);
+	exn = navi_from_spec(&SCM_DECL(current_exception_handler), env);
+	navi_scope_set(env.lexical, navi_sym_current_exn, exn);
+	return env;
+}
 
 DEFUN(env_count, "env-count", 0, 0)
 {

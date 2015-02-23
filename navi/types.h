@@ -529,7 +529,6 @@ int navi_scope_unset(struct navi_scope *scope, navi_obj symbol);
 navi_env navi_env_new_scope(navi_env env);
 navi_env navi_dynamic_env_new_scope(navi_env env);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
-navi_env navi_make_environment(const struct navi_spec *bindings[]);
 navi_env navi_empty_environment(void);
 navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);

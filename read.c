@@ -462,7 +462,7 @@ static navi_obj read_sharp(struct navi_port *port, navi_env env)
 	case '!':
 		return read_sharp_bang(port, env);
 	case '#':
-		return navi_sym_wrap(navi_sym_internal, navi_read(port, env));
+		return navi_get_internal(navi_read(port, env), env);
 	case ';':
 		navi_read(port, env);
 		return navi_make_void();

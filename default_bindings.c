@@ -17,13 +17,15 @@
 
 static navi_env internal_env = {0};
 
-DEFSPECIAL(internal, "#internal", 1, 0, NAVI_SYMBOL)
+navi_obj navi_get_internal(navi_obj symbol, navi_env env)
 {
-	struct navi_binding *binding = navi_env_binding(internal_env.lexical, scm_arg1);
+	struct navi_binding *binding = navi_env_binding(internal_env.lexical, symbol);
 	if (!binding)
-		navi_error(scm_env, "no internal binding",
-				navi_make_apair("symbol", scm_arg1));
-	return navi_from_spec(binding->object.s, scm_env);
+		navi_error(env, "no internal binding",
+				navi_make_apair("symbol", symbol));
+
+	// make sure functions/etc. are bound in *global* environment
+	return navi_from_spec(binding->object.s, navi_get_global_env(env));
 }
 
 /*
@@ -56,7 +58,6 @@ DEFPARAM(current_exception_handler, "#current-exception-handler",
 
 #define DECL_SPEC(name) &SCM_DECL(name)
 static const struct navi_spec *default_bindings[] = {
-	DECL_SPEC(internal),
 	DECL_SPEC(current_exception_handler),
 
 	DECL_SPEC(lambda),
@@ -64,6 +65,8 @@ static const struct navi_spec *default_bindings[] = {
 	DECL_SPEC(define),
 	DECL_SPEC(define_values),
 	DECL_SPEC(defmacro),
+	DECL_SPEC(define_library),
+	DECL_SPEC(import),
 	DECL_SPEC(begin),
 	DECL_SPEC(include),
 	DECL_SPEC(include_ci),

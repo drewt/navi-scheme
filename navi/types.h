@@ -173,6 +173,20 @@ struct navi_spec {
 	navi_obj (*init)(const struct navi_spec*);
 };
 
+struct navi_library {
+	struct navi_hlist_node chain;
+	bool loaded;
+	navi_obj name;
+	union {
+		navi_obj declarations;
+		struct {
+			navi_obj exports;
+			navi_obj imports;
+			navi_env env;
+		};
+	};
+};
+
 struct navi_object {
 	struct navi_clist_head chain;
 	enum navi_type type;
@@ -241,9 +255,10 @@ static inline void _navi_scope_unref(struct navi_scope *scope)
 		navi_scope_free(scope);
 }
 
-static inline void _navi_scope_ref(struct navi_scope *scope)
+static inline struct navi_scope *_navi_scope_ref(struct navi_scope *scope)
 {
 	scope->refs++;
+	return scope;
 }
 
 static inline void navi_env_ref(navi_env env)
@@ -506,6 +521,8 @@ static inline navi_obj navi_unspecified(void)
 
 /* Constructors }}} */
 /* Environments/Evaluation {{{ */
+navi_obj navi_get_internal(navi_obj symbol, navi_env env);
+navi_env navi_get_global_env(navi_env env);
 struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol);
 void navi_scope_set(struct navi_scope *scope, navi_obj symbol, navi_obj object);
 int navi_scope_unset(struct navi_scope *scope, navi_obj symbol);
@@ -516,6 +533,7 @@ navi_env navi_make_environment(const struct navi_spec *bindings[]);
 navi_env navi_empty_environment(void);
 navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
+void navi_import(navi_obj imports, navi_env env);
 
 static inline navi_obj navi_env_lookup(struct navi_scope *env, navi_obj symbol)
 {
@@ -628,6 +646,11 @@ NAVI_TYPE_PREDICATE(navi_is_environment, NAVI_ENVIRONMENT)
 NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 #undef NAVI_TYPE_PREDICATE
 
+static inline bool navi_is_byte(navi_obj obj)
+{
+	return navi_is_num(obj) && navi_num(obj) >= 0 && navi_num(obj) < 256;
+}
+
 static inline bool navi_is_builtin(navi_obj obj)
 {
 	return navi_is_procedure(obj) &&
@@ -653,12 +676,23 @@ static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
 		|| ((p->flags & NAVI_PROC_VARIADIC) && n > p->arity);
 }
 /* Procedures }}} */
-/* Lists {{{ */
+/* Pairs/Lists {{{ */
+static inline void navi_set_car(navi_obj cons, navi_obj obj)
+{
+	cons.p->data->pair.car = obj;
+}
+
+static inline void navi_set_cdr(navi_obj cons, navi_obj obj)
+{
+	cons.p->data->pair.cdr = obj;
+}
+
 navi_obj navi_vlist(navi_obj first, va_list ap);
 navi_obj navi_list(navi_obj first, ...);
 int navi_list_length(navi_obj list);
 int navi_list_length_safe(navi_obj list);
-bool navi_is_list_of(navi_obj list, unsigned type, bool allow_dotted_tail);
+bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
+navi_obj navi_list_append_ip(navi_obj a, navi_obj b);
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 static inline navi_obj navi_last_cons(navi_obj list)
@@ -709,6 +743,8 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 navi_obj navi_current_input_port(navi_env env);
 navi_obj navi_current_output_port(navi_env env);
 navi_obj navi_current_error_port(navi_env env);
+navi_obj _navi_open_input_file(const char *filename, navi_env env);
+navi_obj _navi_open_output_file(const char *filename, navi_env env);
 navi_obj navi_open_input_file(navi_obj filename, navi_env env);
 navi_obj navi_open_output_file(navi_obj filename, navi_env env);
 void navi_close_input_port(struct navi_port *p, navi_env env);

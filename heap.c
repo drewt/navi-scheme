@@ -37,7 +37,17 @@ navi_obj navi_sym_current_error;
 navi_obj navi_sym_read_error;
 navi_obj navi_sym_file_error;
 navi_obj navi_sym_repl;
-navi_obj navi_sym_internal;
+navi_obj navi_sym_export;
+navi_obj navi_sym_import;
+navi_obj navi_sym_only;
+navi_obj navi_sym_except;
+navi_obj navi_sym_prefix;
+navi_obj navi_sym_rename;
+navi_obj navi_sym_deflib;
+navi_obj navi_sym_include;
+navi_obj navi_sym_include_ci;
+navi_obj navi_sym_include_libdecl;
+navi_obj navi_sym_cond_expand;
 
 void navi_free(struct navi_object *obj)
 {
@@ -60,21 +70,31 @@ static void symbol_table_init(void)
 		NAVI_INIT_HLIST_HEAD(&symbol_table[i]);
 
 	#define intern(cname, name) cname = navi_make_symbol(name)
-	intern(navi_sym_begin,          "begin");
-	intern(navi_sym_quote,          "quote");
-	intern(navi_sym_quasiquote,     "quasiquote");
-	intern(navi_sym_unquote,        "unquote");
-	intern(navi_sym_splice,         "unquote-splice");
-	intern(navi_sym_else,           "else");
-	intern(navi_sym_eq_lt,          "=>");
-	intern(navi_sym_current_exn,    "#current-exception-handler");
-	intern(navi_sym_current_input,  "current-input-port");
-	intern(navi_sym_current_output, "current-output-port");
-	intern(navi_sym_current_error,  "current-error-port");
-	intern(navi_sym_read_error,     "#read-error");
-	intern(navi_sym_file_error,     "#file-error");
-	intern(navi_sym_repl,           "#repl");
-	intern(navi_sym_internal,       "#internal");
+	intern(navi_sym_begin,           "begin");
+	intern(navi_sym_quote,           "quote");
+	intern(navi_sym_quasiquote,      "quasiquote");
+	intern(navi_sym_unquote,         "unquote");
+	intern(navi_sym_splice,          "unquote-splice");
+	intern(navi_sym_else,            "else");
+	intern(navi_sym_eq_lt,           "=>");
+	intern(navi_sym_current_exn,     "#current-exception-handler");
+	intern(navi_sym_current_input,   "current-input-port");
+	intern(navi_sym_current_output,  "current-output-port");
+	intern(navi_sym_current_error,   "current-error-port");
+	intern(navi_sym_read_error,      "#read-error");
+	intern(navi_sym_file_error,      "#file-error");
+	intern(navi_sym_repl,            "#repl");
+	intern(navi_sym_export,          "export");
+	intern(navi_sym_import,          "import");
+	intern(navi_sym_only,            "only");
+	intern(navi_sym_except,          "except");
+	intern(navi_sym_prefix,          "prefix");
+	intern(navi_sym_rename,          "rename");
+	intern(navi_sym_deflib,          "define-library");
+	intern(navi_sym_include,         "include");
+	intern(navi_sym_include_ci,      "include-ci");
+	intern(navi_sym_include_libdecl, "include-library-declarations");
+	intern(navi_sym_cond_expand,     "cond-expand");
 	#undef intern
 }
 

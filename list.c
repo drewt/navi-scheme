@@ -84,20 +84,44 @@ bool navi_is_proper_list(navi_obj list)
 	return navi_is_nil(cons);
 }
 
-bool navi_is_list_of(navi_obj list, unsigned type, bool allow_dotted_tail)
+bool navi_is_type(navi_obj obj, int type)
+{
+	switch (type) {
+	case NAVI_LIST:
+		return navi_is_proper_list(obj);
+	case NAVI_BYTE:
+		return navi_is_byte(obj);
+	case NAVI_ANY:
+		return true;
+	default:
+		return navi_type(obj) == (unsigned)type;
+	}
+}
+
+bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail)
 {
 	navi_obj cons;
 
 	navi_list_for_each(cons, list) {
-		if (navi_type(navi_car(cons)) != type)
+		if (!navi_is_type(navi_car(cons), type))
 			return false;
 	}
 	if (!allow_dotted_tail && navi_type(cons) != NAVI_NIL)
 		return false;
 	if (allow_dotted_tail && navi_type(cons) != NAVI_NIL
-			&& navi_type(cons) != type)
+			&& !navi_is_type(cons, type))
 		return false;
 	return true;
+}
+
+navi_obj navi_list_append_ip(navi_obj a, navi_obj b)
+{
+	if (navi_is_nil(a))
+		return b;
+	if (navi_is_nil(b))
+		return a;
+	navi_set_cdr(navi_last_cons(a), b);
+	return a;
 }
 
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data)

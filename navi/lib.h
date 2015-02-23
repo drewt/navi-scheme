@@ -24,6 +24,8 @@ DECLARE(caselambda);
 DECLARE(define);
 DECLARE(define_values);
 DECLARE(defmacro);
+DECLARE(define_library);
+DECLARE(import);
 DECLARE(begin);
 DECLARE(include);
 DECLARE(include_ci);

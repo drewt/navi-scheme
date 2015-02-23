@@ -31,6 +31,16 @@ extern navi_obj navi_sym_current_error;
 extern navi_obj navi_sym_read_error;
 extern navi_obj navi_sym_file_error;
 extern navi_obj navi_sym_repl;
-extern navi_obj navi_sym_internal;
+extern navi_obj navi_sym_export;
+extern navi_obj navi_sym_import;
+extern navi_obj navi_sym_only;
+extern navi_obj navi_sym_except;
+extern navi_obj navi_sym_prefix;
+extern navi_obj navi_sym_rename;
+extern navi_obj navi_sym_deflib;
+extern navi_obj navi_sym_include;
+extern navi_obj navi_sym_include_ci;
+extern navi_obj navi_sym_include_libdecl;
+extern navi_obj navi_sym_cond_expand;
 
 #endif

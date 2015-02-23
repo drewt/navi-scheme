@@ -362,6 +362,12 @@ end:
 
 static navi_obj read_sharp(struct navi_port *port, navi_env env);
 
+static void consume_line(struct navi_port *port, navi_env env)
+{
+	int c;
+	while ((c = read_char(port, env)) != '\n' && c != EOF);
+}
+
 static navi_obj read_list(struct navi_port *port, navi_env env)
 {
 	struct navi_pair head, *elmptr;
@@ -387,6 +393,9 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 			if (navi_type((expr = read_sharp(port, env))) == NAVI_VOID)
 				continue;
 			break;
+		case ';':
+			consume_line(port, env);
+			continue;
 		default:
 			expr = navi_iread(port, env);
 		}
@@ -521,7 +530,7 @@ navi_obj navi_read(struct navi_port *port, navi_env env)
 		fprintf(stderr, "Unexpected character: %c\n", c);
 		break;
 	case ';':
-		while ((c = read_char(port, env)) != '\n' && c != EOF);
+		consume_line(port, env);
 		return navi_read(port, env);
 	case EOF:
 		return navi_make_eof();

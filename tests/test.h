@@ -27,8 +27,11 @@
 
 navi_env env;
 
+navi_obj eval(const char *str);
+
 TCase *arithmetic_tests(void);
 TCase *char_tests(void);
 TCase *bytevector_tests(void);
+TCase *list_tests(void);
 
 #endif

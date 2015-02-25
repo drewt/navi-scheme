@@ -755,6 +755,9 @@ navi_obj navi_open_input_file(navi_obj filename, navi_env env);
 navi_obj navi_open_output_file(navi_obj filename, navi_env env);
 void navi_close_input_port(struct navi_port *p, navi_env env);
 void navi_close_output_port(struct navi_port *p, navi_env env);
+navi_obj navi_open_input_string(navi_obj string);
+navi_obj navi_open_output_string(void);
+navi_obj navi_get_output_string(navi_obj port);
 
 static inline void navi_port_display(struct navi_port *port, navi_obj obj, navi_env env)
 {

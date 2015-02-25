@@ -67,8 +67,6 @@ static inline void check_can_write_u8(struct navi_port *p, navi_env env)
 		navi_error(env, "port doesn't support binary output");
 }
 
-static void void_close(struct navi_port *port, navi_env env) {}
-
 static int stdio_read(struct navi_port *port, navi_env env)
 {
 	return getc(port->specific);
@@ -115,14 +113,14 @@ static void string_write(int32_t ch, struct navi_port *port, navi_env env)
 	str->length++;
 }
 
-static navi_obj make_string_input_port(navi_obj string)
+navi_obj navi_open_input_string(navi_obj string)
 {
 	navi_obj port = navi_make_textual_input_port(string_read, NULL, NULL);
 	navi_port(port)->expr = string;
 	return port;
 }
 
-static navi_obj make_string_output_port(void)
+navi_obj navi_open_output_string(void)
 {
 	navi_obj port = navi_make_textual_output_port(string_write, NULL, NULL);
 	port.p->data->port.expr = navi_make_string(STRING_INIT_SIZE, 0, 0);
@@ -475,40 +473,47 @@ DEFUN(open_output_file, "open-output-file", 1, 0, NAVI_STRING)
 
 DEFUN(open_input_string, "open-input-string", 1, 0, NAVI_STRING)
 {
-	return make_string_input_port(scm_arg1);
+	return navi_open_input_string(scm_arg1);
 }
 
 DEFUN(open_output_string, "open-output-string", 0, 0)
 {
-	return make_string_output_port();
+	return navi_open_output_string();
 }
 
-DEFUN(get_output_string, "get-output-string", 1, 0, NAVI_PORT)
+navi_obj navi_get_output_string(navi_obj port)
 {
 	navi_obj expr;
 	struct navi_string *str;
-	struct navi_port *p = navi_port(scm_arg1);
-
-	if (!(p->flags & STRING_OUTPUT))
-		navi_error(scm_env, "not a string output port");
-
+	struct navi_port *p = navi_port(port);
 	str = navi_string(p->expr);
 	expr = navi_make_string(str->size, str->size, str->length);
 	memcpy(navi_string(expr)->data, str->data, str->size);
 	return expr;
 }
 
+DEFUN(get_output_string, "get-output-string", 1, 0, NAVI_PORT)
+{
+	if (!(navi_port(scm_arg1)->flags & STRING_OUTPUT))
+		navi_error(scm_env, "not a string output port");
+	return navi_get_output_string(scm_arg1);
+}
+
 void navi_close_input_port(struct navi_port *p, navi_env env)
 {
-	p->close_in(p, env);
-	p->close_in = void_close;
+	if (p->close_in) {
+		p->close_in(p, env);
+		p->close_in = NULL;
+	}
 	p->flags |= INPUT_CLOSED;
 }
 
 void navi_close_output_port(struct navi_port *p, navi_env env)
 {
-	p->close_out(p, env);
-	p->close_out = void_close;
+	if (p->close_out) {
+		p->close_out(p, env);
+		p->close_out = NULL;
+	}
 	p->flags |= OUTPUT_CLOSED;
 }
 

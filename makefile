@@ -10,7 +10,8 @@ LDFLAGS   = `pkg-config --libs icu-uc icu-i18n`
 libobjects = arithmetic.o bytevector.o char.o control_features.o display.o \
 	     environment.o eval.o heap.o list.o port.o read.o string.o \
 	     vector.o
-testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o tests/main.o
+testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o tests/main.o \
+	      tests/list.o
 objects = $(libobjects) $(testobjects) repl.o
 target  = navii
 clean   = $(objects) $(target) libnavi.a

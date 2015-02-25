@@ -77,7 +77,7 @@ DEFUN(apply, "apply", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 		navi_pair(last)->cdr = fst;
 		break;
 	}
-	return navi_eval(scm_args, scm_env);
+	return navi_apply(navi_procedure(scm_arg1), navi_cdr(scm_args), scm_env);
 }
 
 navi_obj navi_call_escape(navi_obj escape, navi_obj arg, navi_env env)

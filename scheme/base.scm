@@ -34,7 +34,7 @@
     null? pair? reverse set-car! set-cdr!
 
     make-vector vector vector->list vector-copy vector-copy! vector-fill!
-    vector-length vector-map vector-ref vector-set! vector? ;vector-for-each
+    vector-length vector-map vector-ref vector-set! vector? vector-for-each
 
     bytevector bytevector-append bytevector-copy bytevector-copy!
     bytevector-length bytevector-u8-ref bytevector-u8-set! bytevector?
@@ -282,7 +282,7 @@
     (define vector-copy ##vector-copy)
     (define vector-copy! ##vector-copy!)
     (define vector-fill! ##vector-fill!)
-    ;(define vector-for-each ##vector-for-each)
+    (define vector-for-each ##vector-for-each)
     (define vector-length ##vector-length)
     (define vector-map ##vector-map)
     (define vector-ref ##vector-ref)

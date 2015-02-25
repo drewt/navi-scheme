@@ -462,7 +462,6 @@ DEFUN(for_each, "for-each", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 	navi_check_arity(scm_arg1, scm_nr_args-1, scm_env);
 	cons_array_fill(cons, navi_cdr(scm_args), scm_env);
 	for (;;) {
-		// check if we're at the end of a list
 		if (cons_array_terminated(cons, scm_nr_args-1))
 			break;
 		do_apply(scm_arg1, arg_list(cons, scm_nr_args-1), scm_env);

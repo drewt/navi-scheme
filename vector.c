@@ -171,8 +171,8 @@ DEFUN(vector_copy_to, "vector-copy!", 3, NAVI_PROC_VARIADIC,
 
 navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env)
 {
-	struct navi_vector *tov = navi_vector_cast(to, NAVI_VECTOR, env);
-	struct navi_vector *fromv = navi_vector_cast(from, NAVI_VECTOR, env);
+	struct navi_vector *tov = navi_vector_cast(to, env);
+	struct navi_vector *fromv = navi_vector_cast(from, env);
 
 	for (size_t i = 0; i < tov->size; i++) {
 		navi_obj call = navi_list(proc, fromv->data[i], navi_make_void());
@@ -187,10 +187,67 @@ DEFUN(vector_map_ip, "vector-map!", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 	return navi_vector_map(scm_arg1, scm_arg2, scm_arg2, scm_env);
 }
 
-DEFUN(vector_map, "vector-map", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
+static navi_obj arg_list(struct navi_vector *vecs[], size_t nr_vecs, size_t k)
 {
-	navi_check_arity(scm_arg1, 1, scm_env);
-	return navi_vector_map(scm_arg1,
-			navi_make_vector(navi_vector_length(scm_arg2)),
-			scm_arg2, scm_env);
+	navi_obj args, cons;
+	cons = args = navi_make_pair(navi_make_nil(), navi_make_nil());
+	for (size_t i = 0; i < nr_vecs; i++) {
+		navi_obj cdr = navi_make_pair(vecs[i]->data[k], navi_make_nil());
+		navi_set_cdr(cons, cdr);
+		cons = navi_cdr(cons);
+	}
+	return navi_cdr(args);
+}
+
+static navi_obj do_apply(navi_obj proc, navi_obj args, navi_env env)
+{
+	return navi_force_tail(navi_apply(navi_procedure(proc), args, env), env);
+}
+
+static size_t vector_array_fill(struct navi_vector *array[], navi_obj args,
+		navi_env env)
+{
+	navi_obj cons;
+	size_t i = 0, min_len = navi_vector(navi_car(args))->size;
+	navi_list_for_each(cons, args) {
+		array[i] = navi_vector_cast(navi_car(cons), env);
+		min_len = array[i]->size < min_len ? array[i]->size : min_len;
+		i++;
+	}
+	return min_len;
+}
+
+DEFUN(vector_for_each, "vector-for-each", 2, NAVI_PROC_VARIADIC,
+		NAVI_PROCEDURE, NAVI_VECTOR)
+{
+	size_t min_len;
+	struct navi_vector *args[scm_nr_args-1];
+
+	navi_check_arity(scm_arg1, scm_nr_args-1, scm_env);
+	min_len = vector_array_fill(args, navi_cdr(scm_args), scm_env);
+
+	for (size_t i = 0; i < min_len; i++)
+		do_apply(scm_arg1, arg_list(args, scm_nr_args-1, i), scm_env);
+	return navi_unspecified();
+}
+
+DEFUN(vector_map, "vector-map", 2, NAVI_PROC_VARIADIC,
+		NAVI_PROCEDURE, NAVI_VECTOR)
+{
+	size_t min_len;
+	navi_obj result;
+	struct navi_vector *vec;
+	struct navi_vector *args[scm_nr_args-1];
+
+	navi_check_arity(scm_arg1, scm_nr_args-1, scm_env);
+	min_len = vector_array_fill(args, navi_cdr(scm_args), scm_env);
+
+	result = navi_make_vector(min_len);
+	vec = navi_vector(result);
+
+	for (size_t i = 0; i < min_len; i++) {
+		vec->data[i] = do_apply(scm_arg1,
+				arg_list(args, scm_nr_args-1, i), scm_env);
+	}
+	return result;
 }

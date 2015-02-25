@@ -204,6 +204,7 @@ DECLARE(list_to_vector);
 DECLARE(vector_fill);
 DECLARE(vector_copy);
 DECLARE(vector_copy_to);
+DECLARE(vector_for_each);
 DECLARE(vector_map);
 DECLARE(vector_map_ip);
 

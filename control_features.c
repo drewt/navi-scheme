@@ -18,14 +18,22 @@
 
 #include "navi.h"
 
-// FIXME: broken, need to do lookup in dynamic environment
+static _Noreturn void unhandled_exception(navi_obj obj, navi_env env)
+{
+	navi_obj p = navi_make_file_output_port(stderr);
+	navi_port_write(navi_port(p), obj, env);
+	fputc('\n', stderr);
+	navi_close_output_port(navi_port(p), env);
+	navi_die("no exception handler installed");
+}
+
 _Noreturn void navi_raise(navi_obj args, navi_env env)
 {
 	for (;;) {
 		struct navi_procedure *proc;
 		navi_obj expr = navi_env_lookup(env.dynamic, navi_sym_current_exn);
 		if (navi_type(expr) != NAVI_PROCEDURE)
-			navi_die("no exception handler installed");
+			unhandled_exception(args, env);
 
 		/* set up environment and run handler */
 		proc = navi_procedure(expr);
@@ -63,7 +71,7 @@ DEFUN(apply, "apply", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 			last = cons;
 			continue;
 		}
-		navi_type_check_list(fst, scm_env);
+		navi_type_check_proper_list(fst, scm_env);
 
 		/* flatten arg list */
 		navi_pair(last)->cdr = fst;
@@ -147,7 +155,7 @@ DEFUN(raise_continuable, "raise-continuable", 1, 0, NAVI_ANY)
 
 	handler = navi_env_lookup(scm_env.dynamic, navi_sym_current_exn);
 	if (!navi_is_procedure(handler))
-		navi_die("no exception handler installed");
+		unhandled_exception(scm_args, scm_env);
 
 	proc = navi_procedure(handler);
 	navi_scope_unset(scm_env.dynamic, navi_sym_current_exn);

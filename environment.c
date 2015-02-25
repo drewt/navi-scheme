@@ -284,7 +284,7 @@ static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, nav
 	}
 }
 
-DEFSPECIAL(define_values, "define-values", 2, 0, NAVI_LIST, NAVI_ANY)
+DEFSPECIAL(define_values, "define-values", 2, 0, NAVI_PROPER_LIST, NAVI_ANY)
 {
 	extend_with_values(scm_arg1, navi_eval(scm_arg2, scm_env),
 			navi_make_symbol("define-values"), scm_env);
@@ -718,7 +718,7 @@ static bool declaration_valid(navi_obj declaration, navi_env env)
 static void check_library_syntax(navi_obj name, navi_obj declarations,
 		navi_env env)
 {
-	if (!navi_is_list_of(declarations, NAVI_LIST, false))
+	if (!navi_is_list_of(declarations, NAVI_PROPER_LIST, false))
 		navi_error(env, "invalid library definition");
 	if (!libname_valid(name))
 		navi_error(env, "invalid library name",

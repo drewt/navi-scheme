@@ -33,13 +33,15 @@ _Noreturn void _navi_error(navi_env env, const char *msg, ...);
 	navi_error(env, "wrong number of arguments", navi_make_apair("target", name))
 #define navi_unbound_identifier_error(env, ident) \
 	navi_error(env, "unbound identifier", navi_make_apair("identifier", ident))
+#define navi_type_error(env, expected, actual) \
+	navi_error(env, "type error", \
+			navi_make_apair("expected", expected), \
+			navi_make_apair("actual", actual))
 
 static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_env env)
 {
 	if (navi_type(obj) != type)
-		navi_error(env, "type error",
-				navi_make_apair("expected", navi_typesym(type)),
-				navi_make_apair("actual", navi_typesym(navi_type(obj))));
+		navi_type_error(env, navi_typesym(type), navi_typesym(navi_type(obj)));
 	return obj;
 }
 
@@ -56,6 +58,14 @@ static inline long navi_type_check_range(navi_obj n, long min, long max, navi_en
 
 static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
 {
+	if (!navi_is_list(list))
+		navi_type_error(env, navi_make_symbol("list"),
+				navi_typesym(navi_type(list)));
+	return list;
+}
+
+static inline navi_obj navi_type_check_proper_list(navi_obj list, navi_env env)
+{
 	if (!navi_is_proper_list(list))
 		navi_error(env, "type error: not a proper list");
 	return list;
@@ -64,7 +74,7 @@ static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
 static inline navi_obj navi_check_arity(navi_obj proc, int arity, navi_env env)
 {
 	int actual = navi_procedure(proc)->arity;
-	if (actual != arity)
+	if (!navi_arity_satisfied(navi_procedure(proc), arity))
 		navi_error(env, "wrong arity",
 				navi_make_apair("expected", navi_make_num(arity)),
 				navi_make_apair("actual", navi_make_num(actual)));

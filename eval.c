@@ -370,6 +370,9 @@ static unsigned check_apply(struct navi_procedure *proc, navi_obj args,
 			case NAVI_LIST:
 				navi_type_check_list(navi_car(cons), env);
 				break;
+			case NAVI_PROPER_LIST:
+				navi_type_check_proper_list(navi_car(cons), env);
+				break;
 			case NAVI_BYTE:
 				navi_type_check_byte(navi_car(cons), env);
 				break;

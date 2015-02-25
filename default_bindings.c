@@ -57,7 +57,7 @@ DEFPARAM(current_exception_handler, "#current-exception-handler",
 		toplevel_exn, check_exception_handler);
 
 #define DECL_SPEC(name) &SCM_DECL(name)
-static const struct navi_spec *internal_objects[] = {
+static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(current_exception_handler),
 
 	DECL_SPEC(lambda),
@@ -87,6 +87,9 @@ static const struct navi_spec *internal_objects[] = {
 	DECL_SPEC(parameterize),
 
 	DECL_SPEC(eqvp),
+	DECL_SPEC(eqp),
+	DECL_SPEC(equalp),
+
 	DECL_SPEC(eval),
 	DECL_SPEC(apply),
 	DECL_SPEC(force),
@@ -144,11 +147,27 @@ static const struct navi_spec *internal_objects[] = {
 	DECL_SPEC(cons),
 	DECL_SPEC(car),
 	DECL_SPEC(cdr),
+	DECL_SPEC(set_car),
+	DECL_SPEC(set_cdr),
 	DECL_SPEC(pairp),
 	DECL_SPEC(listp),
 	DECL_SPEC(nullp),
 	DECL_SPEC(list),
+	DECL_SPEC(make_list),
 	DECL_SPEC(length),
+	DECL_SPEC(append),
+	DECL_SPEC(reverse),
+	DECL_SPEC(list_tail),
+	DECL_SPEC(list_ref),
+	DECL_SPEC(list_set),
+	DECL_SPEC(memq),
+	DECL_SPEC(memv),
+	DECL_SPEC(member),
+	DECL_SPEC(assq),
+	DECL_SPEC(assv),
+	DECL_SPEC(assoc),
+	DECL_SPEC(list_copy),
+	DECL_SPEC(for_each),
 	DECL_SPEC(map),
 
 	DECL_SPEC(stringp),
@@ -245,9 +264,9 @@ static const struct navi_spec *internal_objects[] = {
 void navi_internal_init(void)
 {
 	internal_env = navi_empty_environment();
-	for (int i = 0; internal_objects[i]; i++) {
-		navi_obj symbol = navi_make_symbol(internal_objects[i]->ident);
-		navi_obj object = (navi_obj)internal_objects[i];
+	for (int i = 0; builtin_objects[i]; i++) {
+		navi_obj symbol = navi_make_symbol(builtin_objects[i]->ident);
+		navi_obj object = (navi_obj)builtin_objects[i];
 		navi_scope_set(internal_env.lexical, symbol, object);
 	}
 }

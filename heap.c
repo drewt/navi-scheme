@@ -409,6 +409,7 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	case NAVI_PORT:
 	case NAVI_SYMBOL:
 	case NAVI_VECTOR:
+	case NAVI_STRING:
 	case NAVI_VALUES:
 	case NAVI_BYTEVEC:
 	case NAVI_MACRO:
@@ -421,8 +422,6 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	case NAVI_ENVIRONMENT:
 	case NAVI_BOUNCE:
 		return fst.p == snd.p;
-	case NAVI_STRING:
-		return navi_string_equal(fst, snd);
 	}
 	navi_die("navi_eqvp: unknown type");
 }
@@ -430,6 +429,95 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 DEFUN(eqvp, "eqv?", 2, 0, NAVI_ANY, NAVI_ANY)
 {
 	return navi_make_bool(navi_eqvp(scm_arg1, scm_arg2));
+}
+
+DEFUN(eqp, "eq?", 2, 0, NAVI_ANY, NAVI_ANY)
+{
+	return navi_make_bool(navi_eqp(scm_arg1, scm_arg2));
+}
+
+static bool list_equal(navi_obj fst, navi_obj snd)
+{
+	navi_obj cons_a, cons_b;
+	navi_list_for_each_zipped(cons_a, cons_b, fst, snd) {
+		if (!navi_equalp(navi_car(cons_a), navi_car(cons_b)))
+			return false;
+	}
+	if (!navi_equalp(cons_a, cons_b))
+		return false;
+	return true;
+}
+
+static bool vector_equal(navi_obj fst, navi_obj snd)
+{
+	struct navi_vector *a = navi_vector(fst);
+	struct navi_vector *b = navi_vector(snd);
+	if (a->size != b->size)
+		return false;
+	for (size_t i = 0; i < a->size; i++) {
+		if (!navi_equalp(a->data[i], b->data[i]))
+			return false;
+	}
+	return true;
+}
+
+static bool bytevec_equal(navi_obj fst, navi_obj snd)
+{
+	struct navi_bytevec *a = navi_bytevec(fst);
+	struct navi_bytevec *b = navi_bytevec(snd);
+	if (a->size != b->size)
+		return false;
+	for (size_t i = 0; i < a->size; i++) {
+		if (a->data[i] != b->data[i])
+			return false;
+	}
+	return true;
+}
+
+// FIXME: doesn't terminate on circular data structures
+bool navi_equalp(navi_obj fst, navi_obj snd)
+{
+	if (navi_type(fst) != navi_type(snd))
+		return false;
+	switch(navi_type(fst)) {
+	case NAVI_VOID:
+	case NAVI_NIL:
+	case NAVI_EOF:
+		return true;
+	case NAVI_NUM:
+		return navi_num(fst) == navi_num(snd);
+	case NAVI_BOOL:
+		return navi_bool(fst) ? navi_bool(snd) : !navi_bool(snd);
+	case NAVI_CHAR:
+		return navi_char(fst) == navi_char(snd);
+	case NAVI_PORT:
+	case NAVI_SYMBOL:
+	case NAVI_VALUES:
+	case NAVI_MACRO:
+	case NAVI_SPECIAL:
+	case NAVI_PROMISE:
+	case NAVI_PROCEDURE:
+	case NAVI_CASELAMBDA:
+	case NAVI_ESCAPE:
+	case NAVI_PARAMETER:
+	case NAVI_ENVIRONMENT:
+	case NAVI_BOUNCE:
+		return fst.p == snd.p;
+	case NAVI_PAIR:
+		return list_equal(fst, snd);
+	case NAVI_VECTOR:
+		return vector_equal(fst, snd);
+	case NAVI_STRING:
+		return navi_string_equal(fst, snd);
+	case NAVI_BYTEVEC:
+		return bytevec_equal(fst, snd);
+	}
+	navi_die("navi_equalp: unknown type");
+}
+
+DEFUN(equalp, "equal?", 2, 0, NAVI_ANY, NAVI_ANY)
+{
+	return navi_make_bool(navi_equalp(scm_arg1, scm_arg2));
 }
 
 static inline void gc_set_mark(navi_obj obj)

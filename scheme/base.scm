@@ -27,14 +27,11 @@
     ;char->integer
     char<=? char<? char=? char>=? char>? char?
     
-    ;append assoc assq assv
-    car cdr ;caar cadr cdar cddr
-    cons ;for-each
-    length list list->string list->vector ;list-copy list-ref list-set! list-tail
-    list? ;make-list
-    map ;member memq memv
-    null? pair?
-    ;reverse set-car! set-cdr!
+    append assoc assq assv
+    car cdr caar cadr cdar cddr cons for-each
+    length list list->string list->vector list-copy list-ref list-set!
+    list-tail list? make-list map member memq memv
+    null? pair? reverse set-car! set-cdr!
 
     make-vector
     vector vector->list vector-copy vector-copy! vector-fill! vector-length
@@ -42,15 +39,12 @@
 
     bytevector bytevector-append bytevector-copy bytevector-copy!
     bytevector-length bytevector-u8-ref bytevector-u8-set! bytevector?
-    make-bytevector
+    make-bytevector string->utf8 utf8->string
 
-    make-string number->string
-    string string->list string->number string->utf8 utf8->string
-    ;string->symbol string->vector
-    string-append string-copy string-copy! string-fill! substring
-    ;string-for-each
-    string-length string-map string-ref string-set!
-    string<=? string<? string=? string>=? string>?
+    make-string number->string string string->list string->number ;string->symbol string->vector
+    string-append string-copy string-copy! string-fill! substring ;string-for-each
+    string-length string-map string-ref string-set! string<=? string<?
+    string=? string>=? string>?
 
     ;binary-port call-with-port char-ready?
     close-input-port close-output-port close-port
@@ -68,30 +62,26 @@
     eof-object eof-object?
     ;procedure?
 
-    ;eq? equal?
-    eqv?)
+    eq? equal? eqv?)
   (begin
     (##define define ##define)
     (define testing 1)
     (define * ##*)
     (define + ##+)
     (define - ##-)
-    ;(define ... ##...)
     (define / ##/)
     (define < ##<)
     (define <= ##<=)
     (define = ##=)
     (define >= ##>=)
     (define > ##>)
-    ;(define => ##=>)
-    ;(define _ ##_)
     ;(define abs ##abs)
     (define and ##and)
-    ;(define append ##append)
+    (define append ##append)
     (define apply ##apply)
-    ;(define assoc ##assoc)
-    ;(define assq ##assq)
-    ;(define assv ##assv)
+    (define assoc ##assoc)
+    (define assq ##assq)
+    (define assv ##assv)
     (define begin ##begin)
     ;(define binary-port ##binary-port)
     (define boolean=? ##boolean=?)
@@ -110,10 +100,11 @@
     (define call-with-values ##call-with-values)
     (define car ##car)
     (define cdr ##cdr)
-    ;(define caar ##caar)
-    ;(define cadr ##cadr)
-    ;(define cdar ##cdar)
-    ;(define cddr ##cddr)
+    (define (caar pair) (car (car pair)))
+    (define (cadr pair) (car (cdr pair)))
+    (define (cdar pair) (cdr (car pair)))
+    (define (cddr pair)
+      (cdr (cdr pair)))
     (define case ##case)
     ;(define ceiling ##ceiling)
     ;(define char->integer ##char->integer)
@@ -143,8 +134,8 @@
     ;(define else ##else)
     (define eof-object ##eof-object)
     (define eof-object? ##eof-object?)
-    ;(define eq? ##eq?)
-    ;(define equal? ##equal?)
+    (define eq? ##eq?)
+    (define equal? ##equal?)
     (define eqv? ##eqv?)
     (define error ##error)
     (define error-object-irritants ##error-object-irritants)
@@ -163,7 +154,7 @@
     ;(define floor-remainder ##floor-remainder)
     ;(define floor/ ##floor/)
     ;(define flush-output-port ##flush-output-port)
-    ;(define for-each ##for-each)
+    (define for-each ##for-each)
     ;(define gcd ##gcd)
     ;(define get-output-bytevector ##get-output-bytevector)
     (define get-output-string ##get-output-string)
@@ -191,21 +182,21 @@
     (define list ##list)
     (define list->string ##list->string)
     (define list->vector ##list->vector)
-    ;(define list-copy ##list-copy)
-    ;(define list-ref ##list-ref)
-    ;(define list-set! ##list-set!)
-    ;(define list-tail ##list-tail)
+    (define list-copy ##list-copy)
+    (define list-ref ##list-ref)
+    (define list-set! ##list-set!)
+    (define list-tail ##list-tail)
     (define list? ##list?)
     (define make-bytevector ##make-bytevector)
-    ;(define make-list ##make-list)
+    (define make-list ##make-list)
     (define make-parameter ##make-parameter)
     (define make-string ##make-string)
     (define make-vector ##make-vector)
     (define map ##map)
     ;(define max ##max)
-    ;(define member ##member)
-    ;(define memq ##memq)
-    ;(define memv ##memv)
+    (define member ##member)
+    (define memq ##memq)
+    (define memv ##memv)
     ;(define min ##min)
     ;(define modulo ##modulo)
     (define negative? ##negative?)
@@ -246,11 +237,11 @@
     (define read-u8 ##read-u8)
     ;(define real? ##real?)
     (define remainder ##remainder)
-    ;(define reverse ##reverse)
+    (define reverse ##reverse)
     ;(define round ##round)
     (define set! ##set!)
-    ;(define set-car! ##set-car!)
-    ;(define set-cdr! ##set-cdr!)
+    (define set-car! ##set-car!)
+    (define set-cdr! ##set-cdr!)
     ;(define square ##square)
     (define string ##string)
     (define string->list ##string->list)

@@ -96,6 +96,8 @@ DECLARE(display);
 DECLARE(newline);
 
 DECLARE(eqvp);
+DECLARE(eqp);
+DECLARE(equalp);
 
 DECLARE(add);
 DECLARE(sub);
@@ -125,11 +127,27 @@ DECLARE(boolean_eq);
 DECLARE(cons);
 DECLARE(car);
 DECLARE(cdr);
+DECLARE(set_car);
+DECLARE(set_cdr);
 DECLARE(pairp);
 DECLARE(listp);
 DECLARE(nullp);
 DECLARE(list);
+DECLARE(make_list);
 DECLARE(length);
+DECLARE(append);
+DECLARE(reverse);
+DECLARE(list_tail);
+DECLARE(list_ref);
+DECLARE(list_set);
+DECLARE(memq);
+DECLARE(memv);
+DECLARE(member);
+DECLARE(assq);
+DECLARE(assv);
+DECLARE(assoc);
+DECLARE(list_copy);
+DECLARE(for_each);
 DECLARE(map);
 
 DECLARE(charp);

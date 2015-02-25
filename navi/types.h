@@ -82,9 +82,10 @@ enum navi_type {
 };
 
 enum {
-	NAVI_LIST = -1,
-	NAVI_BYTE = -2,
-	NAVI_ANY  = -3,
+	NAVI_LIST        = -1,
+	NAVI_PROPER_LIST = -2,
+	NAVI_BYTE        = -3,
+	NAVI_ANY         = -4,
 };
 
 struct navi_escape {
@@ -656,6 +657,11 @@ static inline bool navi_is_builtin(navi_obj obj)
 		navi_procedure(obj)->flags & NAVI_PROC_BUILTIN;
 }
 
+static inline bool navi_is_list(navi_obj obj)
+{
+	return navi_type(obj) == NAVI_PAIR || navi_type(obj) == NAVI_NIL;
+}
+
 bool navi_is_proper_list(navi_obj list);
 /* Types }}} */
 /* Procedures {{{ */
@@ -687,7 +693,8 @@ static inline void navi_set_cdr(navi_obj cons, navi_obj obj)
 }
 
 navi_obj navi_vlist(navi_obj first, va_list ap);
-navi_obj navi_list(navi_obj first, ...);
+navi_obj _navi_list(navi_obj first, ...);
+#define navi_list(...) _navi_list(__VA_ARGS__, navi_make_void())
 int navi_list_length(navi_obj list);
 int navi_list_length_safe(navi_obj list);
 bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
@@ -828,6 +835,12 @@ char *navi_string_to_cstr(navi_obj string);
 /* Conversion }}} */
 /* Misc {{{ */
 bool navi_eqvp(navi_obj fst, navi_obj snd);
+bool navi_equalp(navi_obj fst, navi_obj snd);
+
+static inline bool navi_eqp(navi_obj fst, navi_obj snd)
+{
+	return fst.p == snd.p;
+}
 
 static inline bool navi_is_true(navi_obj expr)
 {

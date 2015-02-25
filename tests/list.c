@@ -30,67 +30,54 @@ START_TEST(test_cons)
 {
 	navi_obj o = eval("(cons 1 2)");
 	ck_assert(navi_is_pair(o));
-	ck_assert(navi_is_num(navi_car(o)));
-	ck_assert(navi_is_num(navi_cdr(o)));
-	ck_assert_int_eq(navi_num(navi_car(o)), 1);
-	ck_assert_int_eq(navi_num(navi_cdr(o)), 2);
+	assert_num_eq(navi_car(o), 1);
+	assert_num_eq(navi_cdr(o), 2);
 }
 END_TEST
 
 /* car */
 START_TEST(test_car)
 {
-	navi_obj o = eval("(car '(1 . 2))");
-	ck_assert(navi_is_num(o));
-	ck_assert_int_eq(navi_num(o), 1);
+	assert_num_eq(eval("(car '(1 . 2))"), 1);
 }
 END_TEST
 
 /* cdr */
 START_TEST(test_cdr)
 {
-	navi_obj o = eval("(cdr '(1 . 2))");
-	ck_assert(navi_is_num(o));
-	ck_assert_int_eq(navi_num(o), 2);
+	assert_num_eq(eval("(cdr '(1 . 2))"), 2);
 }
 END_TEST
 
 /* set-car! */
 START_TEST(test_set_car)
 {
-	navi_obj o = eval("(let ((p '(1 . 2))) (set-car! p 3) (car p))");
-	ck_assert(navi_is_num(o));
-	ck_assert_int_eq(navi_num(o), 3);
+	assert_num_eq(eval("(let ((p '(1 . 2))) (set-car! p 3) (car p))"), 3);
 }
 END_TEST
 
 /* set-cdr! */
 START_TEST(test_set_cdr)
 {
-	navi_obj o = eval("(let ((p '(1 . 2))) (set-cdr! p 4) (cdr p))");
-	ck_assert(navi_is_num(o));
-	ck_assert_int_eq(navi_num(o), 4);
+	assert_num_eq(eval("(let ((p '(1 . 2))) (set-cdr! p 4) (cdr p))"), 4);
 }
 END_TEST
 
 /* null? */
 START_TEST(test_nullp)
 {
-	navi_obj o = eval("(null? '())");
-	ck_assert(navi_is_bool(o));
-	ck_assert(navi_bool(o));
-	ck_assert(!navi_bool(eval("(null? 1)")));
+	assert_bool_true(eval("(null? '())"));
+	assert_bool_false(eval("(null? 1)"));
 }
 END_TEST
 
 /* list? */
 START_TEST(test_listp)
 {
-	ck_assert(navi_is_bool(eval("(list? '())")));
-	ck_assert(navi_bool(eval("(list? '())")));
-	ck_assert(navi_bool(eval("(list? '(1))")));
-	ck_assert(!navi_bool(eval("(list? '(1 . 2))")));
-	ck_assert(!navi_bool(eval("(list? 1)")));
+	assert_bool_true(eval("(list? '())"));
+	assert_bool_true(eval("(list? '(1))"));
+	assert_bool_false(eval("(list? '(1 . 2))"));
+	assert_bool_false(eval("(list? 1)"));
 }
 END_TEST
 
@@ -103,8 +90,7 @@ START_TEST(test_make_list)
 	int i = 0;
 	navi_obj cons, o = eval("(make-list 5 3)");
 	navi_list_for_each(cons, o) {
-		ck_assert(navi_is_num(navi_car(cons)));
-		ck_assert_int_eq(navi_num(navi_car(cons)), 3);
+		assert_num_eq(navi_car(cons), 3);
 		i++;
 	}
 	ck_assert(navi_is_nil(cons));
@@ -112,13 +98,12 @@ START_TEST(test_make_list)
 }
 END_TEST
 
-static void assert_0_to_3(navi_obj list)
+void assert_0_to_3(navi_obj list)
 {
 	int i = 0;
 	navi_obj cons;
 	navi_list_for_each(cons, list) {
-		ck_assert(navi_is_num(navi_car(cons)));
-		ck_assert_int_eq(navi_num(navi_car(cons)), i);
+		assert_num_eq(navi_car(cons), i);
 		i++;
 	}
 	ck_assert(navi_is_nil(cons));
@@ -137,10 +122,9 @@ END_TEST
 /* length */
 START_TEST(test_length)
 {
-	ck_assert(navi_is_num(eval("(length '())")));
-	ck_assert_int_eq(navi_num(eval("(length '())")), 0);
-	ck_assert_int_eq(navi_num(eval("(length '(1))")), 1);
-	ck_assert_int_eq(navi_num(eval("(length '(1 2))")), 2);
+	assert_num_eq(eval("(length '())"), 0);
+	assert_num_eq(eval("(length '(1))"), 1);
+	assert_num_eq(eval("(length '(1 2))"), 2);
 }
 END_TEST
 
@@ -148,7 +132,7 @@ END_TEST
 START_TEST(test_append)
 {
 	ck_assert(navi_is_nil(eval("(append '() '())")));
-	ck_assert(navi_is_num(eval("(append '() 1)")));
+	assert_num_eq(eval("(append '() 1)"), 1);
 	assert_0_to_3(eval("(append '(0 1) '(2 3))"));
 }
 END_TEST
@@ -174,9 +158,9 @@ END_TEST
 /* list-ref */
 START_TEST(test_list_ref)
 {
-	ck_assert_int_eq(navi_num(eval("(list-ref '(2 1 0) 0)")), 2);
-	ck_assert_int_eq(navi_num(eval("(list-ref '(2 1 0) 1)")), 1);
-	ck_assert_int_eq(navi_num(eval("(list-ref '(2 1 0) 2)")), 0);
+	assert_num_eq(eval("(list-ref '(2 1 0) 0)"), 2);
+	assert_num_eq(eval("(list-ref '(2 1 0) 1)"), 1);
+	assert_num_eq(eval("(list-ref '(2 1 0) 2)"), 0);
 }
 END_TEST
 
@@ -193,8 +177,7 @@ END_TEST
 /* memq */
 START_TEST(test_memq)
 {
-	ck_assert(navi_is_bool(eval("(memq 1 '())")));
-	ck_assert(!navi_bool(eval("(memq 1 '())")));
+	assert_bool_false(eval("(memq 1 '())"));
 	ck_assert(navi_is_pair(eval("(memq 1 '(1))")));
 	assert_0_to_3(eval("(memq 0 '(3 2 1 0 1 2 3))"));
 }
@@ -203,8 +186,7 @@ END_TEST
 /* memv */
 START_TEST(test_memv)
 {
-	ck_assert(navi_is_bool(eval("(memv 1 '())")));
-	ck_assert(!navi_bool(eval("(memv 1 '())")));
+	assert_bool_false(eval("(memv 1 '())"));
 	ck_assert(navi_is_pair(eval("(memv 1 '(1))")));
 	assert_0_to_3(eval("(memv 0 '(3 2 1 0 1 2 3))"));
 }
@@ -213,8 +195,7 @@ END_TEST
 /* member */
 START_TEST(test_member)
 {
-	ck_assert(navi_is_bool(eval("(member \"1\" '())")));
-	ck_assert(!navi_bool(eval("(member \"1\" '())")));
+	assert_bool_false(eval("(member \"1\" '())"));
 	ck_assert(navi_is_pair(eval("(member \"1\" '(\"1\"))")));
 	assert_0_to_3(eval("(member 0 '(3 2 1 0 1 2 3))"));
 	assert_0_to_3(eval("(member -1 '(-1 -2 -3 0 1 2 3) <)"));
@@ -224,8 +205,7 @@ END_TEST
 /* assq */
 START_TEST(test_assq)
 {
-	ck_assert(navi_is_bool(eval("(assq 1 '())")));
-	ck_assert(!navi_bool(eval("(assq 1 '())")));
+	assert_bool_false(eval("(assq 1 '())"));
 	ck_assert(navi_is_pair(eval("(assq 1 '((1 2)))")));
 	assert_0_to_3(eval("(assq 0 '((3) (2) (1) (0 1 2 3)))"));
 }
@@ -234,8 +214,7 @@ END_TEST
 /* assv */
 START_TEST(test_assv)
 {
-	ck_assert(navi_is_bool(eval("(assv 1 '())")));
-	ck_assert(!navi_bool(eval("(assv 1 '())")));
+	assert_bool_false(eval("(assv 1 '())"));
 	ck_assert(navi_is_pair(eval("(assv 1 '((1 2)))")));
 	assert_0_to_3(eval("(assv 0 '((3) (2) (1) (0 1 2 3)))"));
 }
@@ -244,8 +223,7 @@ END_TEST
 /* assoc */
 START_TEST(test_assoc)
 {
-	ck_assert(navi_is_bool(eval("(assoc \"1\" '())")));
-	ck_assert(!navi_bool(eval("(assoc \"1\" '())")));
+	assert_bool_false(eval("(assoc \"1\" '())"));
 	ck_assert(navi_is_pair(eval("(assoc \"1\" '((\"1\")))")));
 	assert_0_to_3(eval("(assoc 0 '((3) (2) (1) (0 1 2 3)))"));
 	assert_0_to_3(eval("(assoc -1 '((-1) (-2) (-3) (0 1 2 3)) <)"));
@@ -257,7 +235,7 @@ START_TEST(test_list_copy)
 {
 	ck_assert(navi_is_nil(eval("(list-copy '())")));
 	ck_assert(navi_is_pair(eval("(list-copy '(1))")));
-	ck_assert(!navi_bool(eval("(let ((x '(1))) (eq? x (list-copy x)))")));
+	assert_bool_false(eval("(let ((x '(1))) (eq? x (list-copy x)))"));
 	assert_0_to_3(eval("(list-copy '(0 1 2 3))"));
 }
 END_TEST

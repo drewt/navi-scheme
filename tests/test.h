@@ -28,10 +28,30 @@
 navi_env env;
 
 navi_obj eval(const char *str);
+void assert_0_to_3(navi_obj list);
+
+#define assert_num_eq(o, n) \
+	do { \
+		ck_assert(navi_is_num(o)); \
+		ck_assert_int_eq(navi_num(o), n); \
+	} while (0)
+
+#define assert_bool_true(b) \
+	do { \
+		ck_assert(navi_is_bool(b)); \
+		ck_assert(navi_bool(b)); \
+	} while (0)
+
+#define assert_bool_false(b) \
+	do { \
+		ck_assert(navi_is_bool(b)); \
+		ck_assert(!navi_bool(b)); \
+	} while (0)
 
 TCase *arithmetic_tests(void);
 TCase *char_tests(void);
 TCase *bytevector_tests(void);
+TCase *lambda_tests(void);
 TCase *list_tests(void);
 
 #endif

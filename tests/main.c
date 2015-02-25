@@ -40,6 +40,7 @@ int main(void)
 	suite_add_tcase(s, arithmetic_tests());
 	suite_add_tcase(s, bytevector_tests());
 	suite_add_tcase(s, char_tests());
+	suite_add_tcase(s, lambda_tests());
 	suite_add_tcase(s, list_tests());
 	sr = srunner_create(s);
 

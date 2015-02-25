@@ -413,7 +413,7 @@ DEFSPECIAL(set, "set!", 2, 0, NAVI_SYMBOL, NAVI_ANY)
 	if (binding == NULL)
 		navi_unbound_identifier_error(scm_env, scm_arg1);
 
-	value = navi_eval(scm_arg1, scm_env);
+	value = navi_eval(scm_arg2, scm_env);
 	binding->object = value;
 
 	return navi_unspecified();

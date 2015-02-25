@@ -193,11 +193,11 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(string_append),
 	DECL_SPEC(string_to_list),
 	DECL_SPEC(list_to_string),
+	DECL_SPEC(string_to_vector),
+	DECL_SPEC(vector_to_string),
 	DECL_SPEC(string_fill),
 	DECL_SPEC(string_copy),
 	DECL_SPEC(string_copy_to),
-	DECL_SPEC(string_map),
-	DECL_SPEC(string_map_ip),
 
 	DECL_SPEC(vectorp),
 	DECL_SPEC(make_vector),

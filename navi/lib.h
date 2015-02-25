@@ -187,11 +187,11 @@ DECLARE(substring);
 DECLARE(string_append);
 DECLARE(string_to_list);
 DECLARE(list_to_string);
+DECLARE(string_to_vector);
+DECLARE(vector_to_string);
 DECLARE(string_fill);
 DECLARE(string_copy);
 DECLARE(string_copy_to);
-DECLARE(string_map);
-DECLARE(string_map_ip);
 
 DECLARE(vectorp);
 DECLARE(make_vector);

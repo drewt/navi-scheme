@@ -33,18 +33,17 @@
     list-tail list? make-list map member memq memv
     null? pair? reverse set-car! set-cdr!
 
-    make-vector
-    vector vector->list vector-copy vector-copy! vector-fill! vector-length
-    vector-map vector-ref vector-set! vector? ;vector-for-each
+    make-vector vector vector->list vector-copy vector-copy! vector-fill!
+    vector-length vector-map vector-ref vector-set! vector? ;vector-for-each
 
     bytevector bytevector-append bytevector-copy bytevector-copy!
     bytevector-length bytevector-u8-ref bytevector-u8-set! bytevector?
     make-bytevector string->utf8 utf8->string
 
-    make-string number->string string string->list string->number ;string->symbol string->vector
-    string-append string-copy string-copy! string-fill! substring ;string-for-each
-    string-length string-map string-ref string-set! string<=? string<?
-    string=? string>=? string>?
+    make-string number->string string string->list string->number
+    string->vector vector->string string-append string-copy string-copy!
+    string-fill! substring string-for-each string-length string-map string-ref
+    string-set! string<=? string<? string=? string>=? string>?
 
     ;binary-port call-with-port char-ready?
     close-input-port close-output-port close-port
@@ -58,12 +57,14 @@
     ;write-bytevector write-string
     write-char write-u8
 
-    ;symbol->string symbol=? symbol?
+    ;string->symbol symbol->string symbol=? symbol?
     eof-object eof-object?
     ;procedure?
 
     eq? equal? eqv?)
   (begin
+
+    ;; Builtins
     (##define define ##define)
     (define testing 1)
     (define * ##*)
@@ -100,11 +101,6 @@
     (define call-with-values ##call-with-values)
     (define car ##car)
     (define cdr ##cdr)
-    (define (caar pair) (car (car pair)))
-    (define (cadr pair) (car (cdr pair)))
-    (define (cdar pair) (cdr (car pair)))
-    (define (cddr pair)
-      (cdr (cdr pair)))
     (define case ##case)
     ;(define ceiling ##ceiling)
     ;(define char->integer ##char->integer)
@@ -248,14 +244,12 @@
     (define string->number ##string->number)
     ;(define string->symbol ##string->symbol)
     (define string->utf8 ##string->utf8)
-    ;(define string->vector ##string->vector)
+    (define string->vector ##string->vector)
     (define string-append ##string-append)
     (define string-copy ##string-copy)
     (define string-copy! ##string-copy!)
     (define string-fill! ##string-fill!)
-    ;(define string-for-each ##string-for-each)
     (define string-length ##string-length)
-    (define string-map ##string-map)
     (define string-ref ##string-ref)
     (define string-set! ##string-set!)
     (define string<=? ##string<=?)
@@ -283,7 +277,7 @@
     (define values ##values)
     (define vector ##vector)
     (define vector->list ##vector->list)
-    ;(define vectot->string ##vector->string)
+    (define vector->string ##vector->string)
     ;(define vector-append ##vector-append)
     (define vector-copy ##vector-copy)
     (define vector-copy! ##vector-copy!)
@@ -300,4 +294,21 @@
     (define write-char ##write-char)
     ;(define write-string ##write-string)
     (define write-u8 ##write-u8)
-    (define zero? ##zero?)))
+    (define zero? ##zero?)
+
+    ;; Non-builtins
+    (define (caar pair) (car (car pair)))
+    (define (cadr pair) (car (cdr pair)))
+    (define (cdar pair) (cdr (car pair)))
+    (define (cddr pair) (cdr (cdr pair)))
+    (define (string-for-each proc str . strs)
+      (apply for-each
+             proc
+             (string->list str)
+             (map string->list strs)))
+    (define (string-map proc str . strs)
+      (list->string
+        (apply map
+               proc
+               (string->list str)
+               (map string->list strs))))))

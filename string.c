@@ -327,6 +327,19 @@ DEFUN(list_to_string, "list->string", 1, 0, NAVI_LIST)
 	return list_to_string(scm_arg1, scm_env);
 }
 
+DEFUN(string_to_vector, "string->vector", 1, 0, NAVI_STRING)
+{
+	return string_to_vector(scm_arg1);
+}
+
+DEFUN(vector_to_string, "vector->string", 1, 0, NAVI_VECTOR)
+{
+	struct navi_vector *vec = navi_vector(scm_arg1);
+	for (size_t i = 0; i < vec->size; i++)
+		navi_type_check(vec->data[i], NAVI_CHAR, scm_env);
+	return vector_to_string(scm_arg1);
+}
+
 static navi_obj copy_to(navi_obj to, int32_t at, navi_obj from, int32_t start,
 		int32_t end)
 {
@@ -433,37 +446,4 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 DEFUN(substring, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
 {
 	return scm_string_copy(3, scm_args, scm_env);
-}
-
-static navi_obj string_map(navi_obj proc, navi_obj str, navi_env env)
-{
-	navi_obj u32_in = string_to_vector(str);
-	navi_obj u32_out = navi_make_vector(navi_vector(u32_in)->size);
-	return navi_vector_map(proc, u32_out, u32_in, env);
-}
-
-DEFUN(string_map_ip, "string-map!", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
-{
-	int32_t size;
-	navi_obj vec_obj;
-	struct navi_vector *vec;
-	struct navi_string *str;
-	navi_check_arity(scm_arg1, 1, scm_env);
-	str = navi_string(scm_arg2);
-
-	vec_obj = string_map(scm_arg1, scm_arg2, scm_env);
-	vec = navi_vector(vec_obj);
-	size = u32_size(vec);
-
-	if (size > str->capacity)
-		navi_string_grow_storage(str, size - str->capacity);
-
-	vector_to_string_ip(str, vec);
-	return scm_arg2;
-}
-
-DEFUN(string_map, "string-map", 2, 0, NAVI_PROCEDURE, NAVI_STRING)
-{
-	navi_check_arity(scm_arg1, 1, scm_env);
-	return vector_to_string(string_map(scm_arg1, scm_arg2, scm_env));
 }

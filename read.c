@@ -383,6 +383,12 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 			return head.cdr;
 		case '.':
 			read_char(port, env);
+			c = ipeek_char(port, env);
+			if (!isspace(c)) {
+				// symbol beginning in .
+				expr = read_symbol_with_prefix(port, isterminal, '.', env);
+				break;
+			}
 			elmptr->cdr = navi_read(port, env);
 			if ((c = peek_first_char(port, env)) != ')')
 				navi_read_error(env, "missing list terminator");

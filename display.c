@@ -155,6 +155,7 @@ SIMPLE_WRITE(write_caselambda, "#<case-lambda>");
 SIMPLE_WRITE(write_escape, "#<escape continuation>");
 SIMPLE_WRITE(write_environment, "#<environment>");
 SIMPLE_WRITE(write_bounce, "#<bounce>");
+SIMPLE_WRITE(write_thunk, "#<thunk>");
 
 #define WRITE_WITH_CALL(name, tag, arg) \
 	static void name(struct navi_port *p, navi_obj o, bool w, navi_env env) \
@@ -188,6 +189,7 @@ static const write_fn writetab[] = {
 	[NAVI_SYMBOL]      = write_symbol,
 	[NAVI_VECTOR]      = write_vector,
 	[NAVI_BYTEVEC]     = write_bytevec,
+	[NAVI_THUNK]       = write_thunk,
 	[NAVI_MACRO]       = write_macro,
 	[NAVI_SPECIAL]     = write_special,
 	[NAVI_PROCEDURE]   = write_procedure,

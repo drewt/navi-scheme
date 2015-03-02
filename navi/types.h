@@ -73,6 +73,7 @@ enum navi_type {
 	NAVI_MACRO,
 	NAVI_SPECIAL,
 	NAVI_PROMISE,
+	NAVI_THUNK,
 	NAVI_PROCEDURE,
 	NAVI_CASELAMBDA,
 	NAVI_ESCAPE,
@@ -97,6 +98,11 @@ struct navi_escape {
 enum {
 	NAVI_PROC_BUILTIN  = 1,
 	NAVI_PROC_VARIADIC = 2,
+};
+
+struct navi_thunk {
+	navi_obj expr;
+	navi_env env;
 };
 
 struct navi_procedure {
@@ -188,13 +194,19 @@ struct navi_library {
 	};
 };
 
+enum {
+	NAVI_GC_MARK = 1,
+	NAVI_PAT_ELLIPSIS = 2,
+};
+
 struct navi_object {
 	struct navi_clist_head chain;
 	enum navi_type type;
-	bool gc_mark;
+	uint16_t flags;
 	union {
 		navi_env env;
 		struct navi_escape esc;
+		struct navi_thunk thunk;
 		struct navi_procedure proc;
 		struct navi_vector vec;
 		struct navi_bytevec bvec;
@@ -211,7 +223,6 @@ struct navi_binding {
 	navi_obj symbol;
 	navi_obj object;
 };
-//
 /* C types }}} */
 
 #define navi_die(msg, ...) \
@@ -313,6 +324,11 @@ static inline struct navi_string *navi_string(navi_obj obj)
 static inline struct navi_symbol *navi_symbol(navi_obj obj)
 {
 	return &obj.p->data->sym;
+}
+
+static inline struct navi_thunk *navi_thunk(navi_obj obj)
+{
+	return &obj.p->data->thunk;
 }
 
 static inline struct navi_procedure *navi_procedure(navi_obj obj)
@@ -441,6 +457,7 @@ navi_obj navi_make_string(size_t storage, size_t size, size_t length);
 void navi_string_grow_storage(struct navi_string *str, long need);
 navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_env env);
 navi_obj navi_make_lambda(navi_obj args, navi_obj body, navi_env env);
+navi_obj navi_make_thunk(navi_obj expr, navi_env env);
 navi_obj navi_make_escape(void);
 navi_obj _navi_make_parameter(navi_obj converter);
 navi_obj navi_make_parameter(navi_obj value, navi_obj converter, navi_env env);
@@ -507,12 +524,11 @@ static inline navi_obj navi_make_apair(const char *sym, navi_obj val)
 	return navi_make_pair(navi_make_symbol(sym), val);
 }
 
-static inline navi_obj navi_make_bounce(navi_obj object, navi_obj env)
+static inline navi_obj navi_make_bounce(navi_obj object, navi_env env)
 {
-	navi_obj ret = navi_make_pair(object, env);
-	ret.p->type = NAVI_BOUNCE;
-	navi_env_ref(navi_environment(env));
-	return ret;
+	navi_obj bounce = navi_make_thunk(object, env);
+	bounce.p->type = NAVI_BOUNCE;
+	return bounce;
 }
 
 static inline navi_obj navi_unspecified(void)
@@ -530,6 +546,7 @@ int navi_scope_unset(struct navi_scope *scope, navi_obj symbol);
 navi_env navi_env_new_scope(navi_env env);
 navi_env navi_dynamic_env_new_scope(navi_env env);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
+navi_env _navi_empty_environment(void);
 navi_env navi_empty_environment(void);
 navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
@@ -600,6 +617,7 @@ static inline const char *navi_strtype(enum navi_type type)
 	case NAVI_SYMBOL:      return "symbol";
 	case NAVI_VECTOR:      return "vector";
 	case NAVI_BYTEVEC:     return "bytevector";
+	case NAVI_THUNK:       return "thunk";
 	case NAVI_MACRO:       return "macro";
 	case NAVI_SPECIAL:     return "special";
 	case NAVI_PROMISE:     return "promise";
@@ -699,6 +717,8 @@ int navi_list_length(navi_obj list);
 int navi_list_length_safe(navi_obj list);
 bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
 navi_obj navi_list_append_ip(navi_obj a, navi_obj b);
+navi_obj navi_list_tail(navi_obj list, long k);
+navi_obj navi_list_copy(navi_obj list);
 navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 static inline navi_obj navi_last_cons(navi_obj list)

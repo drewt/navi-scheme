@@ -48,9 +48,21 @@ navi_obj navi_sym_include;
 navi_obj navi_sym_include_ci;
 navi_obj navi_sym_include_libdecl;
 navi_obj navi_sym_cond_expand;
+navi_obj navi_sym_ellipsis;
 
 void navi_free(struct navi_object *obj)
 {
+	switch (obj->type) {
+	case NAVI_THUNK:
+	case NAVI_BOUNCE:
+		navi_env_unref(obj->data->thunk.env);
+		break;
+	case NAVI_ENVIRONMENT:
+		navi_env_unref(obj->data->env);
+		break;
+	default:
+		break;
+	}
 	obj->type = NAVI_VOID;
 	free(obj);
 }
@@ -95,6 +107,7 @@ static void symbol_table_init(void)
 	intern(navi_sym_include_ci,      "include-ci");
 	intern(navi_sym_include_libdecl, "include-library-declarations");
 	intern(navi_sym_cond_expand,     "cond-expand");
+	intern(navi_sym_ellipsis,        "...");
 	#undef intern
 }
 
@@ -333,6 +346,15 @@ navi_obj navi_capture_env(navi_env env)
 	return (navi_obj) obj;
 }
 
+navi_obj navi_make_thunk(navi_obj expr, navi_env env)
+{
+	struct navi_object *thunk = make_object(NAVI_THUNK, sizeof(struct navi_thunk));
+	thunk->data->thunk.expr = expr;
+	thunk->data->thunk.env = env;
+	navi_env_ref(env);
+	return (navi_obj) thunk;
+}
+
 static navi_obj proc_from_spec(const struct navi_spec *spec, navi_env env)
 {
 	struct navi_object *obj = make_object(spec->type, sizeof(struct navi_procedure));
@@ -412,6 +434,7 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	case NAVI_STRING:
 	case NAVI_VALUES:
 	case NAVI_BYTEVEC:
+	case NAVI_THUNK:
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
 	case NAVI_PROMISE:
@@ -493,6 +516,7 @@ bool navi_equalp(navi_obj fst, navi_obj snd)
 	case NAVI_PORT:
 	case NAVI_SYMBOL:
 	case NAVI_VALUES:
+	case NAVI_THUNK:
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
 	case NAVI_PROMISE:
@@ -520,11 +544,20 @@ DEFUN(equalp, "equal?", 2, 0, NAVI_ANY, NAVI_ANY)
 	return navi_make_bool(navi_equalp(scm_arg1, scm_arg2));
 }
 
-static inline void gc_set_mark(navi_obj obj)
+static inline bool gc_is_marked(navi_obj obj)
 {
-	navi_ptr(obj)->gc_mark = true;
+	return obj.p->flags & NAVI_GC_MARK;
 }
 
+static inline void gc_set_mark(navi_obj obj)
+{
+	obj.p->flags |= NAVI_GC_MARK;
+}
+
+static inline void gc_clear_mark(navi_obj obj)
+{
+	obj.p->flags &= ~NAVI_GC_MARK;
+}
 static void gc_mark_obj(navi_obj obj)
 {
 	struct navi_vector *vec;
@@ -563,6 +596,10 @@ static void gc_mark_obj(navi_obj obj)
 		vec = navi_vector(obj);
 		for (size_t i = 0; i < vec->size; i++)
 			gc_mark_obj(vec->data[i]);
+		break;
+	case NAVI_THUNK:
+		gc_set_mark(obj);
+		gc_mark_obj(navi_thunk(obj)->expr);
 		break;
 	case NAVI_MACRO:
 	case NAVI_SPECIAL:
@@ -610,8 +647,8 @@ static void gc_sweep(void)
 	struct navi_object *obj, *p;
 
 	navi_clist_for_each_entry_safe(obj, p, &heap, chain) {
-		if (obj->gc_mark) {
-			obj->gc_mark = false;
+		if (gc_is_marked((navi_obj)obj)) {
+			gc_clear_mark((navi_obj)obj);
 			continue;
 		}
 		navi_clist_del(&obj->chain);

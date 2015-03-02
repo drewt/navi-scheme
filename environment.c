@@ -169,15 +169,17 @@ static void navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 	}
 }
 
+navi_env _navi_empty_environment(void)
+{
+	return (navi_env) { .lexical = make_scope(), .dynamic = make_scope() };
+}
+
 /*
  * Make "empty" environment, which has only (import ...).
  */
 navi_env navi_empty_environment(void)
 {
-	navi_env env = {
-		.lexical = make_scope(),
-		.dynamic = make_scope()
-	};
+	navi_env env = _navi_empty_environment();
 	navi_scope_set(env.lexical, navi_sym_import,
 			navi_from_spec(&SCM_DECL(import), env));
 	return env;

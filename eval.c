@@ -20,16 +20,6 @@
 
 static navi_obj _eval(navi_obj expr, navi_env env);
 
-static inline navi_obj bounce_object(navi_obj bounce)
-{
-	return navi_car(bounce);
-}
-
-static inline navi_env bounce_env(navi_obj bounce)
-{
-	return navi_cdr(bounce).p->data->env;
-}
-
 static inline bool can_bounce(navi_obj obj)
 {
 	enum navi_type type = navi_type(obj);
@@ -41,7 +31,7 @@ static navi_obj eval_tail(navi_obj tail, navi_env env)
 	if (!can_bounce(tail))
 		return tail;
 
-	return navi_make_bounce(tail, navi_capture_env(env));
+	return navi_make_bounce(tail, env);
 }
 
 static bool lambda_valid(navi_obj lambda)
@@ -485,8 +475,10 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 	case NAVI_ESCAPE:
 	case NAVI_PARAMETER:
 	case NAVI_ENVIRONMENT:
-	case NAVI_BOUNCE:
 		return expr;
+	case NAVI_THUNK:
+	case NAVI_BOUNCE:
+		return _eval(navi_thunk(expr)->expr, navi_thunk(expr)->env);
 	case NAVI_VALUES:
 		return navi_vector_ref(expr, 0);
 	case NAVI_SYMBOL:
@@ -506,18 +498,15 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 navi_obj navi_eval(navi_obj expr, navi_env env)
 {
 	navi_obj result;
-
 	navi_env_ref(env);
-	for (;;) {
+	expr = _eval(expr, env);
+	while (navi_type(expr) == NAVI_BOUNCE) {
 		result = _eval(expr, env);
-		if (navi_type(result) != NAVI_BOUNCE)
-			break;
-		navi_env_unref(env); // unref for previous bounce
-		expr = bounce_object(result);
-		env = bounce_env(result);
+		navi_free(expr.p);
+		expr = result;
 	}
 	navi_env_unref(env);
-	return result;
+	return expr;
 }
 
 DEFUN(eval, "eval", 1, 0, NAVI_ANY)

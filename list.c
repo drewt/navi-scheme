@@ -56,9 +56,6 @@ int navi_list_length(navi_obj list)
 	for (i = 0; navi_type(list) == NAVI_PAIR; i++)
 		list = navi_cdr(list);
 
-	if (navi_type(list) != NAVI_NIL)
-		navi_die("navi_list_length: not a proper list");
-
 	return i;
 }
 

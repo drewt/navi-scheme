@@ -42,5 +42,7 @@ extern navi_obj navi_sym_include;
 extern navi_obj navi_sym_include_ci;
 extern navi_obj navi_sym_include_libdecl;
 extern navi_obj navi_sym_cond_expand;
+extern navi_obj navi_sym_ellipsis;
+extern navi_obj navi_sym_underscore;
 
 #endif

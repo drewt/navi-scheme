@@ -141,6 +141,13 @@ static void write_procedure(struct navi_port *p, navi_obj o, bool w, navi_env en
 	navi_port_write_cstr(">", p, env);
 }
 
+static void write_thunk(struct navi_port *p, navi_obj o, bool w, navi_env env)
+{
+	navi_port_write_cstr("#<thunk ", p, env);
+	_navi_display(p, navi_thunk(o)->expr, w, env);
+	navi_port_write_cstr(">", p, env);
+}
+
 #define SIMPLE_WRITE(name, str) \
 	static void name(struct navi_port *p, navi_obj o, bool w, navi_env env) \
 	{ \
@@ -155,7 +162,6 @@ SIMPLE_WRITE(write_caselambda, "#<case-lambda>");
 SIMPLE_WRITE(write_escape, "#<escape continuation>");
 SIMPLE_WRITE(write_environment, "#<environment>");
 SIMPLE_WRITE(write_bounce, "#<bounce>");
-SIMPLE_WRITE(write_thunk, "#<thunk>");
 
 #define WRITE_WITH_CALL(name, tag, arg) \
 	static void name(struct navi_port *p, navi_obj o, bool w, navi_env env) \

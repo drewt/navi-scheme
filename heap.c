@@ -49,6 +49,7 @@ navi_obj navi_sym_include_ci;
 navi_obj navi_sym_include_libdecl;
 navi_obj navi_sym_cond_expand;
 navi_obj navi_sym_ellipsis;
+navi_obj navi_sym_underscore;
 
 void navi_free(struct navi_object *obj)
 {
@@ -108,6 +109,7 @@ static void symbol_table_init(void)
 	intern(navi_sym_include_libdecl, "include-library-declarations");
 	intern(navi_sym_cond_expand,     "cond-expand");
 	intern(navi_sym_ellipsis,        "...");
+	intern(navi_sym_underscore,      "_");
 	#undef intern
 }
 

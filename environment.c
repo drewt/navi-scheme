@@ -253,12 +253,7 @@ static navi_obj eval_defun(navi_obj fundecl, navi_obj rest, navi_env env)
 
 DEFSPECIAL(define, "define", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
-	enum navi_type type;
-
-	if (navi_list_length(scm_args) < 2)
-		navi_error(scm_env, "invalid define list");
-
-	type = navi_type(scm_arg1);
+	enum navi_type type = navi_type(scm_arg1);
 	if (type == NAVI_SYMBOL)
 		return eval_defvar(scm_arg1, navi_cdr(scm_args), scm_env);
 	if (type == NAVI_PAIR)
@@ -386,20 +381,20 @@ static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
 	return new;
 }
 
-#define DEFLET(name, scmname, validate, extend) \
-	DEFSPECIAL(name, scmname, 2, NAVI_PROC_VARIADIC, \
-			NAVI_ANY, NAVI_ANY) \
-	{ \
-		navi_obj result; \
-		navi_env new_env; \
-		\
-		if (!validate(scm_arg1)) \
-			navi_error(scm_env, "invalid " scmname " list"); \
-		\
-		new_env = extend(scm_arg1, scm_env); \
-		result = scm_begin(0, navi_cdr(scm_args), new_env); \
-		navi_env_unref(new_env); \
-		return result; \
+#define DEFLET(name, scmname, validate, extend)                              \
+	DEFSPECIAL(name, scmname, 2, NAVI_PROC_VARIADIC,                     \
+			NAVI_ANY, NAVI_ANY)                                  \
+	{                                                                    \
+		navi_obj result;                                             \
+		navi_env new_env;                                            \
+		                                                             \
+		if (!validate(scm_arg1))                                     \
+			navi_error(scm_env, "invalid " scmname " list");     \
+		                                                             \
+		new_env = extend(scm_arg1, scm_env);                         \
+		result = scm_begin(0, navi_cdr(scm_args), new_env, NULL);    \
+		navi_env_unref(new_env);                                     \
+		return result;                                               \
 	}
 
 DEFLET(let, "let", let_defs_valid, let_extend_env)
@@ -505,7 +500,7 @@ DEFSPECIAL(parameterize, "parameterize", 2, NAVI_PROC_VARIADIC,
 		NAVI_ANY, NAVI_ANY)
 {
 	navi_env new_env = parameterize_extend_env(scm_arg1, scm_env);
-	navi_obj result = scm_begin(0, navi_cdr(scm_args), new_env);
+	navi_obj result = scm_begin(0, navi_cdr(scm_args), new_env, NULL);
 	navi_env_unref(new_env);
 	return result;
 }
@@ -835,7 +830,7 @@ static struct navi_library *do_load_library(struct navi_library *library,
 		} else if (sym.p == navi_sym_import.p) {
 			navi_import(rest, lib_env);
 		} else if (sym.p == navi_sym_begin.p) {
-			navi_force_tail(scm_begin(0, rest, lib_env), lib_env);
+			navi_force_tail(scm_begin(0, rest, lib_env, NULL), lib_env);
 		} else if (sym.p == navi_sym_include.p) {
 
 		} else if (sym.p == navi_sym_include.p) {

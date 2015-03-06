@@ -53,7 +53,10 @@ typedef struct {
 	struct navi_scope *dynamic;
 } navi_env;
 
-typedef navi_obj (*navi_builtin)(unsigned, navi_obj, navi_env);
+struct navi_procedure;
+
+typedef navi_obj (*navi_builtin)(unsigned, navi_obj, navi_env,
+		struct navi_procedure*);
 typedef navi_obj (*navi_leaf)(navi_obj, void*);
 
 enum navi_type {
@@ -117,6 +120,7 @@ struct navi_procedure {
 		};
 		navi_builtin c_proc;
 	};
+	navi_obj specific;
 	const int *types;
 };
 
@@ -399,6 +403,11 @@ static inline navi_obj navi_caddr(navi_obj obj)
 static inline navi_obj navi_cadar(navi_obj obj)
 {
 	return navi_pair(navi_cdar(obj))->car;
+}
+
+static inline navi_obj navi_cdaar(navi_obj obj)
+{
+	return navi_pair(navi_caar(obj))->cdr;
 }
 
 static inline navi_obj navi_cdddr(navi_obj obj)

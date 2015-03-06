@@ -445,5 +445,5 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 
 DEFUN(substring, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
 {
-	return scm_string_copy(3, scm_args, scm_env);
+	return scm_string_copy(3, scm_args, scm_env, NULL);
 }

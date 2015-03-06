@@ -205,8 +205,11 @@ START_TEST(test_string_to_number)
 {
 	navi_obj r;
 
-#define stn_assert(nr, str, ...) \
-	r = $(scm_string_to_number, navi_cstr_to_string(str), ## __VA_ARGS__); \
+#define stn_assert(nr, str) \
+	r = $(scm_string_to_number, navi_cstr_to_string(str)); \
+	ck_assert_int_eq(navi_num(r), nr);
+#define stn_assertb(nr, str, base) \
+	r = $(scm_string_to_number, navi_cstr_to_string(str), navi_make_num(base)); \
 	ck_assert_int_eq(navi_num(r), nr);
 
 	stn_assert(1,  "1");
@@ -215,11 +218,13 @@ START_TEST(test_string_to_number)
 	stn_assert(8,  "#o10");
 	stn_assert(10, "#d10");
 	stn_assert(16, "#x10");
-	stn_assert(2,  "10", navi_make_num(2));
-	stn_assert(8,  "10", navi_make_num(8));
-	stn_assert(10, "10", navi_make_num(10));
-	stn_assert(16, "10", navi_make_num(16));
+	stn_assertb(2,  "10", 2);
+	stn_assertb(8,  "10", 8);
+	stn_assertb(10, "10", 10);
+	stn_assertb(16, "10", 16);
+
 #undef stn_assert
+#undef stn_assertb
 }
 END_TEST
 

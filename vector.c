@@ -43,7 +43,7 @@ navi_obj navi_vector_to_list(navi_obj obj)
 	vector = navi_vector(obj);
 	for (size_t i = 0; i < vector->size; i++) {
 		ptr->cdr = navi_make_empty_pair();
-		ptr = &ptr->cdr.p->data->pair;
+		ptr = navi_pair(ptr->cdr);
 		ptr->car = vector->data[i];
 	}
 	ptr->cdr = navi_make_nil();

@@ -245,16 +245,16 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 		return navi_make_bool(true); \
 	}
 
-STRING_COMPARE(string_lt,     "string<?",     <,  false);
-STRING_COMPARE(string_gt,     "string>?",     >,  false);
-STRING_COMPARE(string_eq,     "string=?",     ==, false);
-STRING_COMPARE(string_lte,    "string<=?",    <=, false);
-STRING_COMPARE(string_gte,    "string>=?",    >=, false);
-STRING_COMPARE(string_ci_lt,  "string-ci<?",  <,  true);
-STRING_COMPARE(string_ci_gt,  "string-ci>?",  >,  true);
-STRING_COMPARE(string_ci_eq,  "string-ci=?",  ==, true);
-STRING_COMPARE(string_ci_lte, "string-ci<=?", <=, true);
-STRING_COMPARE(string_ci_gte, "string-ci>=?", >=, true);
+STRING_COMPARE(string_lt,     "string<?",     <,  false)
+STRING_COMPARE(string_gt,     "string>?",     >,  false)
+STRING_COMPARE(string_eq,     "string=?",     ==, false)
+STRING_COMPARE(string_lte,    "string<=?",    <=, false)
+STRING_COMPARE(string_gte,    "string>=?",    >=, false)
+STRING_COMPARE(string_ci_lt,  "string-ci<?",  <,  true)
+STRING_COMPARE(string_ci_gt,  "string-ci>?",  >,  true)
+STRING_COMPARE(string_ci_eq,  "string-ci=?",  ==, true)
+STRING_COMPARE(string_ci_lte, "string-ci<=?", <=, true)
+STRING_COMPARE(string_ci_gte, "string-ci>=?", >=, true)
 
 static int32_t count_length(struct navi_string *str)
 {
@@ -287,9 +287,9 @@ static int32_t count_length(struct navi_string *str)
 		return dst_obj; \
 	}
 
-STRING_CASEMAP(string_upcase,   "string-upcase",   ucasemap_utf8ToUpper);
-STRING_CASEMAP(string_downcase, "string-downcase", ucasemap_utf8ToLower);
-STRING_CASEMAP(string_foldcase, "string-foldcase", ucasemap_utf8FoldCase);
+STRING_CASEMAP(string_upcase,   "string-upcase",   ucasemap_utf8ToUpper)
+STRING_CASEMAP(string_downcase, "string-downcase", ucasemap_utf8ToLower)
+STRING_CASEMAP(string_foldcase, "string-foldcase", ucasemap_utf8FoldCase)
 
 DEFUN(string_append, "string-append", 0, NAVI_PROC_VARIADIC)
 {

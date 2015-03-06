@@ -172,7 +172,6 @@ struct navi_spec {
 		int32_t num;
 		char *str;
 		struct navi_procedure proc;
-		struct navi_vector vec;
 		struct navi_pair pair;
 		struct {
 			const struct navi_spec *param_value;
@@ -207,19 +206,7 @@ struct navi_object {
 	struct navi_clist_head chain;
 	enum navi_type type;
 	uint16_t flags;
-	union {
-		navi_env env;
-		struct navi_escape esc;
-		struct navi_thunk thunk;
-		struct navi_procedure proc;
-		struct navi_vector vec;
-		struct navi_bytevec bvec;
-		struct navi_string str;
-		struct navi_symbol sym;
-		struct navi_pair pair;
-		struct navi_port port;
-		struct navi_spec *spec;
-	} data[];
+	void *data[];
 };
 
 struct navi_binding {
@@ -229,16 +216,17 @@ struct navi_binding {
 };
 /* C types }}} */
 
-#define navi_die(msg, ...) \
-	_navi_die("libnavi: critical error in " __FILE__ " (%d): " msg, \
-			__LINE__, ##__VA_ARGS__)
-static inline _Noreturn int _navi_die(const char *msg, ...)
+#define navi_die(...) \
+	_navi_die(__FILE__, __LINE__, __VA_ARGS__)
+static inline _Noreturn int _navi_die(const char *file, int line,
+		const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
+	fprintf(stderr, "libnavi: critical error in %s (%d): ", file, line);
 	vfprintf(stderr, msg, ap);
+	fputc('\n', stderr);
 	va_end(ap);
-	putchar('\n');
 	exit(1);
 }
 
@@ -288,6 +276,18 @@ static inline void navi_env_unref(navi_env env)
 	_navi_scope_unref(env.lexical);
 	_navi_scope_unref(env.dynamic);
 }
+
+#define navi_scope_for_each(binding, scope) \
+	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
+		navi_hlist_for_each_entry(binding, &scope->bindings[navi_i___],\
+				struct navi_binding, chain)
+
+#define navi_scope_for_each_safe(binding, n, scope) \
+	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
+		navi_hlist_for_each_entry_safe(binding, n, \
+				&scope->bindings[navi_i___], \
+				struct navi_binding, chain)
+
 /* Memory Management }}} */
 /* Accessors {{{ */
 static inline long navi_num(navi_obj obj)
@@ -312,52 +312,52 @@ static inline struct navi_object *navi_ptr(navi_obj obj)
 
 static inline struct navi_vector *navi_vector(navi_obj obj)
 {
-	return &obj.p->data->vec;
+	return (struct navi_vector*) obj.p->data;
 }
 
 static inline struct navi_bytevec *navi_bytevec(navi_obj obj)
 {
-	return &obj.p->data->bvec;
+	return (struct navi_bytevec*) obj.p->data;
 }
 
 static inline struct navi_string *navi_string(navi_obj obj)
 {
-	return &obj.p->data->str;
+	return (struct navi_string*) obj.p->data;
 }
 
 static inline struct navi_symbol *navi_symbol(navi_obj obj)
 {
-	return &obj.p->data->sym;
+	return (struct navi_symbol*) obj.p->data;
 }
 
 static inline struct navi_thunk *navi_thunk(navi_obj obj)
 {
-	return &obj.p->data->thunk;
+	return (struct navi_thunk*) obj.p->data;
 }
 
 static inline struct navi_procedure *navi_procedure(navi_obj obj)
 {
-	return &obj.p->data->proc;
+	return (struct navi_procedure*) obj.p->data;
 }
 
 static inline struct navi_escape *navi_escape(navi_obj obj)
 {
-	return &obj.p->data->esc;
+	return (struct navi_escape*) obj.p->data;
 }
 
 static inline struct navi_port *navi_port(navi_obj obj)
 {
-	return &obj.p->data->port;
+	return (struct navi_port*) obj.p->data;
 }
 
 static inline navi_env navi_environment(navi_obj obj)
 {
-	return obj.p->data->env;
+	return *((navi_env*)obj.p->data);
 }
 
 static inline struct navi_pair *navi_pair(navi_obj obj)
 {
-	return &obj.p->data->pair;
+	return (struct navi_pair*) obj.p->data;
 }
 
 static inline struct navi_object *navi_object(void *concrete)
@@ -476,17 +476,17 @@ navi_obj navi_make_named_parameter(navi_obj symbol, navi_obj value,
 
 static inline navi_obj navi_make_void(void)
 {
-	return (navi_obj) NAVI_VOID_TAG;
+	return (navi_obj) { .n = NAVI_VOID_TAG };
 }
 
 static inline navi_obj navi_make_nil(void)
 {
-	return (navi_obj) NAVI_NIL_TAG;
+	return (navi_obj) { .n = NAVI_NIL_TAG };
 }
 
 static inline navi_obj navi_make_eof(void)
 {
-	return (navi_obj) NAVI_EOF_TAG;
+	return (navi_obj) { .n = NAVI_EOF_TAG };
 }
 
 static inline navi_obj navi_make_num(long num)
@@ -711,12 +711,12 @@ static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
 /* Pairs/Lists {{{ */
 static inline void navi_set_car(navi_obj cons, navi_obj obj)
 {
-	cons.p->data->pair.car = obj;
+	navi_pair(cons)->car = obj;
 }
 
 static inline void navi_set_cdr(navi_obj cons, navi_obj obj)
 {
-	cons.p->data->pair.cdr = obj;
+	navi_pair(cons)->cdr = obj;
 }
 
 navi_obj navi_vlist(navi_obj first, va_list ap);
@@ -743,18 +743,18 @@ static inline bool navi_is_last_pair(navi_obj pair)
 }
 
 #define navi_list_for_each(cons, head)                                      \
-	for (cons = (navi_obj) (head); navi_type(cons) == NAVI_PAIR;        \
+	for (cons = (head); navi_type(cons) == NAVI_PAIR;                   \
 			cons = navi_pair(cons)->cdr)
 
 #define navi_list_for_each_safe(cons, n, head)                              \
-	for (cons = (navi_obj) (head),                                      \
+	for (cons = (head),                                                 \
 		n = (navi_type(head) == NAVI_PAIR) ? navi_cdr(head) : head; \
 		navi_type(cons) == NAVI_PAIR;                               \
 		cons = n,                                                   \
 		n = (navi_type(n) == NAVI_PAIR) ? navi_cdr(n) : n)
 
 #define navi_list_for_each_zipped(cons_a, cons_b, head_a, head_b)           \
-	for (cons_a = (navi_obj) (head_a), cons_b = (navi_obj) (head_b);    \
+	for (cons_a = (head_a), cons_b = (head_b);                          \
 			navi_type(cons_a) == NAVI_PAIR &&                   \
 			navi_type(cons_b) == NAVI_PAIR;                     \
 			cons_a = navi_pair(cons_a)->cdr,                    \
@@ -841,7 +841,7 @@ static inline navi_obj navi_vector_ref(navi_obj vec, size_t i)
 
 static inline size_t navi_vector_length(navi_obj vec)
 {
-	return vec.p->data->vec.size;
+	return navi_vector(vec)->size;
 }
 
 navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env);

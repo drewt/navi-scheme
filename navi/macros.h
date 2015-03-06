@@ -20,28 +20,28 @@
 
 #define SCM_DECL(name) scm_decl_##name
 
-#define DEFPROC(_type, cname, scmname, _arity, _flags, ...)                \
-	static const int scm_typedecl_##cname[] = { __VA_ARGS__ };         \
-	_Static_assert(sizeof(scm_typedecl_##cname)/sizeof(int) == _arity, \
-			"DEFPROC: too few types for given arity");         \
-	navi_obj scm_##cname(unsigned, navi_obj, navi_env,                 \
-			struct navi_procedure*);                           \
-	const struct navi_spec SCM_DECL(cname) = {                         \
-		.proc = {                                                  \
-			.flags  = _flags | NAVI_PROC_BUILTIN,              \
-			.arity  = _arity,                                  \
-			.c_proc = scm_##cname,                             \
-			.types  = scm_typedecl_##cname,                    \
-		},                                                         \
-		.ident = scmname,                                          \
-		.type  = _type,                                            \
-	};                                                                 \
-	navi_obj scm_##cname(unsigned scm_nr_args, navi_obj scm_args,      \
+#define DEFPROC(_type, cname, scmname, _arity, _flags, ...)                  \
+	static const int scm_typedecl_##cname[] = { __VA_ARGS__ };           \
+	_Static_assert(sizeof(scm_typedecl_##cname)/sizeof(int) == _arity+1, \
+			"DEFPROC: too few types for given arity");           \
+	navi_obj scm_##cname(unsigned, navi_obj, navi_env,                   \
+			struct navi_procedure*);                             \
+	const struct navi_spec SCM_DECL(cname) = {                           \
+		.proc = {                                                    \
+			.flags  = _flags | NAVI_PROC_BUILTIN,                \
+			.arity  = _arity,                                    \
+			.c_proc = scm_##cname,                               \
+			.types  = scm_typedecl_##cname,                      \
+		},                                                           \
+		.ident = scmname,                                            \
+		.type  = _type,                                              \
+	};                                                                   \
+	navi_obj scm_##cname(unsigned scm_nr_args, navi_obj scm_args,        \
 			navi_env scm_env, struct navi_procedure *scm_proc)
 
-#define DEFUN(...)      DEFPROC(NAVI_PROCEDURE, __VA_ARGS__)
-#define DEFMACRO(...)   DEFPROC(NAVI_MACRO,     __VA_ARGS__)
-#define DEFSPECIAL(...) DEFPROC(NAVI_SPECIAL,   __VA_ARGS__)
+#define DEFUN(...)      DEFPROC(NAVI_PROCEDURE, __VA_ARGS__, 0)
+#define DEFMACRO(...)   DEFPROC(NAVI_MACRO,     __VA_ARGS__, 0)
+#define DEFSPECIAL(...) DEFPROC(NAVI_SPECIAL,   __VA_ARGS__, 0)
 
 #define scm_arg1 navi_car(scm_args)
 #define scm_arg2 navi_cadr(scm_args)
@@ -49,21 +49,21 @@
 #define scm_arg4 navi_cadddr(scm_args)
 #define scm_arg5 navi_caddddr(scm_args)
 
-#define DEFPARAM(cname, scmname, value, converter)                         \
-	const struct navi_spec SCM_DECL(cname) = {                         \
-		.type = NAVI_PARAMETER,                                    \
-		.param_value = &SCM_DECL(value),                           \
-		.param_converter = &SCM_DECL(converter),                   \
-		.ident = scmname,                                          \
+#define DEFPARAM(cname, scmname, value, converter)                           \
+	const struct navi_spec SCM_DECL(cname) = {                           \
+		.type = NAVI_PARAMETER,                                      \
+		.param_value = &SCM_DECL(value),                             \
+		.param_converter = &SCM_DECL(converter),                     \
+		.ident = scmname,                                            \
 	}
 
 /*
  * XXX: really, the functions should be declared static and not exposed here,
  *      but it's useful to call them directly for unit testing.
  */
-#define DECLARE(name)                                                      \
-	extern const struct navi_spec SCM_DECL(name);                      \
-	navi_obj scm_##name(unsigned, navi_obj, navi_env,                  \
+#define DECLARE(name)                                                        \
+	extern const struct navi_spec SCM_DECL(name);                        \
+	navi_obj scm_##name(unsigned, navi_obj, navi_env,                    \
 			struct navi_procedure*)
 
 /* Stolen from chicken.h

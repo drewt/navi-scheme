@@ -268,7 +268,7 @@ void navi_internal_init(void)
 	internal_env = navi_empty_environment();
 	for (int i = 0; builtin_objects[i]; i++) {
 		navi_obj symbol = navi_make_symbol(builtin_objects[i]->ident);
-		navi_obj object = (navi_obj)builtin_objects[i];
+		navi_obj object = (navi_obj) { .s = builtin_objects[i] };
 		navi_scope_set(internal_env.lexical, symbol, object);
 	}
 }

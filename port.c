@@ -122,10 +122,11 @@ navi_obj navi_open_input_string(navi_obj string)
 
 navi_obj navi_open_output_string(void)
 {
-	navi_obj port = navi_make_textual_output_port(string_write, NULL, NULL);
-	port.p->data->port.expr = navi_make_string(STRING_INIT_SIZE, 0, 0);
-	port.p->data->port.flags |= STRING_OUTPUT;
-	return port;
+	navi_obj obj = navi_make_textual_output_port(string_write, NULL, NULL);
+	struct navi_port *port = navi_port(obj);
+	port->expr = navi_make_string(STRING_INIT_SIZE, 0, 0);
+	port->flags |= STRING_OUTPUT;
+	return obj;
 }
 
 static void navi_port_buffer_byte(struct navi_port *port, navi_env env)
@@ -212,9 +213,9 @@ static inline int utf8_char_size(unsigned char ch)
 	return len_tab[ch];
 }
 
-#define navi_utf8_error(env, msg, ...) \
-	navi_error(env, msg, navi_make_symbol("#utf8-error"), \
-			##__VA_ARGS__)
+#define navi_utf8_error(env, ...) \
+	_navi_error(env, navi_make_symbol("#utf8-error"), __VA_ARGS__, \
+			navi_make_void())
 
 static void navi_port_buffer_char(struct navi_port *port, navi_env env)
 {

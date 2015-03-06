@@ -20,13 +20,13 @@
 #include "types.h"
 #include "symbols.h"
 
-_Noreturn void _navi_error(navi_env env, const char *msg, ...);
-#define navi_error(env, msg, ...) \
-	_navi_error(env, msg, ##__VA_ARGS__, navi_make_void())
-#define navi_read_error(env, msg, ...) \
-	navi_error(env, msg, navi_sym_read_error, ##__VA_ARGS__, navi_make_void())
-#define navi_file_error(env, msg, ...) \
-	navi_error(env, msg, navi_sym_file_error, ##__VA_ARGS__, navi_make_void())
+_Noreturn void _navi_error(navi_env env, navi_obj type, const char *msg, ...);
+#define navi_error(env, ...) \
+	_navi_error(env, navi_sym_internal_error, __VA_ARGS__, navi_make_void())
+#define navi_read_error(env, ...) \
+	_navi_error(env, navi_sym_read_error, __VA_ARGS__, navi_make_void())
+#define navi_file_error(env, ...) \
+	_navi_error(env, navi_sym_file_error, __VA_ARGS__, navi_make_void())
 #define navi_enomem(env) \
 	navi_error(env, "not enough memory")
 #define navi_arity_error(env, name) \

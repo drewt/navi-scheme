@@ -154,14 +154,14 @@ static void write_thunk(struct navi_port *p, navi_obj o, bool w, navi_env env)
 		navi_port_write_cstr(str, p, env); \
 	}
 
-SIMPLE_WRITE(write_nil, "()");
-SIMPLE_WRITE(write_eof, "#!eof");
-SIMPLE_WRITE(write_port, "#<port>");
-SIMPLE_WRITE(write_promise, "#<promise>");
-SIMPLE_WRITE(write_caselambda, "#<case-lambda>");
-SIMPLE_WRITE(write_escape, "#<escape continuation>");
-SIMPLE_WRITE(write_environment, "#<environment>");
-SIMPLE_WRITE(write_bounce, "#<bounce>");
+SIMPLE_WRITE(write_nil, "()")
+SIMPLE_WRITE(write_eof, "#!eof")
+SIMPLE_WRITE(write_port, "#<port>")
+SIMPLE_WRITE(write_promise, "#<promise>")
+SIMPLE_WRITE(write_caselambda, "#<case-lambda>")
+SIMPLE_WRITE(write_escape, "#<escape continuation>")
+SIMPLE_WRITE(write_environment, "#<environment>")
+SIMPLE_WRITE(write_bounce, "#<bounce>")
 
 #define WRITE_WITH_CALL(name, tag, arg) \
 	static void name(struct navi_port *p, navi_obj o, bool w, navi_env env) \
@@ -171,13 +171,13 @@ SIMPLE_WRITE(write_bounce, "#<bounce>");
 		navi_port_write_cstr(">", p, env); \
 	}
 
-WRITE_WITH_CALL(write_values, "values", write_vector(p, o, w, env));
+WRITE_WITH_CALL(write_values, "values", write_vector(p, o, w, env))
 WRITE_WITH_CALL(write_macro, "macro",
-		write_symbol(p, navi_procedure(o)->name, w, env));
+		write_symbol(p, navi_procedure(o)->name, w, env))
 WRITE_WITH_CALL(write_special, "special form",
-		write_symbol(p, navi_procedure(o)->name, w, env));
+		write_symbol(p, navi_procedure(o)->name, w, env))
 WRITE_WITH_CALL(write_parameter, "parameter",
-		write_symbol(p, navi_parameter_key(o), w, env));
+		write_symbol(p, navi_parameter_key(o), w, env))
 
 typedef void (*write_fn)(struct navi_port*, navi_obj, bool, navi_env);
 

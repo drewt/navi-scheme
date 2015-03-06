@@ -406,7 +406,7 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 			expr = navi_iread(port, env);
 		}
 		elmptr->cdr = navi_make_empty_pair();
-		elmptr = &elmptr->cdr.p->data->pair;
+		elmptr = navi_pair(elmptr->cdr);
 		elmptr->car = expr;
 	}
 	return head.cdr;

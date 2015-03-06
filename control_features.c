@@ -43,13 +43,13 @@ _Noreturn void navi_raise(navi_obj args, navi_env env)
 	}
 }
 
-_Noreturn void _navi_error(navi_env env, const char *msg, ...)
+_Noreturn void _navi_error(navi_env env, navi_obj type, const char *msg, ...)
 {
 	va_list ap;
 	navi_obj list;
 
 	va_start(ap, msg);
-	list = navi_vlist(navi_cstr_to_string(msg), ap);
+	list = navi_make_pair(type, navi_vlist(navi_cstr_to_string(msg), ap));
 	va_end(ap);
 
 	navi_raise(navi_make_pair(list, navi_make_nil()), env);
@@ -63,7 +63,7 @@ DEFUN(procedurep, "procedure?", 1, 0, NAVI_ANY)
 
 DEFUN(apply, "apply", 2, NAVI_PROC_VARIADIC, NAVI_PROCEDURE, NAVI_ANY)
 {
-	navi_obj cons, last = (navi_obj) scm_args;
+	navi_obj cons, last = scm_args;
 	navi_list_for_each(cons, scm_args) {
 		navi_obj fst = navi_car(cons);
 		/* walk to the last argument */
@@ -171,14 +171,31 @@ DEFUN(error, "error", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 
 static bool is_error_object(navi_obj object)
 {
-	return navi_type(object) == NAVI_PAIR && navi_is_proper_list(object) &&
-		navi_type(navi_car(object)) == NAVI_STRING;
+	return navi_type(object) == NAVI_PAIR
+		&& navi_type(navi_car(object)) == NAVI_SYMBOL
+		&& navi_type(navi_cdr(object)) == NAVI_PAIR
+		&& navi_type(navi_cadr(object)) == NAVI_STRING;
+}
+
+static navi_obj error_object_type(navi_obj object)
+{
+	return navi_car(object);
+}
+
+static navi_obj error_object_message(navi_obj object)
+{
+	return navi_cadr(object);
+}
+
+static navi_obj error_object_irritants(navi_obj object)
+{
+	return navi_cddr(object);
 }
 
 static navi_obj navi_type_check_error(navi_obj object, navi_env env)
 {
 	if (!is_error_object(object))
-		navi_error(env, "type error");
+		navi_error(env, "type error: not an error object");
 	return object;
 }
 
@@ -190,22 +207,20 @@ DEFUN(error_objectp, "error-object?", 1, 0, NAVI_ANY)
 DEFUN(error_object_message, "error-object-message", 1, 0, NAVI_ANY)
 {
 	navi_type_check_error(scm_arg1, scm_env);
-	return navi_car(scm_arg1);
+	return error_object_message(scm_arg1);
 }
 
 DEFUN(error_object_irritants, "error-object-irritants", 1, 0, NAVI_ANY)
 {
 	navi_type_check_error(scm_arg1, scm_env);
-	return navi_cdr(scm_arg1);
+	return error_object_irritants(scm_arg1);
 }
 
 DEFUN(read_errorp, "read-error?", 1, 0, NAVI_ANY)
 {
 	if (!is_error_object(scm_arg1))
 		return navi_make_bool(false);
-	if (navi_list_length(scm_arg1) < 2)
-		return navi_make_bool(false);
-	return navi_make_bool(navi_symbol_eq(navi_cadr(scm_arg1), navi_sym_read_error));
+	return navi_make_bool(error_object_type(scm_arg1).p == navi_sym_read_error.p);
 }
 
 DEFUN(promisep, "promise?", 1, 0, NAVI_ANY)

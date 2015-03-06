@@ -20,23 +20,13 @@
 
 #include <stddef.h> /* NULL, offsetof */
 
-#ifdef __GNUC__
+#define container_of(ptr, type, member) \
+	((type *)(void *)( (char *)(ptr) - offsetof(type, member) ))
 
-#if __GNUC__ > 3
+#if defined(__GNUC__) && __GNUC__ > 3
 #undef offsetof
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #endif
-
-#define container_of(ptr, type, member) ({ 				\
-		const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
-		(type *)( (char *)__mptr - offsetof(type, member) );})
-
-#else /* use portable container_of */
-
-#define container_of(ptr, type, member)					\
-	((type *)(void *)( (char *)(ptr) - offsetof(type, member) ))
-
-#endif /* __GNUC__ */
 
 /*
  * These are non-NULL pointers that will result in page faults
@@ -103,7 +93,8 @@ static inline void __navi_clist_add(struct navi_clist_head *new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static inline void navi_clist_add(struct navi_clist_head *new, struct navi_clist_head *head)
+static inline void navi_clist_add(struct navi_clist_head *new,
+		struct navi_clist_head *head)
 {
 	__navi_clist_add(new, head, head->next);
 }
@@ -117,7 +108,8 @@ static inline void navi_clist_add(struct navi_clist_head *new, struct navi_clist
  * Insert a new entry before the specified head.
  * This is useful for implementing queues.
  */
-static inline void navi_clist_add_tail(struct navi_clist_head *new, struct navi_clist_head *head)
+static inline void navi_clist_add_tail(struct navi_clist_head *new,
+		struct navi_clist_head *head)
 {
 	__navi_clist_add(new, head->prev, head);
 }
@@ -139,8 +131,8 @@ static inline void __navi_clist_del(struct navi_clist_head * prev,
 /**
  * navi_clist_del - deletes entry from list.
  * @entry: the element to delete from the list.
- * Note: navi_clist_empty() on entry does not return true after this, the entry
- * is in an undefined state.
+ * Note: navi_clist_empty() on entry does not return true after this, the
+ * entry is in an undefined state.
  */
 static inline void __navi_clist_del_entry(struct navi_clist_head *entry)
 {
@@ -369,7 +361,8 @@ static inline void navi_clist_splice_init(struct navi_clist_head *list,
 }
 
 /**
- * navi_clist_splice_tail_init - join two lists and reinitialise the emptied list
+ * navi_clist_splice_tail_init - join two lists and reinitialise the emptied
+ * list
  * @list: the new list to add.
  * @head: the place to add it in the first list.
  *
@@ -413,8 +406,9 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  *
  * Note that if the list is empty, it returns NULL.
  */
-#define navi_clist_first_entry_or_null(ptr, type, member) \
-	(!navi_clist_empty(ptr) ? navi_clist_first_entry(ptr, type, member) : NULL)
+#define navi_clist_first_entry_or_null(ptr, type, member)                    \
+	(!navi_clist_empty(ptr) ? navi_clist_first_entry(ptr, type, member)  \
+	 			: NULL)
 
 /**
  * navi_clist_for_each	-	iterate over a list
@@ -433,24 +427,26 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
 	for (pos = (head)->prev; pos != (head); pos = pos->prev)
 
 /**
- * navi_clist_for_each_safe - iterate over a list safe against removal of list entry
+ * navi_clist_for_each_safe - iterate over a list safe against removal of
+ * list entry
  * @pos:	the &struct list_head to use as a loop cursor.
  * @n:		another &struct list_head to use as temporary storage
  * @head:	the head for your list.
  */
-#define navi_clist_for_each_safe(pos, n, head) \
-	for (pos = (head)->next, n = pos->next; pos != (head); \
+#define navi_clist_for_each_safe(pos, n, head)                               \
+	for (pos = (head)->next, n = pos->next; pos != (head);               \
 		pos = n, n = pos->next)
 
 /**
- * navi_clist_for_each_prev_safe - iterate over a list backwards safe against removal of list entry
+ * navi_clist_for_each_prev_safe - iterate over a list backwards safe against
+ * removal of list entry
  * @pos:	the &struct list_head to use as a loop cursor.
  * @n:		another &struct list_head to use as temporary storage
  * @head:	the head for your list.
  */
-#define navi_clist_for_each_prev_safe(pos, n, head) \
-	for (pos = (head)->prev, n = pos->prev; \
-	     pos != (head); \
+#define navi_clist_for_each_prev_safe(pos, n, head)                          \
+	for (pos = (head)->prev, n = pos->prev;                              \
+	     pos != (head);                                                  \
 	     pos = n, n = pos->prev)
 
 /**
@@ -459,35 +455,39 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
  */
-#define navi_clist_for_each_entry(pos, head, member)				\
-	for (pos = navi_clist_entry((head)->next, typeof(*pos), member);	\
-	     &pos->member != (head); 	\
-	     pos = navi_clist_entry(pos->member.next, typeof(*pos), member))
+#define navi_clist_for_each_entry(pos, head, type, member)                   \
+	for (pos = navi_clist_entry((head)->next, type, member);             \
+	     &pos->member != (head);                                         \
+	     pos = navi_clist_entry(pos->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_reverse - iterate backwards over list of given type.
+ * navi_clist_for_each_entry_reverse - iterate backwards over list of given
+ * type.
  * @pos:	the type * to use as a loop cursor.
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
  */
-#define navi_clist_for_each_entry_reverse(pos, head, member)			\
-	for (pos = navi_clist_entry((head)->prev, typeof(*pos), member);	\
-	     &pos->member != (head); 	\
-	     pos = navi_clist_entry(pos->member.prev, typeof(*pos), member))
+#define navi_clist_for_each_entry_reverse(pos, head, type, member)           \
+	for (pos = navi_clist_entry((head)->prev, type, member);             \
+	     &pos->member != (head);                                         \
+	     pos = navi_clist_entry(pos->member.prev, type, member))
 
 /**
- * navi_clist_prepare_entry - prepare a pos entry for use in navi_clist_for_each_entry_continue()
+ * navi_clist_prepare_entry - prepare a pos entry for use in
+ * navi_clist_for_each_entry_continue()
  * @pos:	the type * to use as a start point
  * @head:	the head of the list
  * @member:	the name of the list_struct within the struct.
  *
- * Prepares a pos entry for use as a start point in navi_clist_for_each_entry_continue().
+ * Prepares a pos entry for use as a start point in
+ * navi_clist_for_each_entry_continue().
  */
-#define navi_clist_prepare_entry(pos, head, member) \
-	((pos) ? : navi_clist_entry(head, typeof(*pos), member))
+#define navi_clist_prepare_entry(pos, head, type, member) \
+	((pos) ? : navi_clist_entry(head, type, member))
 
 /**
- * navi_clist_for_each_entry_continue - continue iteration over list of given type
+ * navi_clist_for_each_entry_continue - continue iteration over list of given
+ * type
  * @pos:	the type * to use as a loop cursor.
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
@@ -495,13 +495,14 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * Continue to iterate over list of given type, continuing after
  * the current position.
  */
-#define navi_clist_for_each_entry_continue(pos, head, member) 		\
-	for (pos = navi_clist_entry(pos->member.next, typeof(*pos), member);	\
-	     &pos->member != (head);	\
-	     pos = navi_clist_entry(pos->member.next, typeof(*pos), member))
+#define navi_clist_for_each_entry_continue(pos, head, type, member)          \
+	for (pos = navi_clist_entry(pos->member.next, type, member);         \
+	     &pos->member != (head);                                         \
+	     pos = navi_clist_entry(pos->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_continue_reverse - iterate backwards from the given point
+ * navi_clist_for_each_entry_continue_reverse - iterate backwards from the
+ * given point
  * @pos:	the type * to use as a loop cursor.
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
@@ -509,38 +510,41 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * Start to iterate over list of given type backwards, continuing after
  * the current position.
  */
-#define navi_clist_for_each_entry_continue_reverse(pos, head, member)		\
-	for (pos = navi_clist_entry(pos->member.prev, typeof(*pos), member);	\
-	     &pos->member != (head);	\
-	     pos = navi_clist_entry(pos->member.prev, typeof(*pos), member))
+#define navi_clist_for_each_entry_continue_reverse(pos, head, type, member)  \
+	for (pos = navi_clist_entry(pos->member.prev, type, member);         \
+	     &pos->member != (head);                                         \
+	     pos = navi_clist_entry(pos->member.prev, type, member))
 
 /**
- * navi_clist_for_each_entry_from - iterate over list of given type from the current point
+ * navi_clist_for_each_entry_from - iterate over list of given type from the
+ * current point
  * @pos:	the type * to use as a loop cursor.
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
  *
  * Iterate over list of given type, continuing from current position.
  */
-#define navi_clist_for_each_entry_from(pos, head, member) 			\
-	for (; &pos->member != (head);	\
-	     pos = navi_clist_entry(pos->member.next, typeof(*pos), member))
+#define navi_clist_for_each_entry_from(pos, head, type, member)              \
+	for (; &pos->member != (head);                                       \
+	     pos = navi_clist_entry(pos->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_safe - iterate over list of given type safe against removal of list entry
+ * navi_clist_for_each_entry_safe - iterate over list of given type safe
+ * against removal of list entry
  * @pos:	the type * to use as a loop cursor.
  * @n:		another type * to use as temporary storage
  * @head:	the head for your list.
  * @member:	the name of the list_struct within the struct.
  */
-#define navi_clist_for_each_entry_safe(pos, n, head, member)			\
-	for (pos = navi_clist_entry((head)->next, typeof(*pos), member),	\
-		n = navi_clist_entry(pos->member.next, typeof(*pos), member);	\
-	     &pos->member != (head); 					\
-	     pos = n, n = navi_clist_entry(n->member.next, typeof(*n), member))
+#define navi_clist_for_each_entry_safe(pos, n, head, type, member)           \
+	for (pos = navi_clist_entry((head)->next, type, member),             \
+		n = navi_clist_entry(pos->member.next, type, member);        \
+	     &pos->member != (head);                                         \
+	     pos = n, n = navi_clist_entry(n->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_safe_continue - continue list iteration safe against removal
+ * navi_clist_for_each_entry_safe_continue - continue list iteration safe
+ * against removal
  * @pos:	the type * to use as a loop cursor.
  * @n:		another type * to use as temporary storage
  * @head:	the head for your list.
@@ -549,14 +553,15 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * Iterate over list of given type, continuing after current point,
  * safe against removal of list entry.
  */
-#define navi_clist_for_each_entry_safe_continue(pos, n, head, member) 		\
-	for (pos = navi_clist_entry(pos->member.next, typeof(*pos), member), 		\
-		n = navi_clist_entry(pos->member.next, typeof(*pos), member);		\
-	     &pos->member != (head);						\
-	     pos = n, n = navi_clist_entry(n->member.next, typeof(*n), member))
+#define navi_clist_for_each_entry_safe_continue(pos, n, head, type, member)  \
+	for (pos = navi_clist_entry(pos->member.next, type, member),         \
+		n = navi_clist_entry(pos->member.next, type, member);        \
+	     &pos->member != (head);                                         \
+	     pos = n, n = navi_clist_entry(n->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_safe_from - iterate over list from current point safe against removal
+ * navi_clist_for_each_entry_safe_from - iterate over list from current point
+ * safe against removal
  * @pos:	the type * to use as a loop cursor.
  * @n:		another type * to use as temporary storage
  * @head:	the head for your list.
@@ -565,13 +570,14 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * Iterate over list of given type from current point, safe against
  * removal of list entry.
  */
-#define navi_clist_for_each_entry_safe_from(pos, n, head, member) 			\
-	for (n = navi_clist_entry(pos->member.next, typeof(*pos), member);		\
-	     &pos->member != (head);						\
-	     pos = n, n = navi_clist_entry(n->member.next, typeof(*n), member))
+#define navi_clist_for_each_entry_safe_from(pos, n, head, type, member)      \
+	for (n = navi_clist_entry(pos->member.next, type, member);           \
+	     &pos->member != (head);                                         \
+	     pos = n, n = navi_clist_entry(n->member.next, type, member))
 
 /**
- * navi_clist_for_each_entry_safe_reverse - iterate backwards over list safe against removal
+ * navi_clist_for_each_entry_safe_reverse - iterate backwards over list safe
+ * against removal
  * @pos:	the type * to use as a loop cursor.
  * @n:		another type * to use as temporary storage
  * @head:	the head for your list.
@@ -580,26 +586,28 @@ static inline void navi_clist_splice_tail_init(struct navi_clist_head *list,
  * Iterate backwards over list of given type, safe against removal
  * of list entry.
  */
-#define navi_clist_for_each_entry_safe_reverse(pos, n, head, member)		\
-	for (pos = navi_clist_entry((head)->prev, typeof(*pos), member),	\
-		n = navi_clist_entry(pos->member.prev, typeof(*pos), member);	\
-	     &pos->member != (head); 					\
-	     pos = n, n = navi_clist_entry(n->member.prev, typeof(*n), member))
+#define navi_clist_for_each_entry_safe_reverse(pos, n, head, type, member)   \
+	for (pos = navi_clist_entry((head)->prev, type, member),             \
+		n = navi_clist_entry(pos->member.prev, type, member);        \
+	     &pos->member != (head);                                         \
+	     pos = n, n = navi_clist_entry(n->member.prev, type, member))
 
 /**
- * navi_clist_safe_reset_next - reset a stale navi_clist_for_each_entry_safe loop
- * @pos:	the loop cursor used in the navi_clist_for_each_entry_safe loop
+ * navi_clist_safe_reset_next - reset a stale navi_clist_for_each_entry_safe
+ * loop
+ * @pos:	the loop cursor used in the navi_clist_for_each_entry_safe
+ *		loop
  * @n:		temporary storage used in navi_clist_for_each_entry_safe
  * @member:	the name of the list_struct within the struct.
  *
  * navi_clist_safe_reset_next is not safe to use in general if the list may be
  * modified concurrently (eg. the lock is dropped in the loop body). An
  * exception to this is if the cursor element (pos) is pinned in the list,
- * and navi_clist_safe_reset_next is called after re-taking the lock and before
- * completing the current iteration of the loop body.
+ * and navi_clist_safe_reset_next is called after re-taking the lock and
+ * before completing the current iteration of the loop body.
  */
-#define navi_clist_safe_reset_next(pos, n, member)				\
-	n = navi_clist_entry(pos->member.next, typeof(*pos), member)
+#define navi_clist_safe_reset_next(pos, n, type, member) \
+	n = navi_clist_entry(pos->member.next, type, member)
 
 /*
  * Double linked lists with a single pointer list head.
@@ -651,7 +659,8 @@ static inline void navi_hlist_del_init(struct navi_hlist_node *n)
 	}
 }
 
-static inline void navi_hlist_add_head(struct navi_hlist_node *n, struct navi_hlist_head *h)
+static inline void navi_hlist_add_head(struct navi_hlist_node *n,
+		struct navi_hlist_head *h)
 {
 	struct navi_hlist_node *first = h->first;
 	n->next = first;
@@ -706,14 +715,14 @@ static inline void navi_hlist_move_list(struct navi_hlist_head *old,
 #define navi_hlist_for_each(pos, head) \
 	for (pos = (head)->first; pos ; pos = pos->next)
 
-#define navi_hlist_for_each_safe(pos, n, head) \
-	for (pos = (head)->first; pos && ({ n = pos->next; 1; }); \
-	     pos = n)
+#define navi_hlist_for_each_safe(pos, n, head)                               \
+	for (pos = (head)->first, n = pos ? pos->next : NULL;                \
+	     pos;                                                            \
+	     pos = n, n = pos ? pos->next : NULL)
 
+/* XXX: this evaluates @ptr twice */
 #define navi_hlist_entry_safe(ptr, type, member) \
-	({ typeof(ptr) ____ptr = (ptr); \
-	   ____ptr ? navi_hlist_entry(____ptr, type, member) : NULL; \
-	})
+	((ptr) ? navi_hlist_entry((ptr), type, member) : NULL)
 
 /**
  * navi_hlist_for_each_entry	- iterate over list of given type
@@ -721,40 +730,45 @@ static inline void navi_hlist_move_list(struct navi_hlist_head *old,
  * @head:	the head for your list.
  * @member:	the name of the hlist_node within the struct.
  */
-#define navi_hlist_for_each_entry(pos, head, member)				\
-	for (pos = navi_hlist_entry_safe((head)->first, typeof(*(pos)), member);\
-	     pos;							\
-	     pos = navi_hlist_entry_safe((pos)->member.next, typeof(*(pos)), member))
+#define navi_hlist_for_each_entry(pos, head, type, member)                   \
+	for (pos = navi_hlist_entry_safe((head)->first, type, member);       \
+	     pos;                                                            \
+	     pos = navi_hlist_entry_safe((pos)->member.next, type, member))
 
 /**
- * navi_hlist_for_each_entry_continue - iterate over a hlist continuing after current point
+ * navi_hlist_for_each_entry_continue - iterate over a hlist continuing after
+ * current point
  * @pos:	the type * to use as a loop cursor.
  * @member:	the name of the hlist_node within the struct.
  */
-#define navi_hlist_for_each_entry_continue(pos, member)			\
-	for (pos = navi_hlist_entry_safe((pos)->member.next, typeof(*(pos)), member);\
-	     pos;							\
-	     pos = navi_hlist_entry_safe((pos)->member.next, typeof(*(pos)), member))
+#define navi_hlist_for_each_entry_continue(pos, type, member)                \
+	for (pos = navi_hlist_entry_safe((pos)->member.next, type, member);  \
+	     pos;                                                            \
+	     pos = navi_hlist_entry_safe((pos)->member.next, type, member))
 
 /**
- * navi_hlist_for_each_entry_from - iterate over a hlist continuing from current point
+ * navi_hlist_for_each_entry_from - iterate over a hlist continuing from
+ * current point
  * @pos:	the type * to use as a loop cursor.
  * @member:	the name of the hlist_node within the struct.
  */
-#define navi_hlist_for_each_entry_from(pos, member)				\
-	for (; pos;							\
-	     pos = navi_hlist_entry_safe((pos)->member.next, typeof(*(pos)), member))
+#define navi_hlist_for_each_entry_from(pos, type, member)                    \
+	for (; pos;                                                          \
+	     pos = navi_hlist_entry_safe((pos)->member.next, type, member))
 
 /**
- * navi_hlist_for_each_entry_safe - iterate over list of given type safe against removal of list entry
+ * navi_hlist_for_each_entry_safe - iterate over list of given type safe
+ * against removal of list entry
  * @pos:	the type * to use as a loop cursor.
  * @n:		another &struct hlist_node to use as temporary storage
  * @head:	the head for your list.
  * @member:	the name of the hlist_node within the struct.
  */
-#define navi_hlist_for_each_entry_safe(pos, n, head, member) 		\
-	for (pos = navi_hlist_entry_safe((head)->first, typeof(*pos), member);\
-	     pos && ({ n = pos->member.next; 1; });			\
-	     pos = navi_hlist_entry_safe(n, typeof(*pos), member))
+#define navi_hlist_for_each_entry_safe(pos, n, head, type, member)           \
+	for (pos = navi_hlist_entry_safe((head)->first, type, member),       \
+			n = pos ? pos->member.next : NULL;                   \
+	     pos;                                                            \
+	     pos = navi_hlist_entry_safe(n, type, member),                   \
+			n = pos ? pos->member.next : NULL)
 
 #endif

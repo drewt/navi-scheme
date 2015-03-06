@@ -30,6 +30,7 @@ extern navi_obj navi_sym_current_output;
 extern navi_obj navi_sym_current_error;
 extern navi_obj navi_sym_read_error;
 extern navi_obj navi_sym_file_error;
+extern navi_obj navi_sym_internal_error;
 extern navi_obj navi_sym_repl;
 extern navi_obj navi_sym_export;
 extern navi_obj navi_sym_import;

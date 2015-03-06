@@ -48,7 +48,7 @@ static struct navi_binding *scope_lookup(struct navi_scope *scope,
 	struct navi_binding *binding;
 	struct navi_hlist_head *hd = get_bucket(scope, hashcode);
 	
-	navi_hlist_for_each_entry (binding, hd, chain) {
+	navi_hlist_for_each_entry(binding, hd, struct navi_binding, chain) {
 		if (binding->symbol.p == symbol.p)
 			return binding;
 	}
@@ -163,7 +163,8 @@ static void navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 {
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
 		struct navi_binding *binding;
-		navi_hlist_for_each_entry(binding, &src->bindings[i], chain) {
+		navi_hlist_for_each_entry(binding, &src->bindings[i],
+				struct navi_binding, chain) {
 			navi_scope_set(dst, binding->symbol, binding->object);
 		}
 	}
@@ -192,14 +193,6 @@ static navi_env new_lexical_environment(navi_env env)
 		.dynamic = _navi_scope_ref(env.dynamic)
 	};
 }
-
-#define navi_scope_for_each(binding, scope) \
-	for (unsigned _navi_i_ = 0; _navi_i_ < NAVI_ENV_HT_SIZE; _navi_i_++) \
-		navi_hlist_for_each_entry(binding, &scope->bindings[_navi_i_], chain)
-
-#define navi_scope_for_each_safe(binding, n, scope) \
-	for (unsigned _navi_i_ = 0; _navi_i_ < NAVI_ENV_HT_SIZE; _navi_i_++) \
-		navi_hlist_for_each_entry_safe(binding, n, &scope->bindings[_navi_i_], chain)
 
 void navi_scope_free(struct navi_scope *scope)
 {
@@ -564,7 +557,7 @@ static struct navi_library *find_library(navi_obj name)
 		libraries_init();
 	struct navi_library *entry;
 	struct navi_hlist_head *bucket = lib_bucket(libname_hash(name));
-	navi_hlist_for_each_entry(entry, bucket, chain) {
+	navi_hlist_for_each_entry(entry, bucket, struct navi_library, chain) {
 		if (libname_equal(entry->name, name))
 			return entry;
 	}

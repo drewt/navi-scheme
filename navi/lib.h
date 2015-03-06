@@ -22,6 +22,7 @@
 DECLARE(lambda);
 DECLARE(caselambda);
 DECLARE(define);
+DECLARE(define_syntax);
 DECLARE(define_values);
 DECLARE(defmacro);
 DECLARE(define_library);

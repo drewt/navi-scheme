@@ -261,6 +261,14 @@ DEFSPECIAL(define, "define", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 	navi_error(scm_env, "invalid define list");
 }
 
+DEFSPECIAL(define_syntax, "define-syntax", 2, 0, NAVI_SYMBOL, NAVI_ANY)
+{
+	navi_obj transformer = navi_eval(scm_arg2, scm_env);
+	navi_type_check(transformer, NAVI_MACRO, scm_env);
+	navi_scope_set(scm_env.lexical, scm_arg1, transformer);
+	return navi_unspecified();
+}
+
 static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, navi_env env)
 {
 	navi_obj cons;

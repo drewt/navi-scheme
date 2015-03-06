@@ -63,6 +63,7 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(lambda),
 	DECL_SPEC(caselambda),
 	DECL_SPEC(define),
+	DECL_SPEC(define_syntax),
 	DECL_SPEC(define_values),
 	DECL_SPEC(defmacro),
 	DECL_SPEC(define_library),

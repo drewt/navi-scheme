@@ -3,8 +3,8 @@
     testing
     apply begin ;call/cc call-with-current-continuation
     call-with-values ;cond-expand
-    define ;define-record-type define-syntax
-    define-values ;do dynamic-wind 
+    define ;define-record-type
+    define-syntax define-values ;do dynamic-wind
     error error-object-irritants error-object-message error-object?
     ;file-error? read-error? features guard
     include include-ci lambda let let* ;let*-values let-syntax
@@ -122,7 +122,7 @@
     (define current-input-port ##current-input-port)
     (define current-output-port ##current-output-port)
     ;(define define-record-type ##define-record-type)
-    ;(define define-syntax ##define-syntax)
+    (define define-syntax ##define-syntax)
     (define define-values ##define-values)
     ;(define denominator ##denominator)
     ;(define do ##do)

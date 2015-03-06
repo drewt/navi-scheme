@@ -16,12 +16,13 @@
 #ifndef _NAVI_TYPES_H
 #define _NAVI_TYPES_H
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdint.h>
 
-#include "clist.h"
+#include "queue.h"
 
 #define NAVI_ENV_HT_SIZE 64
 
@@ -41,11 +42,13 @@ typedef union {
 	const struct navi_spec *s;
 } navi_obj;
 
+struct navi_binding;
+
 struct navi_scope {
-	struct navi_clist_head chain;
+	NAVI_LIST_ENTRY(navi_scope) link;
 	struct navi_scope *next;
 	unsigned int refs;
-	struct navi_hlist_head bindings[NAVI_ENV_HT_SIZE];
+	NAVI_LIST_HEAD(navi_bucket, navi_binding) bindings[NAVI_ENV_HT_SIZE];
 };
 
 typedef struct {
@@ -142,7 +145,7 @@ struct navi_string {
 };
 
 struct navi_symbol {
-	struct navi_hlist_node chain;
+	NAVI_LIST_ENTRY(navi_symbol) link;
 	char data[];
 };
 
@@ -184,7 +187,7 @@ struct navi_spec {
 };
 
 struct navi_library {
-	struct navi_hlist_node chain;
+	NAVI_LIST_ENTRY(navi_library) link;
 	bool loaded;
 	navi_obj name;
 	union {
@@ -203,14 +206,14 @@ enum {
 };
 
 struct navi_object {
-	struct navi_clist_head chain;
+	NAVI_LIST_ENTRY(navi_object) link;
 	enum navi_type type;
 	uint16_t flags;
 	void *data[];
 };
 
 struct navi_binding {
-	struct navi_hlist_node chain;
+	NAVI_LIST_ENTRY(navi_binding) link;
 	navi_obj symbol;
 	navi_obj object;
 };
@@ -279,14 +282,11 @@ static inline void navi_env_unref(navi_env env)
 
 #define navi_scope_for_each(binding, scope) \
 	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
-		navi_hlist_for_each_entry(binding, &scope->bindings[navi_i___],\
-				struct navi_binding, chain)
+		NAVI_LIST_FOREACH(binding, &scope->bindings[navi_i___], link)
 
 #define navi_scope_for_each_safe(binding, n, scope) \
 	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
-		navi_hlist_for_each_entry_safe(binding, n, \
-				&scope->bindings[navi_i___], \
-				struct navi_binding, chain)
+		NAVI_LIST_FOREACH_SAFE(binding, &scope->bindings[navi_i___], link, n)
 
 /* Memory Management }}} */
 /* Accessors {{{ */
@@ -360,9 +360,12 @@ static inline struct navi_pair *navi_pair(navi_obj obj)
 	return (struct navi_pair*) obj.p->data;
 }
 
+#define navi_container_of(ptr, type, member) \
+	((type *)(void *)( (char *)(ptr) - offsetof(type, member) ))
+
 static inline struct navi_object *navi_object(void *concrete)
 {
-	return container_of(concrete, struct navi_object, data);
+	return navi_container_of(concrete, struct navi_object, data);
 }
 
 static inline navi_obj navi_car(navi_obj obj)

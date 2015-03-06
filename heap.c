@@ -19,9 +19,9 @@
 
 #define SYMTAB_SIZE 64
 
-extern struct navi_clist_head active_environments;
-static struct navi_hlist_head symbol_table[SYMTAB_SIZE];
-static NAVI_LIST_HEAD(heap);
+extern NAVI_LIST_HEAD(active_environments, navi_scope) active_environments;
+static NAVI_LIST_HEAD(heap, navi_object) heap = NAVI_LIST_HEAD_INITIALIZER(heap);
+static NAVI_LIST_HEAD(sym_bucket, navi_symbol) symbol_table[SYMTAB_SIZE];
 
 navi_obj navi_sym_begin;
 navi_obj navi_sym_quote;
@@ -59,7 +59,7 @@ static navi_obj to_obj(struct navi_object *obj)
 
 void navi_free(struct navi_object *obj)
 {
-	navi_clist_del(&obj->chain);
+	NAVI_LIST_REMOVE(obj, link);
 	switch (obj->type) {
 	case NAVI_THUNK:
 	case NAVI_BOUNCE:
@@ -87,7 +87,7 @@ static unsigned long symbol_hash(const char *symbol)
 static void symbol_table_init(void)
 {
 	for (unsigned i = 0; i < SYMTAB_SIZE; i++)
-		NAVI_INIT_HLIST_HEAD(&symbol_table[i]);
+		NAVI_LIST_INIT(&symbol_table[i]);
 
 	#define intern(cname, name) cname = navi_make_symbol(name)
 	intern(navi_sym_begin,           "begin");
@@ -130,9 +130,9 @@ void navi_init(void)
 static navi_obj symbol_lookup(const char *str, unsigned long hashcode)
 {
 	struct navi_symbol *it;
-	struct navi_hlist_head *head = &symbol_table[hashcode % SYMTAB_SIZE];
+	struct sym_bucket *head = &symbol_table[hashcode % SYMTAB_SIZE];
 
-	navi_hlist_for_each_entry(it, head, struct navi_symbol, chain) {
+	NAVI_LIST_FOREACH(it, head, link) {
 		if (!strcmp(it->data, str))
 			return to_obj(navi_object(it));
 	}
@@ -142,7 +142,7 @@ static navi_obj symbol_lookup(const char *str, unsigned long hashcode)
 static navi_obj make_object(enum navi_type type, size_t size)
 {
 	struct navi_object *obj = navi_critical_malloc(sizeof(struct navi_object) + size);
-	navi_clist_add(&obj->chain, &heap);
+	NAVI_LIST_INSERT_HEAD(&heap, obj, link);
 	obj->type = type;
 	return to_obj(obj);
 }
@@ -195,7 +195,7 @@ static navi_obj new_symbol(const char *str, unsigned long hashcode)
 {
 	navi_obj object = navi_make_uninterned(str);
 	struct navi_symbol *symbol = navi_symbol(object);
-	navi_hlist_add_head(&symbol->chain, &symbol_table[hashcode % SYMTAB_SIZE]);
+	NAVI_LIST_INSERT_HEAD(&symbol_table[hashcode % SYMTAB_SIZE], symbol, link);
 	return object;
 }
 
@@ -647,7 +647,7 @@ static void gc_mark_env(struct navi_scope *env)
 static void gc_mark(void)
 {
 	struct navi_scope *scope;
-	navi_clist_for_each_entry(scope, &active_environments, struct navi_scope, chain) {
+	NAVI_LIST_FOREACH(scope, &active_environments, link) {
 		gc_mark_env(scope);
 	}
 }
@@ -656,7 +656,7 @@ static void gc_sweep(void)
 {
 	struct navi_object *obj, *p;
 
-	navi_clist_for_each_entry_safe(obj, p, &heap, struct navi_object, chain) {
+	NAVI_LIST_FOREACH_SAFE(obj, &heap, link, p) {
 		if (gc_is_marked(to_obj(obj))) {
 			gc_clear_mark(to_obj(obj));
 			continue;
@@ -680,7 +680,7 @@ DEFUN(gc_collect, "gc-collect", 0, 0)
 DEFUN(gc_count, "gc-count", 0, 0)
 {
 	struct navi_object *expr;
-	navi_clist_for_each_entry(expr, &heap, struct navi_object, chain) {
+	NAVI_LIST_FOREACH(expr, &heap, link) {
 		if (navi_is_builtin(to_obj(expr)))
 			continue;
 		printf("<%p> ", (void*)expr);

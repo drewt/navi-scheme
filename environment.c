@@ -20,7 +20,8 @@
 
 #include "default_bindings.c"
 
-NAVI_LIST_HEAD(active_environments);
+NAVI_LIST_HEAD(active_environments, navi_scope) active_environments
+	= NAVI_LIST_HEAD_INITIALIZER(active_environments);
 
 /* FIXME: this is a REALLY bad hash function! */
 static unsigned long ptr_hash(navi_obj ptr)
@@ -28,7 +29,7 @@ static unsigned long ptr_hash(navi_obj ptr)
 	return ptr.n;
 }
 
-static struct navi_hlist_head *get_bucket(struct navi_scope *scope,
+static struct navi_bucket *get_bucket(struct navi_scope *scope,
 		unsigned long hashcode)
 {
 	return &scope->bindings[hashcode % NAVI_ENV_HT_SIZE];
@@ -46,9 +47,9 @@ static struct navi_binding *scope_lookup(struct navi_scope *scope,
 		navi_obj symbol, unsigned long hashcode)
 {
 	struct navi_binding *binding;
-	struct navi_hlist_head *hd = get_bucket(scope, hashcode);
-	
-	navi_hlist_for_each_entry(binding, hd, struct navi_binding, chain) {
+	struct navi_bucket *hd = get_bucket(scope, hashcode);
+
+	NAVI_LIST_FOREACH(binding, hd, link) {
 		if (binding->symbol.p == symbol.p)
 			return binding;
 	}
@@ -77,8 +78,8 @@ static inline struct navi_scope *make_scope(void)
 {
 	struct navi_scope *scope = navi_critical_malloc(sizeof(struct navi_scope));
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++)
-		NAVI_INIT_HLIST_HEAD(&scope->bindings[i]);
-	navi_clist_add(&scope->chain, &active_environments);
+		NAVI_LIST_INIT(&scope->bindings[i]);
+	NAVI_LIST_INSERT_HEAD(&active_environments, scope, link);
 	scope->refs = 1;
 	scope->next = NULL;
 	return scope;
@@ -103,7 +104,7 @@ navi_env navi_dynamic_env_new_scope(navi_env env)
 void env_set(navi_env env, navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding;
-	struct navi_hlist_head *head;
+	struct navi_bucket *head;
 
 	binding = navi_env_binding(env.lexical, symbol);
 	if (binding) {
@@ -114,7 +115,7 @@ void env_set(navi_env env, navi_obj symbol, navi_obj object)
 	/* FIXME: hash() already computed in navi_env_binding */
 	head = get_bucket(env.lexical, ptr_hash(symbol));
 	binding = make_binding(symbol, object);
-	navi_hlist_add_head(&binding->chain, head);
+	NAVI_LIST_INSERT_HEAD(head, binding, link);
 }
 
 void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
@@ -128,7 +129,7 @@ void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 	}
 
 	binding = make_binding(symbol, object);
-	navi_hlist_add_head(&binding->chain, get_bucket(env, hashcode));
+	NAVI_LIST_INSERT_HEAD(get_bucket(env, hashcode), binding, link);
 }
 
 int navi_scope_unset(struct navi_scope *env, navi_obj symbol)
@@ -139,7 +140,7 @@ int navi_scope_unset(struct navi_scope *env, navi_obj symbol)
 	if ((binding = scope_lookup(env, symbol, hashcode)) == NULL)
 		return 0;
 
-	navi_hlist_del(&binding->chain);
+	NAVI_LIST_REMOVE(binding, link);
 	return 1;
 }
 
@@ -163,8 +164,7 @@ static void navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 {
 	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++) {
 		struct navi_binding *binding;
-		navi_hlist_for_each_entry(binding, &src->bindings[i],
-				struct navi_binding, chain) {
+		NAVI_LIST_FOREACH(binding, &src->bindings[i], link) {
 			navi_scope_set(dst, binding->symbol, binding->object);
 		}
 	}
@@ -196,11 +196,10 @@ static navi_env new_lexical_environment(navi_env env)
 
 void navi_scope_free(struct navi_scope *scope)
 {
-	struct navi_binding *binding;
-	struct navi_hlist_node *n;
-	navi_clist_del(&scope->chain);
+	struct navi_binding *binding, *n;
+	NAVI_LIST_REMOVE(scope, link);
 	navi_scope_for_each_safe(binding, n, scope) {
-		navi_hlist_del(&binding->chain);
+		NAVI_LIST_REMOVE(binding, link);
 		free(binding);
 	}
 	if (scope->next != NULL)
@@ -509,12 +508,12 @@ DEFSPECIAL(parameterize, "parameterize", 2, NAVI_PROC_VARIADIC,
 /* Dynamic Bindings }}} */
 /* Libraries {{{ */
 static bool libraries_initialized = false;
-static struct navi_hlist_head libraries[NAVI_ENV_HT_SIZE];
+static NAVI_LIST_HEAD(lib_bucket, navi_library) libraries[NAVI_ENV_HT_SIZE];
 
 static void libraries_init(void)
 {
 	for (int i = 0; i < NAVI_ENV_HT_SIZE; i++)
-		NAVI_INIT_HLIST_HEAD(&libraries[i]);
+		NAVI_LIST_INIT(&libraries[i]);
 	libraries_initialized = true;
 }
 
@@ -538,7 +537,7 @@ static bool libname_equal(navi_obj a, navi_obj b)
 	return navi_is_nil(cons_a) && navi_is_nil(cons_b);
 }
 
-static struct navi_hlist_head *lib_bucket(unsigned long hash)
+static struct lib_bucket *lib_bucket(unsigned long hash)
 {
 	return &libraries[hash % NAVI_ENV_HT_SIZE];
 }
@@ -547,7 +546,7 @@ static struct navi_library *register_library(struct navi_library *lib)
 {
 	if (!libraries_initialized)
 		libraries_init();
-	navi_hlist_add_head(&lib->chain, lib_bucket(libname_hash(lib->name)));
+	NAVI_LIST_INSERT_HEAD(lib_bucket(libname_hash(lib->name)), lib, link);
 	return lib;
 }
 
@@ -556,8 +555,8 @@ static struct navi_library *find_library(navi_obj name)
 	if (!libraries_initialized)
 		libraries_init();
 	struct navi_library *entry;
-	struct navi_hlist_head *bucket = lib_bucket(libname_hash(name));
-	navi_hlist_for_each_entry(entry, bucket, struct navi_library, chain) {
+	struct lib_bucket *bucket = lib_bucket(libname_hash(name));
+	NAVI_LIST_FOREACH(entry, bucket, link) {
 		if (libname_equal(entry->name, name))
 			return entry;
 	}
@@ -913,8 +912,7 @@ static navi_env get_import_env(navi_obj set, navi_env env);
 
 static navi_env import_only(navi_obj set, navi_obj includes, navi_env env)
 {
-	struct navi_binding *binding;
-	struct navi_hlist_node *n;
+	struct navi_binding *binding, *n;
 	navi_env import_env = get_import_env(set, env);
 	navi_scope_for_each_safe(binding, n, import_env.lexical) {
 		navi_obj cons;
@@ -922,7 +920,7 @@ static navi_env import_only(navi_obj set, navi_obj includes, navi_env env)
 			if (navi_car(cons).p == binding->symbol.p)
 				goto pass;
 		}
-		navi_hlist_del(&binding->chain);
+		NAVI_LIST_REMOVE(binding, link);
 pass:
 		continue;
 	}
@@ -931,8 +929,7 @@ pass:
 
 static navi_env import_except(navi_obj set, navi_obj excludes, navi_env env)
 {
-	struct navi_binding *binding;
-	struct navi_hlist_node *n;
+	struct navi_binding *binding, *n;
 	navi_env import_env = get_import_env(set, env);
 	navi_scope_for_each_safe(binding, n, import_env.lexical) {
 		navi_obj cons;
@@ -942,7 +939,7 @@ static navi_env import_except(navi_obj set, navi_obj excludes, navi_env env)
 		}
 		continue;
 remove:
-		navi_hlist_del(&binding->chain);
+		NAVI_LIST_REMOVE(binding, link);
 	}
 	return import_env;
 }
@@ -1076,8 +1073,8 @@ navi_env navi_interaction_environment(void)
 DEFUN(env_count, "env-count", 0, 0)
 {
 	unsigned i = 0;
-	struct navi_clist_head *it;
-	navi_clist_for_each(it, &active_environments) {
+	struct navi_scope *it;
+	NAVI_LIST_FOREACH(it, &active_environments, link) {
 		i++;
 	}
 	printf("nr active environments = %u\n", i);

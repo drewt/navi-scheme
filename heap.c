@@ -59,6 +59,7 @@ static navi_obj to_obj(struct navi_object *obj)
 
 void navi_free(struct navi_object *obj)
 {
+	navi_clist_del(&obj->chain);
 	switch (obj->type) {
 	case NAVI_THUNK:
 	case NAVI_BOUNCE:
@@ -660,7 +661,6 @@ static void gc_sweep(void)
 			gc_clear_mark(to_obj(obj));
 			continue;
 		}
-		navi_clist_del(&obj->chain);
 		navi_free(obj);
 	}
 }

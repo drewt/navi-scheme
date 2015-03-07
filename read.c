@@ -430,6 +430,10 @@ static navi_obj read_sharp_bang(struct navi_port *port, navi_env env)
 		return navi_make_void();
 	}
 	#define read_syntax(name) if (!strcmp(str, name))
+	if (str[0] == '\0' || str[0] == '/') {
+		consume_line(port, env);
+		return navi_make_void();
+	}
 	read_syntax("eof")
 		return navi_make_eof();
 	read_syntax("fold-case") {

@@ -30,6 +30,7 @@ navi_obj navi_sym_unquote;
 navi_obj navi_sym_splice;
 navi_obj navi_sym_else;
 navi_obj navi_sym_eq_lt;
+navi_obj navi_sym_command_line;
 navi_obj navi_sym_current_exn;
 navi_obj navi_sym_current_input;
 navi_obj navi_sym_current_output;
@@ -97,6 +98,7 @@ static void symbol_table_init(void)
 	intern(navi_sym_splice,          "unquote-splice");
 	intern(navi_sym_else,            "else");
 	intern(navi_sym_eq_lt,           "=>");
+	intern(navi_sym_command_line,    "#command-line");
 	intern(navi_sym_current_exn,     "#current-exception-handler");
 	intern(navi_sym_current_input,   "current-input-port");
 	intern(navi_sym_current_output,  "current-output-port");

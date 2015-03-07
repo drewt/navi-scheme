@@ -46,6 +46,8 @@ DECLARE(delay);
 DECLARE(make_parameter);
 DECLARE(parameterize);
 
+DECLARE(command_line);
+
 DECLARE(gensym);
 
 DECLARE(eval);

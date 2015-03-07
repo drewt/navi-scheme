@@ -549,6 +549,9 @@ static inline navi_obj navi_unspecified(void)
 }
 
 /* Constructors }}} */
+/* System Interface {{{ */
+void navi_set_command_line(char *argv[], navi_env env);
+/* System Interface }}} */
 /* Environments/Evaluation {{{ */
 navi_obj navi_get_internal(navi_obj symbol, navi_env env);
 navi_env navi_get_global_env(navi_env env);

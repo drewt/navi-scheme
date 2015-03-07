@@ -11,7 +11,7 @@ LDFLAGS   = `pkg-config --libs icu-uc icu-i18n`
 
 libobjects = arithmetic.o bytevector.o char.o control_features.o display.o \
 	     environment.o eval.o heap.o list.o port.o read.o string.o \
-	     vector.o
+	     system.o vector.o
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o \
 	      tests/lambda.o tests/list.o tests/main.o
 objects = $(libobjects) $(testobjects) navii.o

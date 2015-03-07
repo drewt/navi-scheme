@@ -87,6 +87,8 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(make_parameter),
 	DECL_SPEC(parameterize),
 
+	DECL_SPEC(command_line),
+
 	DECL_SPEC(eqvp),
 	DECL_SPEC(eqp),
 	DECL_SPEC(equalp),

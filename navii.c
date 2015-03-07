@@ -45,7 +45,6 @@ static struct option long_options[] = {
 struct navi_options {
 	char *filename;
 	char **argv;
-	int argc;
 };
 
 void parse_opts(int argc, char *argv[], struct navi_options *options)
@@ -55,7 +54,6 @@ void parse_opts(int argc, char *argv[], struct navi_options *options)
 		if (argv[i][0] != '-' || !strcmp(argv[i], "-")) {
 			options->filename = argv[i];
 			options->argv = &argv[i+1];
-			options->argc = argc - i;
 			argv[i] = NULL;
 			argc = i;
 			break;
@@ -87,7 +85,7 @@ static navi_obj call_read(navi_env env)
 	return navi_read(navi_port(navi_current_input_port(env)), env);
 }
 
-static _Noreturn void repl(void)
+static _Noreturn void repl(struct navi_options *options)
 {
 	navi_env env = navi_interaction_environment();
 	navi_obj cont = navi_make_escape();
@@ -130,9 +128,10 @@ static _Noreturn void script(void)
 	exit(0);
 }
 
-static void program(struct navi_port *p)
+static void program(struct navi_options *options, struct navi_port *p)
 {
 	navi_env env = navi_empty_environment();
+	navi_set_command_line(options->argv, env);
 	while (!navi_is_eof(navi_eval(navi_read(p, env), env)))
 		/* nothing */;
 }
@@ -141,6 +140,7 @@ int main(int argc, char *argv[])
 {
 	struct navi_options options = {
 		.filename = NULL,
+		.argv = &argv[argc],
 	};
 	parse_opts(argc, argv, &options);
 	navi_init();
@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
 			port = navi_open_input_file(filename, env);
 		}
 		navi_env_unref(env);
-		program(navi_port(port));
+		program(&options, navi_port(port));
 	} else {
-		repl();
+		repl(&options);
 	}
 }

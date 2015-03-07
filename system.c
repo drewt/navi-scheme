@@ -65,3 +65,39 @@ DEFUN(exit, "exit", 0, NAVI_PROC_VARIADIC)
 	// TODO: run all outstanding dynamic-wind *after* procedures
 	navi_exit(scm_nr_args > 0 ? scm_arg1 : navi_make_bool(true));
 }
+
+DEFUN(get_environment_variable, "get-environment-variable", 1, 0, NAVI_STRING)
+{
+	char *var = getenv((char*)navi_string(scm_arg1)->data);
+	if (!var)
+		return navi_make_bool(false);
+	return navi_cstr_to_string(var);
+}
+
+extern char **environ;
+
+static navi_obj envvar_to_pair(const char *var)
+{
+	navi_obj name, value;
+	size_t len = strcspn(var, "=");
+	char *dup = navi_critical_malloc(len+1);
+	memcpy(dup, var, len);
+	dup[len] = '\0';
+	name = navi_cstr_to_string(dup);
+	value = navi_cstr_to_string(var + len + 1);
+	free(dup);
+	return navi_make_pair(name, value);
+}
+
+DEFUN(get_environment_variables, "get-environment-variables", 0, 0)
+{
+	navi_obj head, cons;
+	head = cons = navi_make_pair(navi_make_nil(), navi_make_nil());
+	for (int i = 0; environ[i]; i++) {
+		navi_obj next = navi_make_pair(envvar_to_pair(environ[i]),
+						navi_make_nil());
+		navi_set_cdr(cons, next);
+		cons = navi_cdr(cons);
+	}
+	return navi_cdr(head);
+}

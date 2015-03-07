@@ -49,6 +49,8 @@ DECLARE(parameterize);
 DECLARE(command_line);
 DECLARE(emergency_exit);
 DECLARE(exit);
+DECLARE(get_environment_variable);
+DECLARE(get_environment_variables);
 
 DECLARE(gensym);
 

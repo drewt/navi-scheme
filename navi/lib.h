@@ -47,6 +47,8 @@ DECLARE(make_parameter);
 DECLARE(parameterize);
 
 DECLARE(command_line);
+DECLARE(emergency_exit);
+DECLARE(exit);
 
 DECLARE(gensym);
 

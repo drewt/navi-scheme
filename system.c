@@ -37,3 +37,31 @@ DEFUN(command_line, "command-line", 0, 0)
 		return navi_make_nil();
 	return cl;
 }
+
+_Noreturn void navi_exit(navi_obj obj)
+{
+	int status;
+	switch (navi_type(obj)) {
+	case NAVI_BOOL:
+		status = navi_bool(obj) ? EXIT_SUCCESS : EXIT_FAILURE;
+		break;
+	case NAVI_NUM:
+		status = navi_num(obj);
+		break;
+	default:
+		status = EXIT_FAILURE;
+		break;
+	}
+	_Exit(status);
+}
+
+DEFUN(emergency_exit, "emergency-exit", 0, NAVI_PROC_VARIADIC)
+{
+	navi_exit(scm_nr_args > 0 ? scm_arg1 : navi_make_bool(true));
+}
+
+DEFUN(exit, "exit", 0, NAVI_PROC_VARIADIC)
+{
+	// TODO: run all outstanding dynamic-wind *after* procedures
+	navi_exit(scm_nr_args > 0 ? scm_arg1 : navi_make_bool(true));
+}

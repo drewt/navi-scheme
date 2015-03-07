@@ -88,6 +88,8 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(parameterize),
 
 	DECL_SPEC(command_line),
+	DECL_SPEC(emergency_exit),
+	DECL_SPEC(exit),
 
 	DECL_SPEC(eqvp),
 	DECL_SPEC(eqp),

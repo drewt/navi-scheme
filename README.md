@@ -1,9 +1,10 @@
-Navi Scheme
+NAVI Scheme
 ===========
 
-Copyright © 2014-2015 Drew Thoreson
+Copyright © 2014-2015 Drew Thoreson.  See COPYING and COPYING.LESSER for
+details.
 
-Navi Scheme is an implementation of R7RS scheme.  It is currently a work in
+NAVI Scheme is an implementation of R7RS scheme.  It is currently a work in
 progress.
 
 Building

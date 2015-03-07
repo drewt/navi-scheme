@@ -445,7 +445,7 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 	case NAVI_VOID:
 	case NAVI_NIL:
 	case NAVI_EOF:
-	case NAVI_NUM:
+	case NAVI_FIXNUM:
 	case NAVI_BOOL:
 	case NAVI_CHAR:
 	case NAVI_PORT:

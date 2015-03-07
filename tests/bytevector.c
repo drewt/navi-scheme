@@ -25,17 +25,17 @@
 START_TEST(test_bytevectorp)
 {
 	ck_assert(navi_bool($(scm_bytevectorp, navi_make_bytevec(1))));
-	ck_assert(!navi_bool($(scm_bytevectorp, navi_make_num(1))));
+	ck_assert(!navi_bool($(scm_bytevectorp, navi_make_fixnum(1))));
 }
 END_TEST
 
 /* make-bytevector */
 START_TEST(test_make_bytevector)
 {
-	navi_obj v = $(scm_make_bytevector, navi_make_num(2));
+	navi_obj v = $(scm_make_bytevector, navi_make_fixnum(2));
 	bytevector_assert(v, 2);
 
-	v = $(scm_make_bytevector, navi_make_num(2), navi_make_num(3));
+	v = $(scm_make_bytevector, navi_make_fixnum(2), navi_make_fixnum(3));
 	bytevector_assert(v, 2);
 	bytevector_assert_ref(v, 0, 3);
 	bytevector_assert_ref(v, 1, 3);
@@ -48,7 +48,7 @@ START_TEST(test_bytevector)
 	navi_obj v = $$(scm_bytevector);
 	bytevector_assert(v, 0);
 
-	v = $(scm_bytevector, navi_make_num(1), navi_make_num(2));
+	v = $(scm_bytevector, navi_make_fixnum(1), navi_make_fixnum(2));
 	bytevector_assert(v, 2);
 	bytevector_assert_ref(v, 0, 1);
 	bytevector_assert_ref(v, 1, 2);
@@ -59,7 +59,7 @@ END_TEST
 START_TEST(test_bytevector_length)
 {
 	navi_obj v = navi_make_bytevec(2);
-	ck_assert(navi_num($(scm_bytevector_length, v)) == 2);
+	ck_assert(navi_fixnum($(scm_bytevector_length, v)) == 2);
 }
 END_TEST
 
@@ -69,8 +69,8 @@ START_TEST(test_bytevector_u8_ref)
 	navi_obj v = navi_make_bytevec(2);
 	navi_bytevec(v)->data[0] = 1;
 	navi_bytevec(v)->data[1] = 2;
-	ck_assert(navi_num($(scm_bytevector_u8_ref, v, navi_make_num(0))) == 1);
-	ck_assert(navi_num($(scm_bytevector_u8_ref, v, navi_make_num(1))) == 2);
+	ck_assert(navi_fixnum($(scm_bytevector_u8_ref, v, navi_make_fixnum(0))) == 1);
+	ck_assert(navi_fixnum($(scm_bytevector_u8_ref, v, navi_make_fixnum(1))) == 2);
 }
 END_TEST
 
@@ -80,8 +80,8 @@ START_TEST(test_bytevector_u8_set)
 	navi_obj v = navi_make_bytevec(2);
 	navi_bytevec(v)->data[0] = 0;
 	navi_bytevec(v)->data[1] = 1;
-	$(scm_bytevector_u8_set, v, navi_make_num(0), navi_make_num(1));
-	$(scm_bytevector_u8_set, v, navi_make_num(1), navi_make_num(2));
+	$(scm_bytevector_u8_set, v, navi_make_fixnum(0), navi_make_fixnum(1));
+	$(scm_bytevector_u8_set, v, navi_make_fixnum(1), navi_make_fixnum(2));
 	bytevector_assert_ref(v, 0, 1);
 	bytevector_assert_ref(v, 1, 2);
 }
@@ -90,8 +90,8 @@ END_TEST
 /* bytevector-append */
 START_TEST(test_bytevector_append)
 {
-	navi_obj v0 = $(scm_bytevector, navi_make_num(1), navi_make_num(2));
-	navi_obj v1 = $(scm_bytevector, navi_make_num(3), navi_make_num(4));
+	navi_obj v0 = $(scm_bytevector, navi_make_fixnum(1), navi_make_fixnum(2));
+	navi_obj v1 = $(scm_bytevector, navi_make_fixnum(3), navi_make_fixnum(4));
 	navi_obj v3 = $(scm_bytevector_append, v0, v1);
 	bytevector_assert(v3, 4);
 	bytevector_assert_ref(v3, 0, 1);
@@ -105,7 +105,7 @@ END_TEST
 START_TEST(test_bytevector_copy)
 {
 	navi_obj v;
-	navi_obj o = $(scm_bytevector, navi_make_num(0), navi_make_num(1), navi_make_num(2), navi_make_num(3));
+	navi_obj o = $(scm_bytevector, navi_make_fixnum(0), navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(3));
 
 	v = $(scm_bytevector_copy, o);
 	bytevector_assert(v, 4);
@@ -114,12 +114,12 @@ START_TEST(test_bytevector_copy)
 	bytevector_assert_ref(v, 2, 2);
 	bytevector_assert_ref(v, 3, 3);
 
-	v = $(scm_bytevector_copy, o, navi_make_num(2));
+	v = $(scm_bytevector_copy, o, navi_make_fixnum(2));
 	bytevector_assert(v, 2);
 	bytevector_assert_ref(v, 0, 2);
 	bytevector_assert_ref(v, 1, 3);
 
-	v = $(scm_bytevector_copy, o, navi_make_num(1), navi_make_num(3));
+	v = $(scm_bytevector_copy, o, navi_make_fixnum(1), navi_make_fixnum(3));
 	bytevector_assert(v, 2);
 	bytevector_assert_ref(v, 0, 1);
 	bytevector_assert_ref(v, 1, 2);
@@ -129,21 +129,21 @@ END_TEST
 /* bytevector-copy! */
 START_TEST(test_bytevector_copy_to)
 {
-	navi_obj v = $(scm_make_bytevector, navi_make_num(4), navi_make_num(4));
-	navi_obj o = $(scm_bytevector, navi_make_num(0), navi_make_num(1), navi_make_num(2), navi_make_num(3));
+	navi_obj v = $(scm_make_bytevector, navi_make_fixnum(4), navi_make_fixnum(4));
+	navi_obj o = $(scm_bytevector, navi_make_fixnum(0), navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(3));
 
-	$(scm_bytevector_copy_to, v, navi_make_num(0), o);
+	$(scm_bytevector_copy_to, v, navi_make_fixnum(0), o);
 	bytevector_assert_ref(v, 0, 0);
 	bytevector_assert_ref(v, 1, 1);
 	bytevector_assert_ref(v, 2, 2);
 	bytevector_assert_ref(v, 3, 3);
 
 	navi_bytevec(v)->data[3] = 4;
-	$(scm_bytevector_copy_to, v, navi_make_num(3), o, navi_make_num(3));
+	$(scm_bytevector_copy_to, v, navi_make_fixnum(3), o, navi_make_fixnum(3));
 	bytevector_assert_ref(v, 3, 3);
 
 	navi_bytevec(v)->data[1] = 4;
-	$(scm_bytevector_copy_to, v, navi_make_num(1), o, navi_make_num(2), navi_make_num(3));
+	$(scm_bytevector_copy_to, v, navi_make_fixnum(1), o, navi_make_fixnum(2), navi_make_fixnum(3));
 	bytevector_assert_ref(v, 1, 2);
 
 }
@@ -152,7 +152,7 @@ END_TEST
 /* utf8->string */
 START_TEST(test_utf8_to_string)
 {
-	navi_obj v = $(scm_bytevector, navi_make_num(0xCE), navi_make_num(0xBB));
+	navi_obj v = $(scm_bytevector, navi_make_fixnum(0xCE), navi_make_fixnum(0xBB));
 	navi_obj s = $(scm_utf8_to_string, v);
 	ck_assert_uint_eq(navi_type(s), NAVI_STRING);
 	ck_assert_uint_eq((unsigned char)navi_string(s)->data[0], 0xCE);

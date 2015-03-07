@@ -55,14 +55,14 @@ DEFUN(vectorp, "vector?", 1, 0, NAVI_ANY)
 	return navi_make_bool(navi_type(scm_arg1) == NAVI_VECTOR);
 }
 
-DEFUN(make_vector, "make-vector", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(make_vector, "make-vector", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	navi_obj vec;
 
 	if (scm_nr_args > 2)
 		navi_arity_error(scm_env, navi_make_symbol("make-vector"));
 
-	vec = navi_make_vector(navi_num(scm_arg1));
+	vec = navi_make_vector(navi_fixnum(scm_arg1));
 	navi_vector_fill(vec, (scm_nr_args < 2) ? navi_make_bool(false) : scm_arg2);
 	return vec;
 }
@@ -74,23 +74,23 @@ DEFUN(vector, "vector", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(vector_length, "vector-length", 1, 0, NAVI_VECTOR)
 {
-	return navi_make_num(navi_vector(scm_arg1)->size);
+	return navi_make_fixnum(navi_vector(scm_arg1)->size);
 }
 
-DEFUN(vector_ref, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_NUM)
+DEFUN(vector_ref, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_FIXNUM)
 {
-	if (navi_num(scm_arg2) >= (long) navi_vector(scm_arg1)->size)
+	if (navi_fixnum(scm_arg2) >= (long) navi_vector(scm_arg1)->size)
 		navi_error(scm_env, "vector index out of bounds");
 
-	return navi_vector_ref(scm_arg1, navi_num(scm_arg2));
+	return navi_vector_ref(scm_arg1, navi_fixnum(scm_arg2));
 }
 
-DEFUN(vector_set, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_NUM, NAVI_ANY)
+DEFUN(vector_set, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_FIXNUM, NAVI_ANY)
 {
-	if (navi_num(scm_arg2) >= (long) navi_vector(scm_arg1)->size)
+	if (navi_fixnum(scm_arg2) >= (long) navi_vector(scm_arg1)->size)
 		navi_error(scm_env, "vector index out of bounds");
 
-	navi_vector(scm_arg1)->data[navi_num(scm_arg2)] = scm_arg3;
+	navi_vector(scm_arg1)->data[navi_fixnum(scm_arg2)] = scm_arg3;
 	return navi_unspecified();
 }
 
@@ -149,14 +149,14 @@ DEFUN(vector_copy, "vector-copy", 1, NAVI_PROC_VARIADIC, NAVI_VECTOR)
 }
 
 DEFUN(vector_copy_to, "vector-copy!", 3, NAVI_PROC_VARIADIC,
-		NAVI_VECTOR, NAVI_NUM, NAVI_VECTOR)
+		NAVI_VECTOR, NAVI_FIXNUM, NAVI_VECTOR)
 {
 	navi_obj to, from;
 	long at, start, end;
 	struct navi_vector *fromv, *tov;
 
 	to = scm_arg1;
-	at = navi_num(scm_arg2);
+	at = navi_fixnum(scm_arg2);
 	from = scm_arg3;
 	tov = navi_vector(to);
 	fromv = navi_vector(from);

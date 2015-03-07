@@ -19,52 +19,52 @@
 /* + */
 START_TEST(test_add)
 {
-	ck_assert_int_eq(navi_num($$(scm_add)), 0);
-	ck_assert_int_eq(navi_num($(scm_add, navi_make_num(1))), 1);
-	ck_assert_int_eq(navi_num($(scm_add, navi_make_num(1), navi_make_num(2))), 3);
-	ck_assert_int_eq(navi_num($(scm_add, navi_make_num(1), navi_make_num(-2))), -1);
+	ck_assert_int_eq(navi_fixnum($$(scm_add)), 0);
+	ck_assert_int_eq(navi_fixnum($(scm_add, navi_make_fixnum(1))), 1);
+	ck_assert_int_eq(navi_fixnum($(scm_add, navi_make_fixnum(1), navi_make_fixnum(2))), 3);
+	ck_assert_int_eq(navi_fixnum($(scm_add, navi_make_fixnum(1), navi_make_fixnum(-2))), -1);
 }
 END_TEST
 
 /* - */
 START_TEST(test_sub)
 {
-	ck_assert_int_eq(navi_num($(scm_sub, navi_make_num(1))), -1);
-	ck_assert_int_eq(navi_num($(scm_sub, navi_make_num(2), navi_make_num(1))), 1);
-	ck_assert_int_eq(navi_num($(scm_sub, navi_make_num(1), navi_make_num(-1))), 2);
+	ck_assert_int_eq(navi_fixnum($(scm_sub, navi_make_fixnum(1))), -1);
+	ck_assert_int_eq(navi_fixnum($(scm_sub, navi_make_fixnum(2), navi_make_fixnum(1))), 1);
+	ck_assert_int_eq(navi_fixnum($(scm_sub, navi_make_fixnum(1), navi_make_fixnum(-1))), 2);
 }
 END_TEST
 
 /* * */
 START_TEST(test_mul)
 {
-	ck_assert_int_eq(navi_num($$(scm_mul)), 1);
-	ck_assert_int_eq(navi_num($(scm_mul, navi_make_num(1))), 1);
-	ck_assert_int_eq(navi_num($(scm_mul, navi_make_num(2), navi_make_num(3))), 6);
-	ck_assert_int_eq(navi_num($(scm_mul, navi_make_num(2), navi_make_num(-3))), -6);
+	ck_assert_int_eq(navi_fixnum($$(scm_mul)), 1);
+	ck_assert_int_eq(navi_fixnum($(scm_mul, navi_make_fixnum(1))), 1);
+	ck_assert_int_eq(navi_fixnum($(scm_mul, navi_make_fixnum(2), navi_make_fixnum(3))), 6);
+	ck_assert_int_eq(navi_fixnum($(scm_mul, navi_make_fixnum(2), navi_make_fixnum(-3))), -6);
 }
 END_TEST
 
 /* / */
 START_TEST(test_div)
 {
-	ck_assert_int_eq(navi_num($(scm_div, navi_make_num(4))), 0);
-	ck_assert_int_eq(navi_num($(scm_div, navi_make_num(6), navi_make_num(3))), 2);
-	ck_assert_int_eq(navi_num($(scm_div, navi_make_num(6), navi_make_num(-3))), -2);
+	ck_assert_int_eq(navi_fixnum($(scm_div, navi_make_fixnum(4))), 0);
+	ck_assert_int_eq(navi_fixnum($(scm_div, navi_make_fixnum(6), navi_make_fixnum(3))), 2);
+	ck_assert_int_eq(navi_fixnum($(scm_div, navi_make_fixnum(6), navi_make_fixnum(-3))), -2);
 }
 END_TEST
 
 /* quotient */
 START_TEST(test_quotient)
 {
-	ck_assert_int_eq(navi_num($(scm_quotient, navi_make_num(5), navi_make_num(2))), 2);
+	ck_assert_int_eq(navi_fixnum($(scm_quotient, navi_make_fixnum(5), navi_make_fixnum(2))), 2);
 }
 END_TEST
 
 /* remainder */
 START_TEST(test_remainder)
 {
-	ck_assert_int_eq(navi_num($(scm_remainder, navi_make_num(5), navi_make_num(2))), 1);
+	ck_assert_int_eq(navi_fixnum($(scm_remainder, navi_make_fixnum(5), navi_make_fixnum(2))), 1);
 }
 END_TEST
 
@@ -72,13 +72,13 @@ END_TEST
 START_TEST(test_lt)
 {
 	ck_assert(navi_bool($$(scm_lt)));
-	ck_assert(navi_bool($(scm_lt, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_lt, navi_make_num(1), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_lt, navi_make_num(1), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_lt, navi_make_num(2), navi_make_num(1))));
-	ck_assert(navi_bool($(scm_lt, navi_make_num(1), navi_make_num(2), navi_make_num(3))));
-	ck_assert(!navi_bool($(scm_lt, navi_make_num(1), navi_make_num(2), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_lt, navi_make_num(1), navi_make_num(2), navi_make_num(1))));
+	ck_assert(navi_bool($(scm_lt, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_lt, navi_make_fixnum(1), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_lt, navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_lt, navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_lt, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(3))));
+	ck_assert(!navi_bool($(scm_lt, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_lt, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(1))));
 }
 END_TEST
 
@@ -86,13 +86,13 @@ END_TEST
 START_TEST(test_gt)
 {
 	ck_assert(navi_bool($$(scm_gt)));
-	ck_assert(navi_bool($(scm_gt, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_gt, navi_make_num(2), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_gt, navi_make_num(1), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_gt, navi_make_num(1), navi_make_num(2))));
-	ck_assert(navi_bool($(scm_gt, navi_make_num(3), navi_make_num(2), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_gt, navi_make_num(3), navi_make_num(2), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_gt, navi_make_num(3), navi_make_num(2), navi_make_num(3))));
+	ck_assert(navi_bool($(scm_gt, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_gt, navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_gt, navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_gt, navi_make_fixnum(1), navi_make_fixnum(2))));
+	ck_assert(navi_bool($(scm_gt, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_gt, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_gt, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(3))));
 }
 END_TEST
 
@@ -100,13 +100,13 @@ END_TEST
 START_TEST(test_lte)
 {
 	ck_assert(navi_bool($$(scm_lte)));
-	ck_assert(navi_bool($(scm_lte, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_lte, navi_make_num(1), navi_make_num(1))));
-	ck_assert(navi_bool($(scm_lte, navi_make_num(1), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_lte, navi_make_num(2), navi_make_num(1))));
-	ck_assert(navi_bool($(scm_lte, navi_make_num(1), navi_make_num(2), navi_make_num(3))));
-	ck_assert(navi_bool($(scm_lte, navi_make_num(1), navi_make_num(2), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_lte, navi_make_num(1), navi_make_num(2), navi_make_num(1))));
+	ck_assert(navi_bool($(scm_lte, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_lte, navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_lte, navi_make_fixnum(1), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_lte, navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_lte, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(3))));
+	ck_assert(navi_bool($(scm_lte, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_lte, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(1))));
 }
 END_TEST
 
@@ -114,13 +114,13 @@ END_TEST
 START_TEST(test_gte)
 {
 	ck_assert(navi_bool($$(scm_gte)));
-	ck_assert(navi_bool($(scm_gte, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_gte, navi_make_num(1), navi_make_num(1))));
-	ck_assert(navi_bool($(scm_gte, navi_make_num(2), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_gte, navi_make_num(1), navi_make_num(2))));
-	ck_assert(navi_bool($(scm_gte, navi_make_num(3), navi_make_num(2), navi_make_num(1))));
-	ck_assert(navi_bool($(scm_gte, navi_make_num(3), navi_make_num(2), navi_make_num(2))));
-	ck_assert(!navi_bool($(scm_gte, navi_make_num(3), navi_make_num(2), navi_make_num(3))));
+	ck_assert(navi_bool($(scm_gte, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_gte, navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_gte, navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_gte, navi_make_fixnum(1), navi_make_fixnum(2))));
+	ck_assert(navi_bool($(scm_gte, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_gte, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(2))));
+	ck_assert(!navi_bool($(scm_gte, navi_make_fixnum(3), navi_make_fixnum(2), navi_make_fixnum(3))));
 }
 END_TEST
 
@@ -128,57 +128,57 @@ END_TEST
 START_TEST(test_numeq)
 {
 	ck_assert(navi_bool($$(scm_numeq)));
-	ck_assert(navi_bool($(scm_numeq, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_numeq, navi_make_num(1), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_numeq, navi_make_num(1), navi_make_num(2))));
-	ck_assert(navi_bool($(scm_numeq, navi_make_num(1), navi_make_num(1), navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_numeq, navi_make_num(1), navi_make_num(2), navi_make_num(1))));
+	ck_assert(navi_bool($(scm_numeq, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_numeq, navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_numeq, navi_make_fixnum(1), navi_make_fixnum(2))));
+	ck_assert(navi_bool($(scm_numeq, navi_make_fixnum(1), navi_make_fixnum(1), navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_numeq, navi_make_fixnum(1), navi_make_fixnum(2), navi_make_fixnum(1))));
 }
 END_TEST
 
 /* zero? */
 START_TEST(test_zerop)
 {
-	ck_assert(navi_bool($(scm_zerop, navi_make_num(0))));
-	ck_assert(!navi_bool($(scm_zerop, navi_make_num(1))));
+	ck_assert(navi_bool($(scm_zerop, navi_make_fixnum(0))));
+	ck_assert(!navi_bool($(scm_zerop, navi_make_fixnum(1))));
 }
 END_TEST
 
 /* positive? */
 START_TEST(test_positivep)
 {
-	ck_assert(navi_bool($(scm_positivep, navi_make_num(1))));
-	ck_assert(!navi_bool($(scm_positivep, navi_make_num(0))));
-	ck_assert(!navi_bool($(scm_positivep, navi_make_num(-1))));
+	ck_assert(navi_bool($(scm_positivep, navi_make_fixnum(1))));
+	ck_assert(!navi_bool($(scm_positivep, navi_make_fixnum(0))));
+	ck_assert(!navi_bool($(scm_positivep, navi_make_fixnum(-1))));
 }
 END_TEST
 
 /* negative? */
 START_TEST(test_negativep)
 {
-	ck_assert(navi_bool($(scm_negativep, navi_make_num(-1))));
-	ck_assert(!navi_bool($(scm_negativep, navi_make_num(0))));
-	ck_assert(!navi_bool($(scm_negativep, navi_make_num(1))));
+	ck_assert(navi_bool($(scm_negativep, navi_make_fixnum(-1))));
+	ck_assert(!navi_bool($(scm_negativep, navi_make_fixnum(0))));
+	ck_assert(!navi_bool($(scm_negativep, navi_make_fixnum(1))));
 }
 END_TEST
 
 /* odd? */
 START_TEST(test_oddp)
 {
-	ck_assert(navi_bool($(scm_oddp, navi_make_num(1))));
-	ck_assert(navi_bool($(scm_oddp, navi_make_num(-1))));
-	ck_assert(!navi_bool($(scm_oddp, navi_make_num(0))));
-	ck_assert(!navi_bool($(scm_oddp, navi_make_num(2))));
+	ck_assert(navi_bool($(scm_oddp, navi_make_fixnum(1))));
+	ck_assert(navi_bool($(scm_oddp, navi_make_fixnum(-1))));
+	ck_assert(!navi_bool($(scm_oddp, navi_make_fixnum(0))));
+	ck_assert(!navi_bool($(scm_oddp, navi_make_fixnum(2))));
 }
 END_TEST
 
 /* even? */
 START_TEST(test_evenp)
 {
-	ck_assert(navi_bool($(scm_evenp, navi_make_num(0))));
-	ck_assert(navi_bool($(scm_evenp, navi_make_num(2))));
-	ck_assert(navi_bool($(scm_evenp, navi_make_num(-2))));
-	ck_assert(!navi_bool($(scm_evenp, navi_make_num(1))));
+	ck_assert(navi_bool($(scm_evenp, navi_make_fixnum(0))));
+	ck_assert(navi_bool($(scm_evenp, navi_make_fixnum(2))));
+	ck_assert(navi_bool($(scm_evenp, navi_make_fixnum(-2))));
+	ck_assert(!navi_bool($(scm_evenp, navi_make_fixnum(1))));
 }
 END_TEST
 
@@ -191,11 +191,11 @@ START_TEST(test_number_to_string)
 	r = $(scm_number_to_string, __VA_ARGS__); \
 	ck_assert(!strcmp((char*)navi_string(r)->data, str));
 
-	nts_assert("1", navi_make_num(1));
-	nts_assert("-1", navi_make_num(-1));
-	nts_assert("10", navi_make_num(8), navi_make_num(8));
-	nts_assert("10", navi_make_num(10), navi_make_num(10));
-	nts_assert("10", navi_make_num(16), navi_make_num(16));
+	nts_assert("1", navi_make_fixnum(1));
+	nts_assert("-1", navi_make_fixnum(-1));
+	nts_assert("10", navi_make_fixnum(8), navi_make_fixnum(8));
+	nts_assert("10", navi_make_fixnum(10), navi_make_fixnum(10));
+	nts_assert("10", navi_make_fixnum(16), navi_make_fixnum(16));
 #undef nts_assert
 }
 END_TEST
@@ -207,10 +207,10 @@ START_TEST(test_string_to_number)
 
 #define stn_assert(nr, str) \
 	r = $(scm_string_to_number, navi_cstr_to_string(str)); \
-	ck_assert_int_eq(navi_num(r), nr);
+	ck_assert_int_eq(navi_fixnum(r), nr);
 #define stn_assertb(nr, str, base) \
-	r = $(scm_string_to_number, navi_cstr_to_string(str), navi_make_num(base)); \
-	ck_assert_int_eq(navi_num(r), nr);
+	r = $(scm_string_to_number, navi_cstr_to_string(str), navi_make_fixnum(base)); \
+	ck_assert_int_eq(navi_fixnum(r), nr);
 
 	stn_assert(1,  "1");
 	stn_assert(-1, "-1");
@@ -241,7 +241,7 @@ START_TEST(test_booleanp)
 {
 	ck_assert(navi_bool($(scm_booleanp, navi_make_bool(true))));
 	ck_assert(navi_bool($(scm_booleanp, navi_make_bool(false))));
-	ck_assert(!navi_bool($(scm_booleanp, navi_make_num(1))));
+	ck_assert(!navi_bool($(scm_booleanp, navi_make_fixnum(1))));
 }
 END_TEST
 

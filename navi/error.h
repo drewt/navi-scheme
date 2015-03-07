@@ -47,13 +47,13 @@ static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_e
 
 static inline long navi_type_check_range(navi_obj n, long min, long max, navi_env env)
 {
-	navi_type_check(n, NAVI_NUM, env);
-	if (navi_num(n) < min || navi_num(n) >= max)
+	navi_type_check(n, NAVI_FIXNUM, env);
+	if (navi_fixnum(n) < min || navi_fixnum(n) >= max)
 		navi_error(env, "argument not in allowed range",
-				navi_make_apair("min", navi_make_num(min)),
-				navi_make_apair("max", navi_make_num(max)),
+				navi_make_apair("min", navi_make_fixnum(min)),
+				navi_make_apair("max", navi_make_fixnum(max)),
 				navi_make_apair("actual", n));
-	return navi_num(n);
+	return navi_fixnum(n);
 }
 
 static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
@@ -76,8 +76,8 @@ static inline navi_obj navi_check_arity(navi_obj proc, int arity, navi_env env)
 	int actual = navi_procedure(proc)->arity;
 	if (!navi_arity_satisfied(navi_procedure(proc), arity))
 		navi_error(env, "wrong arity",
-				navi_make_apair("expected", navi_make_num(arity)),
-				navi_make_apair("actual", navi_make_num(actual)));
+				navi_make_apair("expected", navi_make_fixnum(arity)),
+				navi_make_apair("actual", navi_make_fixnum(actual)));
 	return proc;
 }
 
@@ -89,7 +89,7 @@ static inline navi_obj navi_type_check_proc(navi_obj proc, int arity, navi_env e
 
 static inline long navi_fixnum_cast(navi_obj num, navi_env env)
 {
-	return navi_num(navi_type_check(num, NAVI_NUM, env));
+	return navi_fixnum(navi_type_check(num, NAVI_FIXNUM, env));
 }
 
 static inline unsigned long navi_char_cast(navi_obj ch, navi_env env)

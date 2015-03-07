@@ -188,14 +188,14 @@ navi_obj navi_make_list(long k, navi_obj obj)
 	return cons;
 }
 
-DEFUN(make_list, "make-list", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(make_list, "make-list", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	if (scm_nr_args > 2)
 		navi_arity_error(scm_env, navi_make_symbol("make-list"));
-	if (navi_num(scm_arg1) < 0)
+	if (navi_fixnum(scm_arg1) < 0)
 		navi_error(scm_env, "type error: not a positive integer");
-	return navi_make_list(navi_num(scm_arg1),
-			scm_nr_args == 2 ? scm_arg2 : navi_make_num(0));
+	return navi_make_list(navi_fixnum(scm_arg1),
+			scm_nr_args == 2 ? scm_arg2 : navi_make_fixnum(0));
 }
 
 DEFUN(length, "length", 1, 0, NAVI_LIST)
@@ -203,7 +203,7 @@ DEFUN(length, "length", 1, 0, NAVI_LIST)
 	int length = navi_list_length_safe(scm_arg1);
 	if (length < 0)
 		navi_error(scm_env, "type error: not a proper list");
-	return navi_make_num(length);
+	return navi_make_fixnum(length);
 }
 
 DEFUN(list, "list", 0, NAVI_PROC_VARIADIC)
@@ -271,12 +271,12 @@ navi_obj navi_list_tail(navi_obj list, long k)
 	return navi_make_void();
 }
 
-DEFUN(list_tail, "list-tail", 2, 0, NAVI_LIST, NAVI_NUM)
+DEFUN(list_tail, "list-tail", 2, 0, NAVI_LIST, NAVI_FIXNUM)
 {
 	navi_obj result;
-	if (navi_num(scm_arg2) < 0)
+	if (navi_fixnum(scm_arg2) < 0)
 		navi_error(scm_env, "type error: not a positive integer");
-	result = navi_list_tail(scm_arg1, navi_num(scm_arg2));
+	result = navi_list_tail(scm_arg1, navi_fixnum(scm_arg2));
 	if (navi_is_void(result))
 		navi_error(scm_env, "list index out of bounds");
 	return result;
@@ -290,23 +290,23 @@ navi_obj navi_list_ref(navi_obj list, long k)
 	return navi_car(tail);
 }
 
-DEFUN(list_ref, "list-ref", 2, 0, NAVI_PAIR, NAVI_NUM)
+DEFUN(list_ref, "list-ref", 2, 0, NAVI_PAIR, NAVI_FIXNUM)
 {
 	navi_obj result;
-	if (navi_num(scm_arg2) < 0)
+	if (navi_fixnum(scm_arg2) < 0)
 		navi_error(scm_env, "type error: not a positive integer");
-	result = navi_list_tail(scm_arg1, navi_num(scm_arg2));
+	result = navi_list_tail(scm_arg1, navi_fixnum(scm_arg2));
 	if (!navi_is_pair(result))
 		navi_error(scm_env, "list index out of bounds");
 	return navi_car(result);
 }
 
-DEFUN(list_set, "list-set!", 3, 0, NAVI_PAIR, NAVI_NUM, NAVI_ANY)
+DEFUN(list_set, "list-set!", 3, 0, NAVI_PAIR, NAVI_FIXNUM, NAVI_ANY)
 {
 	navi_obj result;
-	if (navi_num(scm_arg2) < 0)
+	if (navi_fixnum(scm_arg2) < 0)
 		navi_error(scm_env, "type error: not a positive integer");
-	result = navi_list_tail(scm_arg1, navi_num(scm_arg2));
+	result = navi_list_tail(scm_arg1, navi_fixnum(scm_arg2));
 	if (!navi_is_pair(result))
 		navi_error(scm_env, "list index out of bounds");
 	navi_set_car(result, scm_arg3);

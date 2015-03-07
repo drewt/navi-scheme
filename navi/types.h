@@ -65,7 +65,7 @@ typedef navi_obj (*navi_leaf)(navi_obj, void*);
 enum navi_type {
 	NAVI_VOID,
 	NAVI_NIL,
-	NAVI_NUM,
+	NAVI_FIXNUM,
 	NAVI_EOF,
 	NAVI_BOOL,
 	NAVI_CHAR,
@@ -290,7 +290,7 @@ static inline void navi_env_unref(navi_env env)
 
 /* Memory Management }}} */
 /* Accessors {{{ */
-static inline long navi_num(navi_obj obj)
+static inline long navi_fixnum(navi_obj obj)
 {
 	return obj.n >> 1;
 }
@@ -492,7 +492,7 @@ static inline navi_obj navi_make_eof(void)
 	return (navi_obj) { .n = NAVI_EOF_TAG };
 }
 
-static inline navi_obj navi_make_num(long num)
+static inline navi_obj navi_make_fixnum(long num)
 {
 	return (navi_obj) { .n = (num << 1) | 1 };
 }
@@ -605,7 +605,7 @@ static inline enum navi_type navi_type(navi_obj obj)
 	if (obj.n == 0)
 		return NAVI_VOID;
 	if (obj.n & 1)
-		return NAVI_NUM;
+		return NAVI_FIXNUM;
 	if (obj.n & 2)
 		return navi_immediate_type(obj);
 	return obj.p->type;
@@ -622,7 +622,7 @@ static inline const char *navi_strtype(enum navi_type type)
 	case NAVI_VOID:        return "void";
 	case NAVI_NIL:         return "nil";
 	case NAVI_EOF:         return "eof-object";
-	case NAVI_NUM:         return "number";
+	case NAVI_FIXNUM:      return "number";
 	case NAVI_BOOL:        return "boolean";
 	case NAVI_CHAR:        return "character";
 	case NAVI_VALUES:      return "values";
@@ -660,7 +660,7 @@ static inline navi_obj navi_typesym(enum navi_type type)
 NAVI_TYPE_PREDICATE(navi_is_void, NAVI_VOID)
 NAVI_TYPE_PREDICATE(navi_is_nil,  NAVI_NIL)
 NAVI_TYPE_PREDICATE(navi_is_eof,  NAVI_EOF)
-NAVI_TYPE_PREDICATE(navi_is_num,  NAVI_NUM)
+NAVI_TYPE_PREDICATE(navi_is_fixnum,  NAVI_FIXNUM)
 NAVI_TYPE_PREDICATE(navi_is_bool, NAVI_BOOL)
 NAVI_TYPE_PREDICATE(navi_is_char, NAVI_CHAR)
 NAVI_TYPE_PREDICATE(navi_is_values, NAVI_VALUES)
@@ -681,7 +681,7 @@ NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 
 static inline bool navi_is_byte(navi_obj obj)
 {
-	return navi_is_num(obj) && navi_num(obj) >= 0 && navi_num(obj) < 256;
+	return navi_is_fixnum(obj) && navi_fixnum(obj) >= 0 && navi_fixnum(obj) < 256;
 }
 
 static inline bool navi_is_builtin(navi_obj obj)
@@ -857,7 +857,7 @@ bool navi_bytevec_equal(navi_obj obj, const char *cstr);
 
 static inline navi_obj navi_bytevec_ref(navi_obj vec, size_t i)
 {
-	return navi_make_num(navi_bytevec(vec)->data[i]);
+	return navi_make_fixnum(navi_bytevec(vec)->data[i]);
 }
 /* Bytevectors }}} */
 /* Parameters {{{ */

@@ -399,8 +399,8 @@ navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 		return navi_make_eof();
 	case NAVI_NIL:
 		return navi_make_nil();
-	case NAVI_NUM:
-		return navi_make_num(spec->num);
+	case NAVI_FIXNUM:
+		return navi_make_fixnum(spec->num);
 	case NAVI_BOOL:
 		return navi_make_bool(spec->num);
 	case NAVI_CHAR:
@@ -435,8 +435,8 @@ bool navi_eqvp(navi_obj fst, navi_obj snd)
 	case NAVI_NIL:
 	case NAVI_EOF:
 		return true;
-	case NAVI_NUM:
-		return navi_num(fst) == navi_num(snd);
+	case NAVI_FIXNUM:
+		return navi_fixnum(fst) == navi_fixnum(snd);
 	case NAVI_BOOL:
 		return navi_bool(fst) ? navi_bool(snd) : !navi_bool(snd);
 	case NAVI_CHAR:
@@ -521,8 +521,8 @@ bool navi_equalp(navi_obj fst, navi_obj snd)
 	case NAVI_NIL:
 	case NAVI_EOF:
 		return true;
-	case NAVI_NUM:
-		return navi_num(fst) == navi_num(snd);
+	case NAVI_FIXNUM:
+		return navi_fixnum(fst) == navi_fixnum(snd);
 	case NAVI_BOOL:
 		return navi_bool(fst) ? navi_bool(snd) : !navi_bool(snd);
 	case NAVI_CHAR:
@@ -583,7 +583,7 @@ static void gc_mark_obj(navi_obj obj)
 	case NAVI_VOID:
 	case NAVI_NIL:
 	case NAVI_EOF:
-	case NAVI_NUM:
+	case NAVI_FIXNUM:
 	case NAVI_BOOL:
 	case NAVI_CHAR:
 		break;

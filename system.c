@@ -46,8 +46,8 @@ _Noreturn void navi_exit(navi_obj obj)
 	case NAVI_BOOL:
 		status = navi_bool(obj) ? EXIT_SUCCESS : EXIT_FAILURE;
 		break;
-	case NAVI_NUM:
-		status = navi_num(obj);
+	case NAVI_FIXNUM:
+		status = navi_fixnum(obj);
 		break;
 	default:
 		status = EXIT_FAILURE;
@@ -106,7 +106,7 @@ DEFUN(get_environment_variables, "get-environment-variables", 0, 0)
 DEFUN(current_second, "current-second", 0, 0)
 {
 	// FIXME: supposed to return an inexact number
-	return navi_make_num(time(NULL));
+	return navi_make_fixnum(time(NULL));
 }
 
 DEFUN(current_jiffy, "current-jiffy", 0, 0)
@@ -122,10 +122,10 @@ DEFUN(current_jiffy, "current-jiffy", 0, 0)
 		first_second = t.tv_sec;
 	t.tv_sec -= first_second;
 
-	return navi_make_num(t.tv_sec*1000 + t.tv_nsec/1000000);
+	return navi_make_fixnum(t.tv_sec*1000 + t.tv_nsec/1000000);
 }
 
 DEFUN(jiffies_per_second, "jiffies-per-second", 0, 0)
 {
-	return navi_make_num(100);
+	return navi_make_fixnum(100);
 }

@@ -149,7 +149,7 @@ static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env env)
 navi_obj navi_port_peek_byte(struct navi_port *port, navi_env env)
 {
 	int32_t b = navi_port_peek_c_byte(port, env);
-	return b == EOF ? navi_make_eof() : navi_make_num(b);
+	return b == EOF ? navi_make_eof() : navi_make_fixnum(b);
 }
 
 static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env env)
@@ -171,7 +171,7 @@ navi_obj navi_port_read_byte(struct navi_port *port, navi_env env)
 		port->flags |= GOT_EOF;
 		return navi_make_eof();
 	}
-	return navi_make_num(b);
+	return navi_make_fixnum(b);
 }
 
 static const signed char len_tab[256] = {
@@ -587,7 +587,7 @@ DEFUN(read, "read", 0, NAVI_PROC_VARIADIC)
 DEFUN(write_u8, "write-u8", 1, NAVI_PROC_VARIADIC, NAVI_BYTE)
 {
 	struct navi_port *p = get_output_port(navi_cdr(scm_args), scm_env);
-	navi_port_write_char(navi_num(scm_arg1), p, scm_env);
+	navi_port_write_char(navi_fixnum(scm_arg1), p, scm_env);
 	return navi_unspecified();
 }
 

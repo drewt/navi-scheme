@@ -581,9 +581,9 @@ static bool libname_valid(navi_obj name)
 		navi_obj part = navi_car(cons);
 		if (navi_is_symbol(part))
 			continue;
-		if (!navi_is_num(part))
+		if (!navi_is_fixnum(part))
 			return false;
-		if (navi_num(part) < 0)
+		if (navi_fixnum(part) < 0)
 			return false;
 	}
 	return navi_is_nil(cons);

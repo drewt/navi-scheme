@@ -32,8 +32,8 @@ void assert_0_to_3(navi_obj list);
 
 #define assert_num_eq(o, n) \
 	do { \
-		ck_assert(navi_is_num(o)); \
-		ck_assert_int_eq(navi_num(o), n); \
+		ck_assert(navi_is_fixnum(o)); \
+		ck_assert_int_eq(navi_fixnum(o), n); \
 	} while (0)
 
 #define assert_bool_true(b) \

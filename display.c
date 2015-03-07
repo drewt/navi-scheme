@@ -22,10 +22,10 @@ static void write_void(struct navi_port *p, navi_obj o, bool w, navi_env env)
 	/* nothing */
 }
 
-static void write_num(struct navi_port *p, navi_obj o, bool w, navi_env env)
+static void write_fixnum(struct navi_port *p, navi_obj o, bool w, navi_env env)
 {
 	char buf[128];
-	snprintf(buf, 128, "%ld", navi_num(o));
+	snprintf(buf, 128, "%ld", navi_fixnum(o));
 	buf[127] = '\0';
 	navi_port_write_cstr(buf, p, env);
 }
@@ -121,11 +121,11 @@ static void write_bytevec(struct navi_port *p, navi_obj o, bool w, navi_env env)
 	}
 
 	navi_port_write_cstr("#u8(", p, env);
-	_navi_display(p, navi_make_num(vec->data[0]), w, env);
+	_navi_display(p, navi_make_fixnum(vec->data[0]), w, env);
 
 	for (size_t i = 1; i < vec->size; i++) {
 		navi_port_write_cstr(" ", p, env);
-		_navi_display(p, navi_make_num(vec->data[i]), w, env);
+		_navi_display(p, navi_make_fixnum(vec->data[i]), w, env);
 	}
 
 	navi_port_write_cstr(")", p, env);
@@ -185,7 +185,7 @@ static const write_fn writetab[] = {
 	[NAVI_VOID]        = write_void,
 	[NAVI_NIL]         = write_nil,
 	[NAVI_EOF]         = write_eof,
-	[NAVI_NUM]         = write_num,
+	[NAVI_FIXNUM]      = write_fixnum,
 	[NAVI_BOOL]        = write_bool,
 	[NAVI_CHAR]        = write_char,
 	[NAVI_VALUES]      = write_values,

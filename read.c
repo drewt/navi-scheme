@@ -191,22 +191,22 @@ static long read_num(struct navi_port *port, int radix, int (*ctype)(int),
 
 static navi_obj read_decimal(struct navi_port *port, navi_env env)
 {
-	return navi_make_num(read_num(port, 10, isdigit, decimal_value, env));
+	return navi_make_fixnum(read_num(port, 10, isdigit, decimal_value, env));
 }
 
 static navi_obj read_hex(struct navi_port *port, navi_env env)
 {
-	return navi_make_num(read_num(port, 16, isxdigit, hex_value, env));
+	return navi_make_fixnum(read_num(port, 16, isxdigit, hex_value, env));
 }
 
 static navi_obj read_octal(struct navi_port *port, navi_env env)
 {
-	return navi_make_num(read_num(port, 8, isodigit, decimal_value, env));
+	return navi_make_fixnum(read_num(port, 8, isodigit, decimal_value, env));
 }
 
 static navi_obj read_binary(struct navi_port *port, navi_env env)
 {
-	return navi_make_num(read_num(port, 2, isbdigit, decimal_value, env));
+	return navi_make_fixnum(read_num(port, 2, isbdigit, decimal_value, env));
 }
 
 static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env),
@@ -333,7 +333,7 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 		}
 		if (!u_isdefined(ch))
 			navi_read_error(env, "invalid unicode literal",
-					navi_make_apair("value", navi_make_num(ch)));
+					navi_make_apair("value", navi_make_fixnum(ch)));
 		ret = navi_make_char(ch);
 		goto end;
 	}
@@ -555,7 +555,7 @@ navi_obj navi_read(struct navi_port *port, navi_env env)
 		sign = c == '+' ? 1 : -1;
 		if (isdigit((d = peek_char(port, env)))) {
 			expr = read_decimal(port, env);
-			return navi_make_num(navi_num(expr) * sign);
+			return navi_make_fixnum(navi_fixnum(expr) * sign);
 		}
 		return read_symbol_with_prefix(port, isterminal, c, env);
 	default:

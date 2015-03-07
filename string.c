@@ -126,10 +126,10 @@ DEFUN(stringp, "string?", 1, 0, NAVI_ANY)
 	return navi_make_bool(navi_type(scm_arg1) == NAVI_STRING);
 }
 
-DEFUN(make_string, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(make_string, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	UChar32 ch = ' ';
-	int32_t length = navi_num(scm_arg1);
+	int32_t length = navi_fixnum(scm_arg1);
 	if (length < 0)
 		navi_error(scm_env, "invalid length");
 	if (scm_nr_args > 1)
@@ -151,10 +151,10 @@ DEFUN(string, "string", 0, NAVI_PROC_VARIADIC)
 
 DEFUN(string_length, "string-length", 1, 0, NAVI_STRING)
 {
-	return navi_make_num(navi_string(scm_arg1)->length);
+	return navi_make_fixnum(navi_string(scm_arg1)->length);
 }
 
-DEFUN(string_ref, "string-ref", 2, 0, NAVI_STRING, NAVI_NUM)
+DEFUN(string_ref, "string-ref", 2, 0, NAVI_STRING, NAVI_FIXNUM)
 {
 	UChar32 ch;
 	struct navi_string *str = navi_string(scm_arg1);
@@ -201,13 +201,13 @@ void navi_string_set(struct navi_string *str, long k, UChar32 new_ch)
 	str->data[str->size] = '\0';
 }
 
-DEFUN(string_set, "string-set!", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_CHAR)
+DEFUN(string_set, "string-set!", 3, 0, NAVI_STRING, NAVI_FIXNUM, NAVI_CHAR)
 {
 	int32_t k;
 	struct navi_string *str;
 
 	str = navi_string(scm_arg1);
-	k = navi_num(scm_arg2);
+	k = navi_fixnum(scm_arg2);
 
 	if (k < 0 || k >= str->size)
 		navi_error(scm_env, "string index out of bounds");
@@ -425,13 +425,13 @@ DEFUN(string_copy, "string-copy", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 }
 
 DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
-		NAVI_STRING, NAVI_NUM, NAVI_STRING)
+		NAVI_STRING, NAVI_FIXNUM, NAVI_STRING)
 {
 	navi_obj to, from;
 	long at, start, end;
 
 	to = scm_arg1;
-	at = navi_num(scm_arg2);
+	at = navi_fixnum(scm_arg2);
 	from = scm_arg3;
 	start = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
 	end = (scm_nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env)
@@ -443,7 +443,7 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 	return navi_unspecified();
 }
 
-DEFUN(substring, "substring", 3, 0, NAVI_STRING, NAVI_NUM, NAVI_NUM)
+DEFUN(substring, "substring", 3, 0, NAVI_STRING, NAVI_FIXNUM, NAVI_FIXNUM)
 {
 	return scm_string_copy(3, scm_args, scm_env, NULL);
 }

@@ -19,7 +19,7 @@
 START_TEST(test_charp)
 {
 	ck_assert(navi_bool($(scm_charp, navi_make_char('a'))));
-	ck_assert(!navi_bool($(scm_charp, navi_make_num(1))));
+	ck_assert(!navi_bool($(scm_charp, navi_make_fixnum(1))));
 }
 END_TEST
 

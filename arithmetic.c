@@ -18,30 +18,30 @@
 #define ARITHMETIC_FOLD(operator, args, acc, env) \
 	do { \
 		navi_obj ____MAF_CONS; \
-		navi_type_check(navi_car(args), NAVI_NUM, env); \
+		navi_type_check(navi_car(args), NAVI_FIXNUM, env); \
 		acc = navi_car(args); \
 		navi_list_for_each(____MAF_CONS, navi_cdr(args)) { \
-			navi_type_check(navi_car(____MAF_CONS), NAVI_NUM, env); \
+			navi_type_check(navi_car(____MAF_CONS), NAVI_FIXNUM, env); \
 			acc.n = operator(acc.n, navi_car(____MAF_CONS).n); \
 		} \
 	} while (0)
 
 DEFUN(add, "+", 0, NAVI_PROC_VARIADIC)
 {
-	navi_obj acc = navi_make_num(0);
+	navi_obj acc = navi_make_fixnum(0);
 	if (navi_is_nil(scm_args))
-		return navi_make_num(0);
+		return navi_make_fixnum(0);
 	if (navi_is_nil(navi_cdr(scm_args)))
 		return scm_arg1;
 	ARITHMETIC_FOLD(navi_fixnum_plus, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(sub, "-", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(sub, "-", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	navi_obj acc;
 	if (navi_is_nil(navi_cdr(scm_args))) {
-		acc.n = navi_fixnum_minus(navi_make_num(0).n, scm_arg1.n);
+		acc.n = navi_fixnum_minus(navi_make_fixnum(0).n, scm_arg1.n);
 		return acc;
 	}
 	ARITHMETIC_FOLD(navi_fixnum_minus, scm_args, acc, scm_env);
@@ -52,32 +52,32 @@ DEFUN(mul, "*", 0, NAVI_PROC_VARIADIC)
 {
 	navi_obj acc;
 	if (navi_is_nil(scm_args))
-		return navi_make_num(1);
+		return navi_make_fixnum(1);
 	if (navi_is_nil(navi_cdr(scm_args)))
 		return scm_arg1;
 	ARITHMETIC_FOLD(navi_fixnum_times, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(div, "/", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(div, "/", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	navi_obj acc;
 	if (navi_is_nil(navi_cdr(scm_args))) {
-		acc.n = navi_fixnum_divide(navi_make_num(1).n, scm_arg1.n);
+		acc.n = navi_fixnum_divide(navi_make_fixnum(1).n, scm_arg1.n);
 		return acc;
 	}
 	ARITHMETIC_FOLD(navi_fixnum_divide, scm_args, acc, scm_env);
 	return acc;
 }
 
-DEFUN(quotient, "quotient", 2, 0, NAVI_NUM, NAVI_NUM)
+DEFUN(quotient, "quotient", 2, 0, NAVI_FIXNUM, NAVI_FIXNUM)
 {
-	return navi_make_num(navi_num(scm_arg1) / navi_num(scm_arg2));
+	return navi_make_fixnum(navi_fixnum(scm_arg1) / navi_fixnum(scm_arg2));
 }
 
-DEFUN(remainder, "remainder", 2, 0, NAVI_NUM, NAVI_NUM)
+DEFUN(remainder, "remainder", 2, 0, NAVI_FIXNUM, NAVI_FIXNUM)
 {
-	return navi_make_num(navi_num(scm_arg1) % navi_num(scm_arg2));
+	return navi_make_fixnum(navi_fixnum(scm_arg1) % navi_fixnum(scm_arg2));
 }
 
 static bool fold_pairs(navi_obj list, bool (*compare)(navi_obj,navi_obj,navi_env),
@@ -98,11 +98,11 @@ static bool fold_pairs(navi_obj list, bool (*compare)(navi_obj,navi_obj,navi_env
 	static bool _ ## cname(navi_obj ____MAP_A, navi_obj ____MAP_B, \
 			navi_env ____MAP_ENV) \
 	{ \
-		navi_type_check(____MAP_A, NAVI_NUM, ____MAP_ENV); \
-		navi_type_check(____MAP_B, NAVI_NUM, ____MAP_ENV); \
-		return navi_num(____MAP_A) op navi_num(____MAP_B); \
+		navi_type_check(____MAP_A, NAVI_FIXNUM, ____MAP_ENV); \
+		navi_type_check(____MAP_B, NAVI_FIXNUM, ____MAP_ENV); \
+		return navi_fixnum(____MAP_A) op navi_fixnum(____MAP_B); \
 	} \
-	DEFUN(cname, scmname, 1, NAVI_PROC_VARIADIC, NAVI_NUM) \
+	DEFUN(cname, scmname, 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM) \
 	{ \
 		return navi_make_bool(fold_pairs(scm_args, _ ## cname, scm_env)); \
 	}
@@ -114,9 +114,9 @@ NUMERIC_COMPARISON(gte,   ">=", >=)
 NUMERIC_COMPARISON(numeq, "=",  ==)
 
 #define NUMERIC_PREDICATE(cname, scmname, test) \
-	DEFUN(cname, scmname, 1, 0, NAVI_NUM) \
+	DEFUN(cname, scmname, 1, 0, NAVI_FIXNUM) \
 	{ \
-		return navi_make_bool(navi_num(scm_arg1) test); \
+		return navi_make_bool(navi_fixnum(scm_arg1) test); \
 	}
 
 NUMERIC_PREDICATE(zerop,     "zero?",     == 0)
@@ -125,25 +125,25 @@ NUMERIC_PREDICATE(negativep, "negative?", < 0)
 NUMERIC_PREDICATE(oddp,      "odd?",      % 2 != 0)
 NUMERIC_PREDICATE(evenp,     "even?",     % 2 == 0)
 
-DEFUN(number_to_string, "number->string", 1, NAVI_PROC_VARIADIC, NAVI_NUM)
+DEFUN(number_to_string, "number->string", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	char buf[64];
 	long radix = 10;
 
 	if (navi_type(navi_cdr(scm_args)) != NAVI_NIL) {
-		navi_type_check(scm_arg2, NAVI_NUM, scm_env);
-		radix = navi_num(scm_arg2);
+		navi_type_check(scm_arg2, NAVI_FIXNUM, scm_env);
+		radix = navi_fixnum(scm_arg2);
 	}
 
 	switch (radix) {
 	case 8:
-		snprintf(buf, 64, "%lo", navi_num(scm_arg1));
+		snprintf(buf, 64, "%lo", navi_fixnum(scm_arg1));
 		break;
 	case 10:
-		snprintf(buf, 64, "%ld", navi_num(scm_arg1));
+		snprintf(buf, 64, "%ld", navi_fixnum(scm_arg1));
 		break;
 	case 16:
-		snprintf(buf, 64, "%lx", navi_num(scm_arg1));
+		snprintf(buf, 64, "%lx", navi_fixnum(scm_arg1));
 		break;
 	default:
 		navi_error(scm_env, "unsupported radix");
@@ -180,7 +180,7 @@ DEFUN(string_to_number, "string->number", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 	n = strtol(string, &endptr, radix);
 	if (*endptr != '\0')
 		return navi_make_bool(false);
-	return navi_make_num(n);
+	return navi_make_fixnum(n);
 }
 
 DEFUN(not, "not", 1, 0, NAVI_ANY)

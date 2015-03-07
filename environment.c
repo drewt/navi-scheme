@@ -1064,7 +1064,8 @@ navi_env navi_interaction_environment(void)
 			make_libname("scheme", "lazy"),
 			make_libname("scheme", "read"),
 			make_libname("scheme", "write"),
-			make_libname("scheme", "process-context"));
+			make_libname("scheme", "process-context"),
+			make_libname("scheme", "time"));
 	navi_import(libs, env);
 	exn = navi_from_spec(&SCM_DECL(current_exception_handler), env);
 	navi_scope_set(env.lexical, navi_sym_current_exn, exn);

@@ -3,7 +3,7 @@ CC        = gcc
 CFLAGS    = -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-empty-body \
 	    -Wno-missing-field-initializers -g -O2
 ALLCFLAGS = $(CFLAGS) -std=c11 -D NAVI_COMPILE -D NAVI_VERSION="\"$(VERSION)\"" \
-	    -include assert.h
+	    -D_POSIX_C_SOURCE=199309L -include assert.h
 AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)

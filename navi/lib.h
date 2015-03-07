@@ -51,6 +51,9 @@ DECLARE(emergency_exit);
 DECLARE(exit);
 DECLARE(get_environment_variable);
 DECLARE(get_environment_variables);
+DECLARE(current_second);
+DECLARE(current_jiffy);
+DECLARE(jiffies_per_second);
 
 DECLARE(gensym);
 

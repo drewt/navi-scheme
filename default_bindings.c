@@ -92,6 +92,9 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(exit),
 	DECL_SPEC(get_environment_variable),
 	DECL_SPEC(get_environment_variables),
+	DECL_SPEC(current_second),
+	DECL_SPEC(current_jiffy),
+	DECL_SPEC(jiffies_per_second),
 
 	DECL_SPEC(eqvp),
 	DECL_SPEC(eqp),

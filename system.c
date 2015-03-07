@@ -14,6 +14,7 @@
  */
 
 #include <stdlib.h>
+#include <time.h>
 #include "navi.h"
 
 void navi_set_command_line(char *argv[], navi_env env)
@@ -100,4 +101,31 @@ DEFUN(get_environment_variables, "get-environment-variables", 0, 0)
 		cons = navi_cdr(cons);
 	}
 	return navi_cdr(head);
+}
+
+DEFUN(current_second, "current-second", 0, 0)
+{
+	// FIXME: supposed to return an inexact number
+	return navi_make_num(time(NULL));
+}
+
+DEFUN(current_jiffy, "current-jiffy", 0, 0)
+{
+	struct timespec t;
+	static time_t first_second = 0;
+
+	if (clock_gettime(CLOCK_REALTIME, &t) < 0)
+		navi_error(scm_env, "unable to read system clock");
+
+	// start at (approximately) 0 to increase the range before overflow
+	if (!first_second)
+		first_second = t.tv_sec;
+	t.tv_sec -= first_second;
+
+	return navi_make_num(t.tv_sec*1000 + t.tv_nsec/1000000);
+}
+
+DEFUN(jiffies_per_second, "jiffies-per-second", 0, 0)
+{
+	return navi_make_num(100);
 }

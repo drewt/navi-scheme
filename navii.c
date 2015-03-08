@@ -44,7 +44,7 @@ static _Noreturn void usage(const char *name, int status)
 
 static void version(void)
 {
-	puts("NAVI Scheme " NAVI_VERSION);
+	puts(PACKAGE_NAME " " NAVI_VERSION);
 	puts("(c) 2014-2015 Drew Thoreson");
 }
 

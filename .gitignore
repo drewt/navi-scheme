@@ -3,5 +3,11 @@
 *.a
 *.d
 
+config.h
+makefile
+config.log
+config.status
+autom4te.cache
+
 navii
 check

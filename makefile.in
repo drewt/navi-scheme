@@ -41,6 +41,7 @@ $(target): navii.o libnavi.a
 
 check: $(testobjects) libnavi.a
 	$(call cmd,ld,-lcheck)
+	@./check
 
 install: all
 	$(call cmd,install,-m755 navii $(bindir))

@@ -16,6 +16,7 @@ extern navi_obj navi_sym_unquote;
 extern navi_obj navi_sym_splice;
 extern navi_obj navi_sym_else;
 extern navi_obj navi_sym_eq_lt;
+extern navi_obj navi_sym_lib_paths;
 extern navi_obj navi_sym_command_line;
 extern navi_obj navi_sym_current_exn;
 extern navi_obj navi_sym_current_input;

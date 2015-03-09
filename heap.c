@@ -22,6 +22,7 @@ navi_obj navi_sym_unquote;
 navi_obj navi_sym_splice;
 navi_obj navi_sym_else;
 navi_obj navi_sym_eq_lt;
+navi_obj navi_sym_lib_paths;
 navi_obj navi_sym_command_line;
 navi_obj navi_sym_current_exn;
 navi_obj navi_sym_current_input;
@@ -90,6 +91,7 @@ static void symbol_table_init(void)
 	intern(navi_sym_splice,          "unquote-splice");
 	intern(navi_sym_else,            "else");
 	intern(navi_sym_eq_lt,           "=>");
+	intern(navi_sym_lib_paths,       "#lib-search-paths");
 	intern(navi_sym_command_line,    "#command-line");
 	intern(navi_sym_current_exn,     "#current-exception-handler");
 	intern(navi_sym_current_input,   "current-input-port");
@@ -382,6 +384,19 @@ static navi_obj parameter_from_spec(const struct navi_spec *spec, navi_env env)
 	return param;
 }
 
+static navi_obj list_from_spec(const struct navi_spec *spec, navi_env env)
+{
+	navi_obj head, cons;
+	head = cons = navi_make_pair(navi_make_nil(), navi_make_nil());
+	for (size_t i = 0; spec->elms[i]; i++) {
+		navi_obj obj = navi_from_spec(spec->elms[i], env);
+		navi_obj next = navi_make_pair(obj, navi_make_nil());
+		navi_set_cdr(cons, next);
+		cons = navi_cdr(cons);
+	}
+	return navi_cdr(head);
+}
+
 navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 {
 	if (spec->init)
@@ -411,6 +426,8 @@ navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 		return proc_from_spec(spec, env);
 	case NAVI_PARAMETER:
 		return parameter_from_spec(spec, env);
+	case NAVI_LIST:
+		return list_from_spec(spec, env);
 	default:
 		break;
 	}

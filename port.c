@@ -425,11 +425,11 @@ DEFPARAM(current_input_port,  "current-input-port",  stdin,  check_input_port);
 DEFPARAM(current_output_port, "current-output-port", stdout, check_output_port);
 DEFPARAM(current_error_port,  "current-error-port",  stderr, check_output_port);
 
-navi_obj _navi_open_input_file(const char *filename, navi_env env)
+navi_obj _navi_open_input_file(const char *filename)
 {
 	FILE *f;
 	if ((f = fopen(filename, "r")) == NULL) {
-		navi_file_error(env, "unable to open file");
+		return navi_make_void();
 	}
 	return navi_make_file_input_port(f);
 
@@ -437,7 +437,10 @@ navi_obj _navi_open_input_file(const char *filename, navi_env env)
 
 navi_obj navi_open_input_file(navi_obj filename, navi_env env)
 {
-	return _navi_open_input_file((char*)navi_string(filename)->data, env);
+	navi_obj r = _navi_open_input_file((char*)navi_string(filename)->data);
+	if (navi_is_void(r))
+		navi_file_error(env, "unable to open file");
+	return r;
 }
 
 navi_obj _navi_open_output_file(const char *filename, navi_env env)

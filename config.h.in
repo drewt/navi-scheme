@@ -1,23 +1,10 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Copyright 2014-2015 Drew Thoreson
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
 /* Define to 1 if you have the `clock_gettime' function. */
 #undef HAVE_CLOCK_GETTIME
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 if you have the `icu-i18n' library (-licu-i18n). */
-#undef HAVE_LIBICU_I18N
-
-/* Define to 1 if you have the `icu-uc' library (-licu-uc). */
-#undef HAVE_LIBICU_UC
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */

@@ -34,11 +34,15 @@
 
 static _Noreturn void usage(const char *name, int status)
 {
-	printf("usage: %s [OPTION ...] [FILENAME [ARGUMENT ...]]\n", name);
-	puts("  FILENAME is a Scheme source file, or '-' to read from standard input.");
-	puts("  OPTION may be one of the following:\n");
-	puts("    -h, --help     display this text and exit");
-	puts("        --version  display version and exit");
+	printf("\
+usage: %s [OPTION ...] [FILENAME [ARGUMENT ...]]\n\
+\n\
+  FILENAME is a Scheme source file, or '-' to read from standard input.\n\
+  OPTION may be one of the following:\n\
+\n\
+    -L, --lib-path PATHNAME  add PATHNAME to the library search paths\n\
+    -h, --help               display this text and exit\n\
+        --version            display version and exit\n", name);
 	exit(status);
 }
 
@@ -49,35 +53,30 @@ static void version(void)
 }
 
 static struct option long_options[] = {
-	{ "help",    no_argument, 0, 'h' },
-	{ "version", no_argument, 0, 'V' },
+	{ "lib-path", required_argument, 0, 'L' },
+	{ "help",     no_argument,       0, 'h' },
+	{ "version",  no_argument,       0, 'V' },
 };
 
 struct navi_options {
-	char *filename;
 	char **argv;
+	char *filename;
+	navi_env env;
 };
 
 void parse_opts(int argc, char *argv[], struct navi_options *options)
 {
-	// separate navii options from program arguments
-	for (int i = 1; i < argc; i++) {
-		if (argv[i][0] != '-' || !strcmp(argv[i], "-")) {
-			options->filename = argv[i];
-			options->argv = &argv[i+1];
-			argv[i] = NULL;
-			argc = i;
-			break;
-		}
-	}
-
-	// parse navii options
+	int options_index = 0;
+	navi_obj cons, lib_paths = navi_make_nil();
 	for (;;) {
-		int options_index = 0;
-		int c = getopt_long(argc, argv, "h", long_options, &options_index);
+		int c = getopt_long(argc, argv, "L:h", long_options, &options_index);
 		if (c < 0)
 			break;
 		switch (c) {
+		case 'L':
+			lib_paths = navi_make_pair((navi_obj) { .v = optarg },
+						lib_paths);
+			break;
 		case 'h':
 			usage(argv[0], EXIT_SUCCESS);
 		case 'V':
@@ -89,6 +88,13 @@ void parse_opts(int argc, char *argv[], struct navi_options *options)
 			usage(argv[0], EXIT_FAILURE);
 		}
 	}
+
+	options->argv = &argv[optind];
+	options->filename = argv[optind];
+
+	navi_list_for_each(cons, lib_paths) {
+		navi_add_lib_search_path(navi_car(cons).v, options->env);
+	}
 }
 
 static navi_obj call_read(navi_env env)
@@ -98,7 +104,7 @@ static navi_obj call_read(navi_env env)
 
 static _Noreturn void repl(struct navi_options *options)
 {
-	navi_env env = navi_interaction_environment();
+	navi_env env = _navi_interaction_environment(options->env);
 	navi_obj cont = navi_make_escape();
 	struct navi_escape *escape = navi_escape(cont);
 
@@ -125,20 +131,6 @@ static _Noreturn void repl(struct navi_options *options)
 	exit(0);
 }
 
-static _Noreturn void script(void)
-{
-	navi_env env = navi_interaction_environment();
-
-	for (;;) {
-		navi_obj expr = call_read(env);
-		if (navi_is_eof(expr))
-			break;
-		navi_write(navi_eval(expr, env), env);
-	}
-	putchar('\n');
-	exit(0);
-}
-
 static void program(struct navi_options *options, struct navi_port *p)
 {
 	navi_env env = navi_empty_environment();
@@ -149,22 +141,21 @@ static void program(struct navi_options *options, struct navi_port *p)
 
 int main(int argc, char *argv[])
 {
+	navi_init();
 	struct navi_options options = {
-		.filename = NULL,
-		.argv = &argv[argc],
+		.argv      = &argv[argc],
+		.filename  = NULL,
+		.env       = navi_empty_environment(),
 	};
 	parse_opts(argc, argv, &options);
-	navi_init();
 	if (options.filename) {
 		navi_obj port;
-		navi_env env = navi_empty_environment();
 		if (!strcmp(options.filename, "-")) {
 			port = navi_make_file_input_port(stdin);
 		} else {
 			navi_obj filename = navi_cstr_to_string(options.filename);
-			port = navi_open_input_file(filename, env);
+			port = navi_open_input_file(filename, options.env);
 		}
-		navi_env_unref(env);
 		program(&options, navi_port(port));
 	} else {
 		repl(&options);

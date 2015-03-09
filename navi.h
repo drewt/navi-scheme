@@ -15,9 +15,12 @@
 #include <stdbool.h>
 
 #include "navi/types.h"
+#include "navi/error.h"
+
+#ifdef NAVI_COMPILE
 #include "navi/lib.h"
 #include "navi/macros.h"
 #include "navi/symbols.h"
-#include "navi/error.h"
+#endif
 
 #endif

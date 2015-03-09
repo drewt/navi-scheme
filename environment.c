@@ -167,14 +167,23 @@ navi_env _navi_empty_environment(void)
 	return (navi_env) { .lexical = make_scope(), .dynamic = make_scope() };
 }
 
+DEFLIST(lib_search_paths, "#lib-search-paths",
+	&STRING_LITERAL(DATADIR "/navi"));
+
+#define IMPORT(name, env, scope)                                             \
+	navi_scope_set(scope,                                                \
+			navi_make_symbol(SCM_DECL(name).ident),              \
+			navi_from_spec(&SCM_DECL(name), env))
+
 /*
- * Make "empty" environment, which has only (import ...).
+ * Make "empty" environment, which has only (import ...) and private
+ * implementation stuff.
  */
 navi_env navi_empty_environment(void)
 {
 	navi_env env = _navi_empty_environment();
-	navi_scope_set(env.lexical, navi_sym_import,
-			navi_from_spec(&SCM_DECL(import), env));
+	IMPORT(import, env, env.lexical);
+	IMPORT(lib_search_paths, env, env.dynamic);
 	return env;
 }
 
@@ -735,12 +744,6 @@ DEFSPECIAL(define_library, "define-library", 2, NAVI_PROC_VARIADIC,
 	return navi_unspecified();
 }
 
-static const char *navi_lib_path(void)
-{
-	// TODO: use sane default, implement override mechanism (-L /path/)
-	return "";
-}
-
 #define LIBNAME_STEP 128
 
 static void write_char(char **path, size_t *length, size_t *wp, char c)
@@ -750,6 +753,13 @@ static void write_char(char **path, size_t *length, size_t *wp, char c)
 		*length += LIBNAME_STEP;
 	}
 	(*path)[(*wp)++] = c;
+}
+
+static void write_path(char **path, size_t *length, size_t *wp, const char *str)
+{
+	for (int i = 0; str[i]; i++) {
+		write_char(path, length, wp, str[i]);
+	}
 }
 
 static void write_string(char **path, size_t *length, size_t *wp, const char *str)
@@ -767,24 +777,52 @@ static void write_string(char **path, size_t *length, size_t *wp, const char *st
  * name, with a path separator between each two parts, and then adding the
  * file extension ".scm" to the result.
  */
-static char *libname_to_path(navi_obj name)
+static char *libname_to_path(const char *base, navi_obj name)
 {
 	navi_obj cons;
 	size_t wp = 0;
 	size_t length = LIBNAME_STEP;
 	char *path = navi_critical_malloc(LIBNAME_STEP+1);
-	write_string(&path, &length, &wp, navi_lib_path());
+	write_path(&path, &length, &wp, base);
 	navi_list_for_each(cons, name) {
 		if (!navi_is_symbol(navi_car(cons)))
 			continue;
 		struct navi_symbol *sym = navi_symbol(navi_car(cons));
-		write_string(&path, &length, &wp, sym->data);
 		write_char(&path, &length, &wp, '/');
+		write_string(&path, &length, &wp, sym->data);
 	}
-	wp--; // overwrite trailing separator
 	write_string(&path, &length, &wp, ".scm");
 	path[wp] = '\0';
 	return path;
+}
+
+static navi_obj open_lib_file(const char *base, navi_obj name)
+{
+	char *path = libname_to_path(base, name);
+	navi_obj port = _navi_open_input_file(path);
+	free(path);
+	return port;
+}
+
+static bool is_libdef(navi_obj obj)
+{
+	return navi_is_pair(obj)
+		&& navi_is_symbol(navi_car(obj))
+		&& navi_car(obj).p == navi_sym_deflib.p;
+}
+
+static struct navi_library *try_read_library(const char *path, navi_obj name,
+		navi_env env)
+{
+	navi_obj defn, port;
+	port = open_lib_file(path, name);
+	if (navi_is_void(port))
+		return NULL;
+	defn = navi_read(navi_port(port), env);
+	if (!is_libdef(defn))
+		navi_error(env, "error reading library",
+				navi_make_apair("library", name));
+	return define_library(navi_cdr(defn), env);
 }
 
 /*
@@ -792,18 +830,25 @@ static char *libname_to_path(navi_obj name)
  */
 static struct navi_library *read_library(navi_obj name, navi_env env)
 {
-	navi_obj obj;
-	char *path = libname_to_path(name);
-	struct navi_port *port = navi_port(_navi_open_input_file(path, env));
+	navi_obj cons;
+	navi_obj paths = navi_env_lookup(env.dynamic, navi_sym_lib_paths);
+	assert(navi_is_pair(paths) || navi_is_nil(paths));
+	navi_list_for_each(cons, paths) {
+		struct navi_library *lib;
+		assert(navi_is_string(navi_car(cons)));
+		lib = try_read_library((char*)navi_string(navi_car(cons))->data, name, env);
+		if (lib)
+			return lib;
+	}
+	navi_error(env, "library not found", navi_make_apair("library", name));
+}
 
-	free(path);
-	obj = navi_read(port, env);
-	if (!navi_is_pair(obj) || !navi_is_symbol(navi_car(obj))
-			|| navi_car(obj).p != navi_sym_deflib.p)
-		navi_error(env, "error reading library",
-				navi_make_apair("library", name));
-
-	return define_library(navi_cdr(obj), env);
+void navi_add_lib_search_path(const char *path, navi_env env)
+{
+	navi_obj paths = navi_env_lookup(env.dynamic, navi_sym_lib_paths);
+	assert(navi_is_pair(paths) || navi_is_nil(paths));
+	paths = navi_make_pair(navi_cstr_to_string(path), paths);
+	navi_scope_set(env.dynamic, navi_sym_lib_paths, paths);
 }
 
 static struct navi_library *do_load_library(struct navi_library *library,
@@ -1045,10 +1090,9 @@ static navi_obj _make_libname(const char *str, ...)
 #define make_libname(...) \
 	_make_libname(__VA_ARGS__, (void*) NULL)
 
-navi_env navi_interaction_environment(void)
+navi_env _navi_interaction_environment(navi_env env)
 {
 	navi_obj exn;
-	navi_env env = navi_empty_environment();
 	navi_obj libs = navi_list(
 			make_libname("scheme", "base"),
 			make_libname("scheme", "case-lambda"),
@@ -1062,6 +1106,11 @@ navi_env navi_interaction_environment(void)
 	exn = navi_from_spec(&SCM_DECL(current_exception_handler), env);
 	navi_scope_set(env.lexical, navi_sym_current_exn, exn);
 	return env;
+}
+
+navi_env navi_interaction_environment(void)
+{
+	return _navi_interaction_environment(navi_empty_environment());
 }
 
 DEFUN(env_count, "env-count", 0, 0)

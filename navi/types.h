@@ -32,6 +32,7 @@ typedef union {
 	long n;
 	struct navi_object *p;
 	const struct navi_spec *s;
+	void *v;
 } navi_obj;
 
 struct navi_binding;
@@ -161,11 +162,12 @@ struct navi_port {
 };
 
 struct navi_spec {
-	enum navi_type type;
+	int type;
 	union {
 		void *ptr;
 		int32_t num;
-		char *str;
+		const char *str;
+		const struct navi_spec **elms;
 		struct navi_procedure proc;
 		struct navi_pair pair;
 		struct {
@@ -545,6 +547,7 @@ static inline navi_obj navi_unspecified(void)
 void navi_set_command_line(char *argv[], navi_env env);
 /* System Interface }}} */
 /* Environments/Evaluation {{{ */
+void navi_add_lib_search_path(const char *path, navi_env env);
 navi_obj navi_get_internal(navi_obj symbol, navi_env env);
 navi_env navi_get_global_env(navi_env env);
 struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol);
@@ -555,6 +558,7 @@ navi_env navi_dynamic_env_new_scope(navi_env env);
 navi_env navi_extend_environment(navi_env env, navi_obj vars, navi_obj args);
 navi_env _navi_empty_environment(void);
 navi_env navi_empty_environment(void);
+navi_env _navi_interaction_environment(navi_env env);
 navi_env navi_interaction_environment(void);
 navi_obj navi_capture_env(navi_env env);
 void navi_import(navi_obj imports, navi_env env);
@@ -776,7 +780,7 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 navi_obj navi_current_input_port(navi_env env);
 navi_obj navi_current_output_port(navi_env env);
 navi_obj navi_current_error_port(navi_env env);
-navi_obj _navi_open_input_file(const char *filename, navi_env env);
+navi_obj _navi_open_input_file(const char *filename);
 navi_obj _navi_open_output_file(const char *filename, navi_env env);
 navi_obj navi_open_input_file(navi_obj filename, navi_env env);
 navi_obj navi_open_output_file(navi_obj filename, navi_env env);

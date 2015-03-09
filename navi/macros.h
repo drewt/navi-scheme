@@ -41,12 +41,28 @@
 #define scm_arg4 navi_cadddr(scm_args)
 #define scm_arg5 navi_caddddr(scm_args)
 
+#define STRING_LITERAL(value)                                                \
+	((const struct navi_spec) {                                          \
+		.type = NAVI_STRING,                                         \
+		.str  = value,                                               \
+	})
+
+#define DEFLIST(cname, scmname, ...)                                         \
+	const struct navi_spec *scm_listdecl_##cname[] = {                   \
+		__VA_ARGS__, NULL                                            \
+	};                                                                   \
+	const struct navi_spec SCM_DECL(cname) = {                           \
+		.type  = NAVI_LIST,                                          \
+		.elms  = scm_listdecl_##cname,                               \
+		.ident = scmname,                                            \
+	}
+
 #define DEFPARAM(cname, scmname, value, converter)                           \
 	const struct navi_spec SCM_DECL(cname) = {                           \
-		.type = NAVI_PARAMETER,                                      \
-		.param_value = &SCM_DECL(value),                             \
+		.type            = NAVI_PARAMETER,                           \
+		.param_value     = &SCM_DECL(value),                         \
 		.param_converter = &SCM_DECL(converter),                     \
-		.ident = scmname,                                            \
+		.ident           = scmname,                                  \
 	}
 
 /*
@@ -96,11 +112,11 @@
 #define navi_fixnum_plus(n1, n2)    (navi_u_fixnum_plus(n1, n2) | 1)
 #define navi_u_fixnum_minus(n1, n2) ((n1) - (n2) + 1)
 #define navi_fixnum_minus(n1, n2)   (navi_u_fixnum_minus(n1, n2) | 1)
-#define navi_fixnum_times(n1, n2)   (navi_fixnum_fix(navi_fixnum_unfix(n1) \
-			* navi_fixnum_unfix(n2)))
-#define navi_fixnum_divide(n1, n2)  (navi_fixnum_fix(navi_fixnum_unfix(n1) \
-			/ navi_fixnum_unfix(n2)))
-#define navi_fixnum_modulo(n1, n2)  (navi_fixnum_fix(navi_fixnum_unfix(n1) \
-			% navi_fixnum_unfix(n2)))
+#define navi_fixnum_times(n1, n2) \
+	(navi_fixnum_fix(navi_fixnum_unfix(n1) * navi_fixnum_unfix(n2)))
+#define navi_fixnum_divide(n1, n2) \
+	(navi_fixnum_fix(navi_fixnum_unfix(n1) / navi_fixnum_unfix(n2)))
+#define navi_fixnum_modulo(n1, n2) \
+	(navi_fixnum_fix(navi_fixnum_unfix(n1) % navi_fixnum_unfix(n2)))
 
 #endif

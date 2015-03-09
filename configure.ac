@@ -8,6 +8,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_MKDIR_P
 
 # Checks for libraries.
 PKG_CHECK_MODULES([ICU], [icu-uc icu-i18n])

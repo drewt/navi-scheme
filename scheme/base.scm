@@ -6,7 +6,6 @@
 
 (define-library (scheme base)
   (export
-    testing
     apply begin ;call/cc call-with-current-continuation
     call-with-values ;cond-expand
     define ;define-record-type
@@ -72,7 +71,6 @@
 
     ;; Builtins
     (##define define ##define)
-    (define testing 1)
     (define * ##*)
     (define + ##+)
     (define - ##-)

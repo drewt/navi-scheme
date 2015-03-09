@@ -5,19 +5,25 @@ bindir      = @bindir@
 datadir     = @datadir@
 mandir      = @mandir@
 
-_ver0     = $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
-_ver1     = @PACKAGE_VERSION@
-VERSION   = $(or $(_ver0),$(_ver1))
+_ver0   = $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
+_ver1   = @PACKAGE_VERSION@
+VERSION = $(or $(_ver0),$(_ver1))
+
 CC        = gcc
+DEFS      = -D NAVI_COMPILE -D NAVI_VERSION="\"$(VERSION)\"" \
+	    -D _POSIX_C_SOURCE=199309L -D DATADIR="\"@datadir@\""
 CFLAGS    = -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-empty-body \
 	    -Wno-missing-field-initializers -g -O2
-ALLCFLAGS = $(CFLAGS) -std=c11 -D NAVI_COMPILE -D NAVI_VERSION="\"$(VERSION)\"" \
-	    -D_POSIX_C_SOURCE=199309L -include assert.h -include ./config.h
+ALLCFLAGS = $(CFLAGS) -std=c11 $(DEFS) -include assert.h -include ./config.h \
+	    -include ./compiler.h
 AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)
 LDFLAGS   = @ICU_LIBS@
-INSTALL   = install
+
+INSTALL      = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+MKDIR_P      = @MKDIR_P@
 
 libobjects  = arithmetic.o bytevector.o char.o control_features.o display.o \
 	      environment.o eval.o heap.o list.o port.o read.o string.o \
@@ -44,4 +50,13 @@ check: $(testobjects) libnavi.a
 	@./check
 
 install: all
-	$(call cmd,install,-m755 navii $(bindir))
+	$(call cmd,mkdir_p,$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/base.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/case-lambda.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/char.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/lazy.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/process-context.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/read.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/time.scm $(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/write.scm $(datadir)/navi/scheme)
+	$(call cmd,install,navii $(bindir))

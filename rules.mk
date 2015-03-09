@@ -72,8 +72,14 @@ quiet_cmd_ttman   = MAN     $@
 quiet_cmd_groff   = GROFF   $@
       cmd_groff   = groff -man -Tascii $< | col -bx > $@
 
+quiet_cmd_mkdir_p = MKDIR   $(1)
+      cmd_mkdir_p = $(MKDIR_P) $(1)
+
 quiet_cmd_install = INSTALL $(1)
       cmd_install = $(INSTALL) $(1)
+
+quiet_cmd_install_data = INSTALL $(1)
+      cmd_install_data = $(INSTALL_DATA) $(1)
 
 # cmd macro (taken from kbuild)
 cmd = @$(if $($(quiet)cmd_$(1)),echo '  $(call $(quiet)cmd_$(1),$(2))' &&) $(call cmd_$(1),$(2))

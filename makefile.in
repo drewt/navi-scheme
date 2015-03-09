@@ -1,3 +1,10 @@
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+bindir      = @bindir@
+datadir     = @datadir@
+mandir      = @mandir@
+
 _ver0     = $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
 _ver1     = @PACKAGE_VERSION@
 VERSION   = $(or $(_ver0),$(_ver1))
@@ -10,6 +17,7 @@ AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)
 LDFLAGS   = @ICU_LIBS@
+INSTALL   = install
 
 libobjects  = arithmetic.o bytevector.o char.o control_features.o display.o \
 	      environment.o eval.o heap.o list.o port.o read.o string.o \
@@ -33,3 +41,6 @@ $(target): navii.o libnavi.a
 
 check: $(testobjects) libnavi.a
 	$(call cmd,ld,-lcheck)
+
+install: all
+	$(call cmd,install,-m755 navii $(bindir))

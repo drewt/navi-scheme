@@ -31,21 +31,22 @@ libobjects  = arithmetic.o bytevector.o char.o control_features.o display.o \
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o \
 	      tests/lambda.o tests/list.o tests/main.o
 objects     = $(libobjects) $(testobjects) navii.o
-target      = navii
-clean       = $(objects) $(target) libnavi.a
+binary      = navii
+static_lib  = libnavi.a
+clean       = $(objects) $(binary) $(static_lib)
 distclean   = config.h config.log config.status makefile
 
-all: $(target)
+all: $(binary)
 
 include rules.mk
 
-libnavi.a: $(libobjects)
+$(static_lib): $(libobjects)
 	$(call cmd,ar)
 
-$(target): navii.o libnavi.a
+$(binary): navii.o $(static_lib)
 	$(call cmd,ld)
 
-check: $(testobjects) libnavi.a
+check: $(testobjects) $(static_lib)
 	$(call cmd,ld,-lcheck)
 	@./check
 
@@ -59,4 +60,17 @@ install: all
 	$(call cmd,install_data,scheme/read.scm $(datadir)/navi/scheme)
 	$(call cmd,install_data,scheme/time.scm $(datadir)/navi/scheme)
 	$(call cmd,install_data,scheme/write.scm $(datadir)/navi/scheme)
-	$(call cmd,install,navii $(bindir))
+	$(call cmd,install,$(binary) $(bindir))
+
+uninstall:
+	rm -f $(datadir)/navi/scheme/base.scm
+	rm -f $(datadir)/navi/scheme/case-lambda.scm
+	rm -f $(datadir)/navi/scheme/char.scm
+	rm -f $(datadir)/navi/scheme/lazy.scm
+	rm -f $(datadir)/navi/scheme/process-context.scm
+	rm -f $(datadir)/navi/scheme/read.scm
+	rm -f $(datadir)/navi/scheme/time.scm
+	rm -f $(datadir)/navi/scheme/write.scm
+	rmdir $(datadir)/navi/scheme
+	rmdir $(datadir)/navi
+	rm -f $(bindir)/$(binary)

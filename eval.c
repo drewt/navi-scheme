@@ -81,13 +81,14 @@ DEFSPECIAL(begin, "begin", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
  * XXX: The function may return a bounce object--take care not to bounce with
  *      the wrong environment.
  */
-navi_obj navi_load(navi_obj filename, navi_env in_env, navi_env out_env)
+navi_obj navi_load(navi_obj filename, bool ci, navi_env in_env, navi_env out_env)
 {
 	navi_obj fst, snd;
 	// FIXME: need to protect unbound object from gc somehow...
 	navi_obj port_obj = navi_open_input_file(filename, out_env);
 	struct navi_port *port = navi_port(port_obj);
 
+	navi_port_set_fold_case(port, ci);
 	// read/eval until EOF with 1 expr lookahead for tail call
 	fst = navi_read(port, in_env);
 	// special case: if the file is empty, return void and not #!eof
@@ -101,26 +102,28 @@ navi_obj navi_load(navi_obj filename, navi_env in_env, navi_env out_env)
 	return eval_tail(fst, in_env);
 }
 
-DEFSPECIAL(include, "include", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+static navi_obj navi_include(navi_obj args, bool ci, navi_env env)
 {
 	navi_obj cons, result;
-	navi_list_for_each(cons, scm_args) {
-		navi_type_check(navi_car(cons), NAVI_STRING, scm_env);
+	navi_list_for_each(cons, args) {
+		navi_type_check(navi_car(cons), NAVI_STRING, env);
 	}
-	navi_list_for_each(cons, scm_args) {
-		result = navi_load(navi_car(cons), scm_env, scm_env);
+	navi_list_for_each(cons, args) {
+		result = navi_load(navi_car(cons), ci, env, env);
 		if (!navi_is_last_pair(cons))
-			result = navi_force_tail(result, scm_env);
+			result = navi_force_tail(result, env);
 	}
 	return result;
 }
 
+DEFSPECIAL(include, "include", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
+{
+	return navi_include(scm_args, false, scm_env);
+}
+
 DEFSPECIAL(include_ci, "include-ci", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
-	bool restore = navi_read_set_fold_case(true);
-	navi_obj result = scm_include(scm_nr_args, scm_args, scm_env, NULL);
-	navi_read_set_fold_case(restore);
-	return result;
+	return navi_include(scm_args, true, scm_env);
 }
 
 DEFSPECIAL(quote, "quote", 1, 0, NAVI_ANY)

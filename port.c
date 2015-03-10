@@ -17,6 +17,7 @@ enum {
 	INPUT_CLOSED  = 4,
 	OUTPUT_CLOSED = 8,
 	STRING_OUTPUT = 16,
+	FOLD_CASE     = 32,
 };
 
 static inline void check_input_port(struct navi_port *p, navi_env env)
@@ -304,6 +305,19 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 		while (*str != '\0')
 			navi_port_write_char(*str++, port, env);
 	}
+}
+
+bool navi_port_is_fold_case(struct navi_port *port)
+{
+	return port->flags & FOLD_CASE;
+}
+
+void navi_port_set_fold_case(struct navi_port *port, bool fold)
+{
+	if (fold)
+		port->flags |= FOLD_CASE;
+	else
+		port->flags &= ~FOLD_CASE;
 }
 
 navi_obj navi_current_input_port(navi_env env)

@@ -21,23 +21,9 @@
 #define STR_BUF_LEN  64
 #define STR_BUF_STEP 64
 
-static int fold_case(int c)
+static int handle_case(struct navi_port *port, int c)
 {
-	return tolower(c);
-}
-
-static int no_fold_case(int c)
-{
-	return c;
-}
-
-static int (*handle_case)(int) = no_fold_case;
-
-bool navi_read_set_fold_case(bool fold)
-{
-	bool old = handle_case == no_fold_case ? false : true;
-	handle_case = fold ? fold_case : no_fold_case;
-	return old;
+	return navi_port_is_fold_case(port) ? tolower(c) : c;
 }
 
 static inline void unexpected_eof(navi_env env)
@@ -281,7 +267,7 @@ static inline navi_obj read_symbol(struct navi_port *port, int (*stop)(int,navi_
 	char *str = read_until(port, stop, env);
 
 	for (unsigned i = 0; str[i] != '\0'; i++)
-		str[i] = handle_case(str[i]);
+		str[i] = handle_case(port, str[i]);
 	return navi_make_symbol(str);
 }
 
@@ -295,7 +281,7 @@ static navi_obj read_symbol_with_prefix(struct navi_port *port,
 		navi_enomem(env);
 	prefixed[0] = first;
 	for (size_t i = 0; i < length+1; i++)
-		prefixed[i+1] = handle_case(unfixed[i]);
+		prefixed[i+1] = handle_case(port, unfixed[i]);
 
 	return navi_make_symbol(prefixed);
 }
@@ -313,7 +299,7 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 	}
 
 	for (size_t i = 0; i < len; i++)
-		str[i] = handle_case(str[i]);
+		str[i] = handle_case(port, str[i]);
 
 	if (str[0] == 'x') {
 		UChar32 ch = 0;
@@ -429,11 +415,11 @@ static navi_obj read_sharp_bang(struct navi_port *port, navi_env env)
 	read_syntax("eof")
 		return navi_make_eof();
 	read_syntax("fold-case") {
-		handle_case = fold_case;
+		navi_port_set_fold_case(port, true);
 		return navi_make_void();
 	}
 	read_syntax("no-fold-case") {
-		handle_case = no_fold_case;
+		navi_port_set_fold_case(port, false);
 		return navi_make_void();
 	}
 	#undef read_syntax

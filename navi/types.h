@@ -767,7 +767,8 @@ navi_obj navi_char_upcase(navi_obj ch);
 navi_obj navi_char_downcase(navi_obj ch);
 /* Characters }}} */
 /* Ports {{{ */
-bool navi_read_set_fold_case(bool fold);
+bool navi_port_is_fold_case(struct navi_port *port);
+void navi_port_set_fold_case(struct navi_port *port, bool fold);
 navi_obj navi_read(struct navi_port *port, navi_env env);
 void _navi_display(struct navi_port *port, navi_obj expr, bool write, navi_env env);
 navi_obj navi_port_read_byte(struct navi_port *port, navi_env env);

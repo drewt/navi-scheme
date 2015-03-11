@@ -29,7 +29,7 @@
 /* C types {{{ */
 
 typedef union {
-	long n;
+	intptr_t n;
 	struct navi_object *p;
 	const struct navi_spec *s;
 	void *v;
@@ -284,7 +284,7 @@ static inline void navi_env_unref(navi_env env)
 
 /* Memory Management }}} */
 /* Accessors {{{ */
-static inline long navi_fixnum(navi_obj obj)
+static inline intptr_t navi_fixnum(navi_obj obj)
 {
 	return obj.n >> 1;
 }

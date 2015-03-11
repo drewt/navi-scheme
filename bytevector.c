@@ -29,7 +29,7 @@ navi_obj navi_list_to_bytevec(navi_obj list, navi_env env)
 {
 	navi_obj cons, vec = navi_make_bytevec(navi_list_length(list));
 
-	unsigned i = 0;
+	size_t i = 0;
 	struct navi_bytevec *vector = navi_bytevec(vec);
 	navi_list_for_each(cons, list) {
 		navi_type_check_byte(navi_car(cons), env);
@@ -118,13 +118,14 @@ DEFUN(bytevector_copy, "bytevector-copy", 1, NAVI_PROC_VARIADIC,
 		NAVI_BYTEVEC)
 {
 	navi_obj from;
-	long start, end;
+	intptr_t start, end;
 	struct navi_bytevec *vec;
 
 	from = scm_arg1;
 	vec = navi_bytevec(from);
 	start = (scm_nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
-	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : (long) vec->size;
+	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env)
+				: (intptr_t) vec->size;
 
 	navi_check_copy(vec->size, start, end, scm_env);
 
@@ -135,7 +136,7 @@ DEFUN(bytevector_copy_to, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
 		NAVI_BYTEVEC, NAVI_FIXNUM, NAVI_BYTEVEC)
 {
 	navi_obj to, from;
-	long at, start, end;
+	intptr_t at, start, end;
 	struct navi_bytevec *from_vec, *to_vec;
 
 	to = scm_arg1;
@@ -145,7 +146,7 @@ DEFUN(bytevector_copy_to, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
 	from_vec = navi_bytevec(from);
 	start = (scm_nr_args > 3) ? navi_fixnum_cast(scm_arg4, scm_env) : 0;
 	end = (scm_nr_args > 4) ? navi_fixnum_cast(scm_arg5, scm_env)
-		: (long)from_vec->size;
+				: (intptr_t)from_vec->size;
 
 	navi_check_copy_to(to_vec->size, at, from_vec->size, start, end, scm_env);
 
@@ -153,9 +154,9 @@ DEFUN(bytevector_copy_to, "bytevector-copy!", 3, NAVI_PROC_VARIADIC,
 	return navi_unspecified();
 }
 
-static int32_t count_chars(struct navi_bytevec *vec)
+static intptr_t count_chars(struct navi_bytevec *vec)
 {
-	int32_t n = 0;
+	intptr_t n = 0;
 	for (int32_t i = 0; (size_t) i < vec->size; n++) {
 		UChar32 ch;
 		u8_next_unchecked(vec->data, i, vec->size, ch);
@@ -168,11 +169,12 @@ static int32_t count_chars(struct navi_bytevec *vec)
 DEFUN(utf8_to_string, "utf8->string", 1, NAVI_PROC_VARIADIC, NAVI_BYTEVEC)
 {
 	navi_obj str;
-	int32_t start, end, size, length;
+	intptr_t start, end, size, length;
 	struct navi_bytevec *vec = navi_bytevec(scm_arg1);
 
 	start = (scm_nr_args > 1) ? navi_fixnum_cast(scm_arg2, scm_env) : 0;
-	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) : (long) vec->size;
+	end = (scm_nr_args > 2) ? navi_fixnum_cast(scm_arg3, scm_env) :
+				(intptr_t) vec->size;
 
 	navi_check_copy(vec->size, start, end, scm_env);
 	size = end - start;
@@ -188,7 +190,7 @@ DEFUN(utf8_to_string, "utf8->string", 1, NAVI_PROC_VARIADIC, NAVI_BYTEVEC)
 DEFUN(string_to_utf8, "string->utf8", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 {
 	navi_obj r;
-	int32_t start, end;
+	intptr_t start, end;
 	struct navi_string *str = navi_string(scm_arg1);
 	int32_t end_i, start_i = 0;
 
@@ -199,7 +201,7 @@ DEFUN(string_to_utf8, "string->utf8", 1, NAVI_PROC_VARIADIC, NAVI_STRING)
 
 	u8_fwd_n(str->data, start_i, str->size, start);
 	end_i = start_i;
-	for (int32_t count = start; count < end; count++) {
+	for (intptr_t count = start; count < end; count++) {
 		u8_fwd_1(str->data, end_i, str->size);
 	}
 	r = navi_make_bytevec(end_i - start_i);

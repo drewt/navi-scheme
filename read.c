@@ -427,9 +427,17 @@ static navi_obj read_sharp_bang(struct navi_port *port, navi_env env)
 			navi_make_apair("directive", navi_cstr_to_string(str)));
 }
 
-static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
+static navi_obj read_boolean(struct navi_port *port, char fst, navi_env env)
 {
-	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
+	char buf[6] = { fst };
+	char *str = read_until(port, isterminal, env);
+	strncpy(buf+1, str, 4);
+	free(str);
+	if (!strcmp(buf, "t") || !strcmp(buf, "true"))
+		return navi_make_bool(true);
+	if (!strcmp(buf, "f") || !strcmp(buf, "false"))
+		return navi_make_bool(false);
+	navi_read_error(env, "invalid # syntax");
 }
 
 static navi_obj read_sharp(struct navi_port *port, navi_env env)
@@ -438,9 +446,8 @@ static navi_obj read_sharp(struct navi_port *port, navi_env env)
 
 	switch ((c = iread_char(port, env))) {
 	case 't':
-		return navi_make_bool(true);
 	case 'f':
-		return navi_make_bool(false);
+		return read_boolean(port, c, env);
 	case '\\':
 		return read_character(port, env);
 	case '(':
@@ -477,6 +484,11 @@ static navi_obj read_sharp(struct navi_port *port, navi_env env)
 	}
 	navi_read_error(env, "unknown disciminator",
 			navi_make_apair("discriminator", navi_make_char(c)));
+}
+
+static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
+{
+	return navi_make_pair(symbol, navi_make_pair(expr, navi_make_nil()));
 }
 
 navi_obj navi_read(struct navi_port *port, navi_env env)

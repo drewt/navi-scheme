@@ -18,6 +18,14 @@
  * WARNING: What follows is a hand-rolled parser, and not a very good one.
  */
 
+/*
+ * These are passed as arguments to higher order functions, so undefine them
+ * in case they're implemented as macros
+ */
+#undef isspace
+#undef isdigit
+#undef isxdigit
+
 #define STR_BUF_LEN  64
 #define STR_BUF_STEP 64
 

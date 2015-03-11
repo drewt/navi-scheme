@@ -351,7 +351,7 @@ navi_obj navi_make_escape(void)
 navi_obj navi_capture_env(navi_env env)
 {
 	navi_obj obj = make_object(NAVI_ENVIRONMENT, sizeof(navi_env));
-	*((navi_env*)obj.p->data) = env;
+	memcpy(obj.p->data, &env, sizeof(env));
 	return obj;
 }
 

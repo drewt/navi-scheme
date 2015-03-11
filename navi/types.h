@@ -203,7 +203,7 @@ struct navi_object {
 	NAVI_LIST_ENTRY(navi_object) link;
 	enum navi_type type;
 	uint16_t flags;
-	void *data[];
+	unsigned char data[];
 };
 
 struct navi_binding {
@@ -346,7 +346,9 @@ static inline struct navi_port *navi_port(navi_obj obj)
 
 static inline navi_env navi_environment(navi_obj obj)
 {
-	return *((navi_env*)obj.p->data);
+	// XXX: cast through a union to bypass the strict aliasing rule
+	union { unsigned char *c; navi_env *e; } u = { .c = obj.p->data };
+	return *(u.e);
 }
 
 static inline struct navi_pair *navi_pair(navi_obj obj)

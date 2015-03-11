@@ -362,7 +362,7 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 		case '.':
 			read_char(port, env);
 			c = ipeek_char(port, env);
-			if (!isspace(c)) {
+			if (!isterminal(c, env)) {
 				// symbol beginning in .
 				expr = read_symbol_with_prefix(port, isterminal, '.', env);
 				break;

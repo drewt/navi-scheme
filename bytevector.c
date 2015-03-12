@@ -159,7 +159,7 @@ static intptr_t count_chars(struct navi_bytevec *vec)
 	intptr_t n = 0;
 	for (int32_t i = 0; (size_t) i < vec->size; n++) {
 		UChar32 ch;
-		u8_next_unchecked(vec->data, i, vec->size, ch);
+		u8_next_unchecked(vec->data, i, (int32_t)vec->size, ch);
 		if (ch < 0)
 			return -1;
 	}

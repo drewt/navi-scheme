@@ -9,11 +9,6 @@
 
 #include "navi.h"
 
-static inline bool both_chars(navi_obj a, navi_obj b)
-{
-	return navi_type(a) == NAVI_CHAR && navi_type(b) == NAVI_CHAR;
-}
-
 DEFUN(charp, "char?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(scm_arg1) == NAVI_CHAR);

@@ -9,12 +9,11 @@ _ver0   = $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
 _ver1   = @PACKAGE_VERSION@
 VERSION = $(or $(_ver0),$(_ver1))
 
-CC        = gcc
+CC        = @CC@
+CFLAGS    = @CFLAGS@
 DEFS      = -D NAVI_COMPILE -D NAVI_VERSION="\"$(VERSION)\"" \
 	    -D _POSIX_C_SOURCE=199309L -D DATADIR="\"@datadir@\""
-CFLAGS    = -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-empty-body \
-	    -Wno-missing-field-initializers -g -O2
-ALLCFLAGS = $(CFLAGS) -std=c11 $(DEFS) -include assert.h -include ./config.h \
+ALLCFLAGS = $(CFLAGS) $(DEFS) -include assert.h -include ./config.h \
 	    -include ./compiler.h
 AR        = ar
 ARFLAGS   = rcs

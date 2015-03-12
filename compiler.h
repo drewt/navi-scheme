@@ -8,6 +8,12 @@
 #ifndef _COMPILER_H
 #define _COMPILER_H
 
+#if __STDC_VERSION__ < 201112L
+#define _Static_assert(cond, msg) \
+	extern char navi_static_assert_fail[1/(cond)]
+#define _Noreturn
+#endif
+
 /*
  * GCC 2.96 or compatible required
  */

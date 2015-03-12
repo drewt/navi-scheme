@@ -227,3 +227,4 @@ AS_VAR_COPY([$1], [pkg_cv_][$1])
 AS_VAR_IF([$1], [""], [$5], [$4])dnl
 ])# PKG_CHECK_VAR
 
+m4_include([m4/ax_check_compile_flag.m4])

@@ -5,6 +5,7 @@ AC_PREREQ([2.69])
 AC_INIT([NAVI Scheme], [v0.1])
 AC_CONFIG_SRCDIR([navii.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_ARG_WITH([icu], [AS_HELP_STRING([--without-icu],
                                    [configure without unicode support])])
@@ -13,6 +14,19 @@ AC_ARG_WITH([icu], [AS_HELP_STRING([--without-icu],
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
+
+# Checks for compiler flags
+AX_CHECK_COMPILE_FLAG([-Wall], [CFLAGS+=" -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wextra], [CFLAGS+=" -Wextra"])
+AX_CHECK_COMPILE_FLAG([-Wpedantic], [CFLAGS+=" -Wpedantic"])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-parameter],
+                      [CFLAGS+=" -Wno-unused-parameter"])
+AX_CHECK_COMPILE_FLAG([-Wno-empty-body], [CFLAGS+=" -Wno-empty-body"])
+AX_CHECK_COMPILE_FLAG([-Wno-missing-field-initializers],
+                      [CFLAGS+=" -Wno-missing-field-initializers"])
+AX_CHECK_COMPILE_FLAG([-std=c11],
+                      [CC+=" -std=c11"],
+                      [AC_PROG_CC_STDC])
 
 # Checks for libraries.
 AS_IF([test "x$with_icu" != "xno"],

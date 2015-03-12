@@ -5,8 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-#include "navi/unicode.h"
+#include "unicode.h"
 
 bool navi_string_equal(navi_obj a, navi_obj b)
 {

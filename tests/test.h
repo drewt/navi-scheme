@@ -10,7 +10,6 @@
 
 #include <stdlib.h>
 #include <check.h>
-#include "../navi.h"
 
 #define $$(fn) fn(0, navi_make_nil(), env, NULL)
 #define $(fn, ...) \

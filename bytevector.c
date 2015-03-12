@@ -5,8 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-#include "navi/unicode.h"
+#include "unicode.h"
 
 bool navi_bytevec_equal(navi_obj obj, const char *cstr)
 {

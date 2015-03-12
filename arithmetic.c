@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-
 #define ARITHMETIC_FOLD(operator, args, acc, env) \
 	do { \
 		navi_obj ____MAF_CONS; \

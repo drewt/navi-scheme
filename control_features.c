@@ -5,11 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdarg.h>
-#include <setjmp.h>
-
-#include "navi.h"
-
 static _Noreturn void unhandled_exception(navi_obj obj, navi_env env)
 {
 	navi_obj p = navi_make_file_output_port(stderr);

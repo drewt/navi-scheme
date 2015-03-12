@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-
 #define SYMTAB_SIZE 64
 
 extern NAVI_LIST_HEAD(active_environments, navi_scope) active_environments;

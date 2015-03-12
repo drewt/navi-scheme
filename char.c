@@ -7,8 +7,6 @@
 
 #include <ctype.h>
 
-#include "navi.h"
-
 DEFUN(charp, "char?", 1, 0, NAVI_ANY)
 {
 	return navi_make_bool(navi_type(scm_arg1) == NAVI_CHAR);

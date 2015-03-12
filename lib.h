@@ -8,7 +8,7 @@
 #ifndef _NAVI_LIB_H
 #define _NAVI_LIB_H
 
-#include "types.h"
+#include "internal.h"
 #include "macros.h"
 
 DECLARE(lambda);

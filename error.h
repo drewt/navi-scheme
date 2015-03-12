@@ -9,7 +9,7 @@
 #define _NAVI_ERROR_H
 
 #include <stdio.h>
-#include "types.h"
+#include "internal.h"
 #include "symbols.h"
 
 _Noreturn void _navi_error(navi_env env, navi_obj type, const char *msg, ...);

@@ -5,8 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-#include "navi/unicode.h"
+#include "unicode.h"
 
 #define STRING_INIT_SIZE 64
 #define STRING_STEP_SIZE 64
@@ -307,12 +306,12 @@ void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env)
 	}
 }
 
-bool navi_port_is_fold_case(struct navi_port *port)
+int navi_port_is_fold_case(struct navi_port *port)
 {
 	return port->flags & FOLD_CASE;
 }
 
-void navi_port_set_fold_case(struct navi_port *port, bool fold)
+void navi_port_set_fold_case(struct navi_port *port, int fold)
 {
 	if (fold)
 		port->flags |= FOLD_CASE;

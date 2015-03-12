@@ -5,10 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
-#include "navi.h"
 
 _Noreturn int _navi_die(const char *file, int line, const char *msg, ...)
 {

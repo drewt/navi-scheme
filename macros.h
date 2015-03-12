@@ -8,7 +8,7 @@
 #ifndef _NAVI_MACROS_H
 #define _NAVI_MACROS_H
 
-#include "types.h"
+#include "internal.h"
 
 #define SCM_DECL(name) scm_decl_##name
 

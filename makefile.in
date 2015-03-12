@@ -14,7 +14,7 @@ CFLAGS    = @CFLAGS@
 DEFS      = -D NAVI_COMPILE -D NAVI_VERSION="\"$(VERSION)\"" \
 	    -D _POSIX_C_SOURCE=199309L -D DATADIR="\"@datadir@\""
 ALLCFLAGS = $(CFLAGS) $(DEFS) -include assert.h -include ./config.h \
-	    -include ./compiler.h
+	    -include ./compiler.h -include ./internal.h
 AR        = ar
 ARFLAGS   = rcs
 LD        = $(CC)
@@ -25,8 +25,8 @@ INSTALL_DATA = @INSTALL_DATA@
 MKDIR_P      = @MKDIR_P@
 
 libobjects  = arithmetic.o bytevector.o char.o control_features.o display.o \
-	      environment.o eval.o heap.o list.o port.o read.o string.o \
-	      system.o vector.o
+	      environment.o eval.o extern.o heap.o list.o port.o read.o \
+	      string.o system.o vector.o
 testobjects = tests/arithmetic.o tests/bytevector.o tests/char.o \
 	      tests/lambda.o tests/list.o tests/main.o
 objects     = $(libobjects) $(testobjects) navii.o

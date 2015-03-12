@@ -5,14 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
-
-#include "navi.h"
-#include "compiler.h"
-#include "navi/unicode.h"
+#include "unicode.h"
 
 /*
  * WARNING: What follows is a hand-rolled parser, and not a very good one.

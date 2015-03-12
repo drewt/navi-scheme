@@ -5,11 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdlib.h>
-#include <string.h>
-
-#include "navi.h"
-
 #include "default_bindings.c"
 
 NAVI_LIST_HEAD(active_environments, navi_scope) active_environments

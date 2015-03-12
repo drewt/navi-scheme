@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-
 static navi_env internal_env = {0};
 
 navi_obj navi_get_internal(navi_obj symbol, navi_env env)

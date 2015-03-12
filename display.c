@@ -5,10 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdio.h>
-
-#include "navi.h"
-
 static void write_void(struct navi_port *p, navi_obj o, bool w, navi_env env)
 {
 	/* nothing */
@@ -202,7 +198,7 @@ static const write_fn writetab[] = {
 	[NAVI_BOUNCE]      = write_bounce,
 };
 
-void _navi_display(struct navi_port *port, navi_obj obj, bool write, navi_env env)
+void _navi_display(struct navi_port *port, navi_obj obj, int write, navi_env env)
 {
 	assert(navi_type(obj) < sizeof(writetab)/sizeof(*writetab));
 	writetab[navi_type(obj)](port, obj, write, env);

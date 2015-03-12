@@ -5,10 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdarg.h>
-
-#include "navi.h"
-
 navi_obj navi_vlist(navi_obj first, va_list ap)
 {
 	navi_obj list, listptr;
@@ -61,7 +57,7 @@ int navi_list_length_safe(navi_obj list)
 	return i;
 }
 
-bool navi_is_proper_list(navi_obj list)
+int navi_is_proper_list(navi_obj list)
 {
 	navi_obj cons;
 	enum navi_type type = navi_type(list);

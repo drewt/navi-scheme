@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "navi.h"
-
 void navi_vector_fill(navi_obj vector, navi_obj fill)
 {
 	struct navi_vector *vec = navi_vector(vector);

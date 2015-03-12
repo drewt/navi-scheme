@@ -5,11 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdio.h>
-#include <stddef.h>
-#include <string.h>
-#include "navi.h"
-
 static navi_obj _eval(navi_obj expr, navi_env env);
 
 static inline bool can_bounce(navi_obj obj)

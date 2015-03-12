@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <unicode/ustring.h>
-
 #include "navi.h"
 
 #define SYMTAB_SIZE 64

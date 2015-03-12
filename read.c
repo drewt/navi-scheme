@@ -519,7 +519,7 @@ static navi_obj navi_sym_wrap(navi_obj symbol, navi_obj expr)
 
 navi_obj navi_read(struct navi_port *port, navi_env env)
 {
-	char c, d;
+	int c, d;
 	int sign;
 	navi_obj expr;
 

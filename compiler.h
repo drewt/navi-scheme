@@ -12,6 +12,7 @@
 #define _Static_assert(cond, msg) \
 	extern char navi_static_assert_fail[1/(cond)]
 #define _Noreturn
+#define _Alignas(n) __attribute__((aligned(n)))
 #endif
 
 /*

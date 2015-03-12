@@ -203,7 +203,7 @@ struct navi_object {
 	NAVI_LIST_ENTRY(navi_object) link;
 	enum navi_type type;
 	uint16_t flags;
-	unsigned char data[];
+	_Alignas(sizeof(int)) unsigned char data[];
 };
 
 struct navi_binding {

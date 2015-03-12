@@ -11,20 +11,20 @@
 #if __STDC_VERSION__ < 201112L
 #define _Static_assert(cond, msg) \
 	extern char navi_static_assert_fail[1/(cond)]
-#define _Noreturn
+#ifdef __GNUC__
+#define _Noreturn __attribute__((noreturn))
 #define _Alignas(n) __attribute__((aligned(n)))
+#else
+#define _Noreturn
+#define _Alignas(n)
+#pragma message "*** WARNING: _Alignas defined as NOP ***"
+#endif
 #endif
 
 /*
  * GCC 2.96 or compatible required
  */
 #if defined(__GNUC__)
-
-#if __GNUC__ > 3
-#undef offsetof
-#define offsetof(type, member) __builtin_offsetof(type, member)
-#endif
-
 /* Optimization: Condition @x is likely */
 #define likely(x) __builtin_expect(!!(x), 1)
 /* Optimization: Condition @x is unlikely */
@@ -33,12 +33,10 @@
 #define __used   __attribute__((used))
 #define __unused __attribute__((unused))
 #else
-
 #define likely(x) (x)
 #define unlikely(x) (x)
 
 #define __used
 #define __unused
-
 #endif /* defined(__GNUC__) */
 #endif /* _COMPILER_H */

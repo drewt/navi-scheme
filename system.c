@@ -10,6 +10,17 @@
 #include <sys/time.h>
 #include "navi.h"
 
+_Noreturn int _navi_die(const char *file, int line, const char *msg, ...)
+{
+	va_list ap;
+	va_start(ap, msg);
+	fprintf(stderr, "libnavi: critical error in %s (%d): ", file, line);
+	vfprintf(stderr, msg, ap);
+	fputc('\n', stderr);
+	va_end(ap);
+	exit(1);
+}
+
 void navi_set_command_line(char *argv[], navi_env env)
 {
 	navi_obj head, cons;

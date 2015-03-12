@@ -213,35 +213,10 @@ struct navi_binding {
 };
 /* C types }}} */
 
-#define navi_die(...) \
-	_navi_die(__FILE__, __LINE__, __VA_ARGS__)
-static inline _Noreturn int _navi_die(const char *file, int line,
-		const char *msg, ...)
-{
-	va_list ap;
-	va_start(ap, msg);
-	fprintf(stderr, "libnavi: critical error in %s (%d): ", file, line);
-	vfprintf(stderr, msg, ap);
-	fputc('\n', stderr);
-	va_end(ap);
-	exit(1);
-}
-
-static inline void *navi_critical_malloc(size_t size)
-{
-	void *r;
-	if (!(r = malloc(size)))
-		navi_die("not enough memory");
-	return r;
-}
-
-static inline void *navi_critical_realloc(void *p, size_t size)
-{
-	void *r;
-	if (!(r = realloc(p, size)))
-		navi_die("not enough memory");
-	return r;
-}
+#define navi_die(...) _navi_die(__FILE__, __LINE__, __VA_ARGS__)
+_Noreturn int _navi_die(const char *file, int line, const char *msg, ...);
+void *navi_critical_malloc(size_t size);
+void *navi_critical_realloc(void *p, size_t size);
 
 void navi_init(void);
 void navi_internal_init(void);

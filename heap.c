@@ -44,6 +44,22 @@ navi_obj navi_sym_cond_expand;
 navi_obj navi_sym_ellipsis;
 navi_obj navi_sym_underscore;
 
+void *navi_critical_malloc(size_t size)
+{
+	void *r;
+	if (!(r = malloc(size)))
+		navi_die("not enough memory");
+	return r;
+}
+
+void *navi_critical_realloc(void *p, size_t size)
+{
+	void *r;
+	if (!(r = realloc(p, size)))
+		navi_die("not enough memory");
+	return r;
+}
+
 static navi_obj to_obj(struct navi_object *obj)
 {
 	return (navi_obj) { .p = obj };

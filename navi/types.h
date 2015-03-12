@@ -767,6 +767,7 @@ static inline bool navi_is_last_pair(navi_obj pair)
 /* Characters {{{ */
 navi_obj navi_char_upcase(navi_obj ch);
 navi_obj navi_char_downcase(navi_obj ch);
+const char *navi_char_name(int32_t value);
 /* Characters }}} */
 /* Ports {{{ */
 bool navi_port_is_fold_case(struct navi_port *port);

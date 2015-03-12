@@ -294,6 +294,31 @@ static navi_obj read_symbol_with_prefix(struct navi_port *port,
 	return navi_make_symbol(prefixed);
 }
 
+static const struct {
+	char *name;
+	UChar32 value;
+} named_chars[] = {
+	{ "alarm",     '\x7'  },
+	{ "backspace", '\x8'  },
+	{ "delete",    '\x7f' },
+	{ "escape",    '\x1b' },
+	{ "newline",   '\n'   },
+	{ "null",      '\0'   },
+	{ "return",    '\r'   },
+	{ "space",     ' '    },
+	{ "tab",       '\t'   },
+	{ NULL,        0,     }
+};
+
+const char *navi_char_name(int32_t value)
+{
+	for (int i = 0; named_chars[i].name; i++) {
+		if (named_chars[i].value == value)
+			return named_chars[i].name;
+	}
+	return NULL;
+}
+
 static navi_obj read_character(struct navi_port *port, navi_env env)
 {
 	navi_obj ret;
@@ -324,19 +349,12 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 		goto end;
 	}
 
-	#define named_char(name, ch) \
-		if (!strcmp(str, name)) \
-			ret = navi_make_char(ch);
-	named_char("alarm",     '\x7');
-	named_char("backspace", '\x8');
-	named_char("delete",    '\x7f');
-	named_char("escape",    '\x1b');
-	named_char("newline",   '\n');
-	named_char("null",      '\0');
-	named_char("return",    '\r');
-	named_char("space",     ' ');
-	named_char("tab",       '\t');
-	#undef named_char
+	for (int i = 0; named_chars[i].name; i++) {
+		if (!strcmp(str, named_chars[i].name)) {
+			ret = navi_make_char(named_chars[i].value);
+			break;
+		}
+	}
 
 	if (ret.n == 0)
 		navi_read_error(env, "unknown named character",

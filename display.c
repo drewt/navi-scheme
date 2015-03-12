@@ -32,7 +32,10 @@ static void write_bool(struct navi_port *p, navi_obj o, bool w, navi_env env)
 static void write_char(struct navi_port *p, navi_obj o, bool w, navi_env env)
 {
 	char buf[128];
-	if (navi_char(o) > 127)
+	const char *name = navi_char_name(navi_char(o));
+	if (name)
+		snprintf(buf, 128, "#\\%s", name);
+	else if (navi_char(o) > 127)
 		snprintf(buf, 128, "#\\x%lx", navi_char(o));
 	else
 		snprintf(buf, 128, "#\\%c", (char)navi_char(o));

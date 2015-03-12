@@ -6,13 +6,25 @@ AC_INIT([NAVI Scheme], [v0.1])
 AC_CONFIG_SRCDIR([navii.c])
 AC_CONFIG_HEADERS([config.h])
 
+AC_ARG_WITH([icu], [AS_HELP_STRING([--without-icu],
+                                   [configure without unicode support])])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 
 # Checks for libraries.
-PKG_CHECK_MODULES([ICU], [icu-uc icu-i18n])
+AS_IF([test "x$with_icu" != "xno"],
+      [PKG_CHECK_MODULES([ICU],
+                         [icu-uc icu-i18n],
+                         [AC_DEFINE([HAVE_ICU],
+                                    [1],
+                                    [Define to 1 if you have the ICU library]
+                         )],
+			 [AC_MSG_WARN([configuring without Unicode support])]
+      )]
+)
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])

@@ -9,6 +9,8 @@
 #define _NAVI_UNICODE_H
 
 #include <assert.h>
+
+#ifdef HAVE_ICU
 #include <unicode/uchar.h>
 #include <unicode/utf8.h>
 #include <unicode/ucol.h>
@@ -50,4 +52,44 @@
 		assert(c >= 0); \
 	} while (0)
 #endif /* NDEBUG */
+#else  /* HAVE_ICU */
+
+/*
+ * If we're compiling without ICU, define fake ICU functions/macros that work
+ * on ASCII.
+ */
+
+#include <ctype.h>
+
+typedef int32_t UChar32;
+
+#define u_isdefined(c) ((c) < 128)
+#define u8_length(c) 1
+#define u8_fwd_1(s, i, length) u8_fwd_n(s, i, length, 1)
+#define u8_get u8_get_unchecked
+#define u8_next u8_next_unchecked
+
+#define u8_fwd_n(s, i, length, n)                                            \
+	do {                                                                 \
+		(i) += n;                                                    \
+	} while (0)
+
+#define u8_get_unchecked(s, start, i, length, c)                             \
+	do {                                                                 \
+		(c) = (s)[(start)+(i)];                                      \
+		(void) (c);                                                  \
+	} while (0)
+
+#define u8_next_unchecked(s, i, length, c)                                   \
+	do {                                                                 \
+		(c) = ((s)[(i)++]);                                          \
+		(void) (c);                                                  \
+	} while (0)
+
+#define u8_append(s, i, capacity, c)                                         \
+	do {                                                                 \
+		(s)[(i)++] = (c);                                            \
+	} while (0)
+
+#endif /* HAVE_ICU */
 #endif /* _NAVI_UNICODE_H */

@@ -208,6 +208,7 @@ DEFUN(string_set, "string-set!", 3, 0, NAVI_STRING, NAVI_FIXNUM, NAVI_CHAR)
 	return navi_unspecified();
 }
 
+#ifdef HAVE_ICU
 static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 {
 	int result;
@@ -222,6 +223,24 @@ static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
 	ucol_close(coll);
 	return result;
 }
+#else
+static int navi_strcoll(struct navi_string *a, struct navi_string *b, bool ci)
+{
+	for (int32_t i = 0; i < a->size && i < b->size; i++) {
+		char ac = ci ? tolower(a->data[i]) : a->data[i];
+		char bc = ci ? tolower(b->data[i]) : b->data[i];
+		if (ac < bc)
+			return -1;
+		if (ac > bc)
+			return 1;
+	}
+	if (a->size < b->size)
+		return -1;
+	if (a->size > b->size)
+		return 1;
+	return 0;
+}
+#endif
 
 #define STRING_COMPARE(cname, scmname, op, ci) \
 	DEFUN(cname, scmname, 2, NAVI_PROC_VARIADIC, NAVI_STRING, NAVI_STRING) \
@@ -248,6 +267,7 @@ STRING_COMPARE(string_ci_eq,  "string-ci=?",  ==, true)
 STRING_COMPARE(string_ci_lte, "string-ci<=?", <=, true)
 STRING_COMPARE(string_ci_gte, "string-ci>=?", >=, true)
 
+#ifdef HAVE_ICU
 static int32_t count_length(struct navi_string *str)
 {
 	int32_t count = 0;
@@ -258,30 +278,48 @@ static int32_t count_length(struct navi_string *str)
 	return count;
 }
 
-#define STRING_CASEMAP(cname, scmname, fun) \
-	DEFUN(cname, scmname, 1, 0, NAVI_STRING) \
-	{ \
-		struct navi_string *src = navi_string(scm_arg1); \
-		navi_obj dst_obj = navi_make_string(src->size, src->size, src->length); \
-		struct navi_string *dst = navi_string(dst_obj); \
-		UErrorCode error = U_ZERO_ERROR; \
-		UCaseMap *map = ucasemap_open(NULL, 0, &error); \
-		assert(!error); \
-		do { \
-			error = U_ZERO_ERROR; \
-			navi_string_grow_storage(dst, dst->size - dst->capacity); \
-			dst->size = fun(map, (char*)dst->data, dst->capacity, \
-					(char*)src->data, src->size, &error); \
-		} while (dst->size > dst->capacity); \
-		assert(U_SUCCESS(error)); \
-		dst->length = count_length(dst); \
-		ucasemap_close(map); \
-		return dst_obj; \
+#define STRING_CASEMAP(cname, scmname, fun)                                  \
+	DEFUN(cname, scmname, 1, 0, NAVI_STRING)                             \
+	{                                                                    \
+		struct navi_string *src = navi_string(scm_arg1);             \
+		navi_obj dst_obj = navi_make_string(src->size, src->size,    \
+						src->length);                \
+		struct navi_string *dst = navi_string(dst_obj);              \
+		UErrorCode error = U_ZERO_ERROR;                             \
+		UCaseMap *map = ucasemap_open(NULL, 0, &error);              \
+		assert(!error);                                              \
+		do {                                                         \
+			error = U_ZERO_ERROR;                                \
+			navi_string_grow_storage(dst,                        \
+					dst->size - dst->capacity);          \
+			dst->size = fun(map, (char*)dst->data, dst->capacity,\
+					(char*)src->data, src->size, &error);\
+		} while (dst->size > dst->capacity);                         \
+		assert(U_SUCCESS(error));                                    \
+		dst->length = count_length(dst);                             \
+		ucasemap_close(map);                                         \
+		return dst_obj;                                              \
 	}
 
 STRING_CASEMAP(string_upcase,   "string-upcase",   ucasemap_utf8ToUpper)
 STRING_CASEMAP(string_downcase, "string-downcase", ucasemap_utf8ToLower)
 STRING_CASEMAP(string_foldcase, "string-foldcase", ucasemap_utf8FoldCase)
+#else
+#define STRING_CASEMAP(cname, scmname, fun)                                  \
+	DEFUN(cname, scmname, 1, 0, NAVI_STRING)                             \
+	{                                                                    \
+		struct navi_string *src = navi_string(scm_arg1);             \
+		navi_obj dst_obj = navi_make_string(src->length, src->length,\
+						src->length);                \
+		struct navi_string *dst = navi_string(dst_obj);              \
+		for (int32_t i = 0; i < src->length; i++)                    \
+			dst->data[i] = fun(src->data[i]);                    \
+		return dst_obj;                                              \
+	}
+STRING_CASEMAP(string_upcase,   "string-upcase",   toupper)
+STRING_CASEMAP(string_downcase, "string-downcase", tolower)
+STRING_CASEMAP(string_foldcase, "string-foldcase", tolower)
+#endif
 
 DEFUN(string_append, "string-append", 0, NAVI_PROC_VARIADIC)
 {

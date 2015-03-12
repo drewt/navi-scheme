@@ -198,7 +198,7 @@ static navi_obj read_binary(struct navi_port *port, navi_env env)
 static char *read_until(struct navi_port *port, int(*ctype)(int,navi_env),
 		navi_env env)
 {
-	UChar c;
+	UChar32 c;
 	int32_t pos = 0;
 	int32_t buf_len = STR_BUF_LEN;
 	unsigned char *str = malloc(buf_len);
@@ -239,10 +239,10 @@ static UChar32 read_string_escape(struct navi_port *port, navi_env env)
 		return c;
 	case 'x':
 		c = read_unum(port, 16, isxdigit, hex_value, env);
-		if (ipeek_char(port, env) != ';')
-			navi_read_error(env, "missing terminator on string hex escape");
-		read_char(port, env);
-		return c;
+		if (ipeek_char(port, env) == ';')
+			read_char(port, env);
+		// FIXME: warn about missing ';' terminator
+		return u_isdefined(c) ? c : '?';
 	}
 	navi_read_error(env, "unknown string escape", navi_make_apair("char", navi_make_char(c)));
 }
@@ -318,7 +318,7 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 			ch += hex_value(str[i], env);
 		}
 		if (!u_isdefined(ch))
-			navi_read_error(env, "invalid unicode literal",
+			navi_read_error(env, "invalid character literal",
 					navi_make_apair("value", navi_make_fixnum(ch)));
 		ret = navi_make_char(ch);
 		goto end;

@@ -156,11 +156,18 @@ END_TEST
 /* string->utf8 */
 START_TEST(test_string_to_utf8)
 {
-	navi_obj s = $(scm_string, navi_make_char(0x3BB));
+	navi_obj s = $(scm_string, navi_make_char('a'), navi_make_char('b'));
 	navi_obj v = $(scm_string_to_utf8, s);
+	bytevector_assert(v, 2);
+	bytevector_assert_ref(v, 0, 'a');
+	bytevector_assert_ref(v, 1, 'b');
+#ifdef HAVE_ICU
+	s = $(scm_string, navi_make_char(0x3BB));
+	v = $(scm_string_to_utf8, s);
 	bytevector_assert(v, 2);
 	bytevector_assert_ref(v, 0, 0xCE);
 	bytevector_assert_ref(v, 1, 0xBB);
+#endif
 }
 END_TEST
 

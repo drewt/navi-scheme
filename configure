@@ -681,6 +681,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_icu
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1300,6 +1301,11 @@ if test -n "$ac_init_help"; then
      short | recursive ) echo "Configuration of NAVI Scheme v0.1:";;
    esac
   cat <<\_ACEOF
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --without-icu           configure without unicode support
 
 Some influential environment variables:
   CC          C compiler command
@@ -2283,6 +2289,13 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 ac_config_headers="$ac_config_headers config.h"
+
+
+
+# Check whether --with-icu was given.
+if test "${with_icu+set}" = set; then :
+  withval=$with_icu;
+fi
 
 
 # Checks for programs.
@@ -3361,6 +3374,7 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
+if test "x$with_icu" != "xno"; then :
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ICU" >&5
@@ -3420,36 +3434,24 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$ICU_PKG_ERRORS" >&5
 
-	as_fn_error $? "Package requirements (icu-uc icu-i18n) were not met:
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: configuring without Unicode support" >&5
+$as_echo "$as_me: WARNING: configuring without Unicode support" >&2;}
 
-$ICU_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables ICU_CFLAGS
-and ICU_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: configuring without Unicode support" >&5
+$as_echo "$as_me: WARNING: configuring without Unicode support" >&2;}
 
-Alternatively, you may set the environment variables ICU_CFLAGS
-and ICU_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
 else
 	ICU_CFLAGS=$pkg_cv_ICU_CFLAGS
 	ICU_LIBS=$pkg_cv_ICU_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_ICU 1" >>confdefs.h
+
+fi
 
 fi
 

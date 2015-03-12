@@ -47,7 +47,7 @@ DEFUN(make_bytevector, "make-bytevector", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	navi_obj obj;
 
-	if (scm_nr_args > 2)
+	if (unlikely(scm_nr_args > 2))
 		navi_arity_error(scm_env, navi_make_symbol("bytevector"));
 
 	obj = navi_make_bytevec(navi_fixnum(scm_arg1));
@@ -179,7 +179,7 @@ DEFUN(utf8_to_string, "utf8->string", 1, NAVI_PROC_VARIADIC, NAVI_BYTEVEC)
 	navi_check_copy(vec->size, start, end, scm_env);
 	size = end - start;
 	length = count_chars(vec);
-	if (length < 0)
+	if (unlikely(length < 0))
 		navi_error(scm_env, "invalid UTF-8");
 
 	str = navi_make_string(size, size, length);

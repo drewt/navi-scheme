@@ -50,7 +50,7 @@ static inline int peek_char(struct navi_port *port, navi_env env)
 static inline int ipeek_char(struct navi_port *port, navi_env env)
 {
 	int c = peek_char(port, env);
-	if (c == EOF)
+	if (unlikely(c == EOF))
 		unexpected_eof(env);
 	return c;
 }
@@ -66,7 +66,7 @@ static inline int read_char(struct navi_port *port, navi_env env)
 static inline int iread_char(struct navi_port *port, navi_env env)
 {
 	int c = read_char(port, env);
-	if (c == EOF)
+	if (unlikely(c == EOF))
 		unexpected_eof(env);
 	return c;
 }
@@ -82,7 +82,7 @@ static inline int peek_first_char(struct navi_port *port, navi_env env)
 static inline int ipeek_first_char(struct navi_port *port, navi_env env)
 {
 	int c = peek_first_char(port, env);
-	if (c == EOF)
+	if (unlikely(c == EOF))
 		unexpected_eof(env);
 	return c;
 }
@@ -90,7 +90,7 @@ static inline int ipeek_first_char(struct navi_port *port, navi_env env)
 static inline navi_obj navi_iread(struct navi_port *port, navi_env env)
 {
 	navi_obj expr = navi_read(port, env);
-	if (navi_is_eof(expr))
+	if (unlikely(navi_is_eof(expr)))
 		unexpected_eof(env);
 	return expr;
 }
@@ -107,7 +107,7 @@ static int isbdigit(int c)
 
 static int ispipe(int c, navi_env env)
 {
-	if (c == EOF)
+	if (unlikely(c == EOF))
 		unexpected_eof(env);
 	return c == '|';
 }
@@ -342,7 +342,7 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 			ch *= 16;
 			ch += hex_value(str[i], env);
 		}
-		if (!u_isdefined(ch))
+		if (unlikely(!u_isdefined(ch)))
 			navi_read_error(env, "invalid character literal",
 					navi_make_apair("value", navi_make_fixnum(ch)));
 		ret = navi_make_char(ch);
@@ -356,7 +356,7 @@ static navi_obj read_character(struct navi_port *port, navi_env env)
 		}
 	}
 
-	if (ret.n == 0)
+	if (unlikely(ret.n == 0))
 		navi_read_error(env, "unknown named character",
 				navi_make_apair("name", navi_cstr_to_string(str)));
 end:
@@ -394,7 +394,7 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 				break;
 			}
 			elmptr->cdr = navi_read(port, env);
-			if ((c = peek_first_char(port, env)) != ')')
+			if (unlikely((c = peek_first_char(port, env)) != ')'))
 				navi_read_error(env, "missing list terminator");
 			read_char(port, env);
 			return head.cdr;

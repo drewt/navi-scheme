@@ -12,7 +12,7 @@ static navi_env internal_env = {0};
 navi_obj navi_get_internal(navi_obj symbol, navi_env env)
 {
 	struct navi_binding *binding = navi_env_binding(internal_env.lexical, symbol);
-	if (!binding)
+	if (unlikely(!binding))
 		navi_error(env, "no internal binding",
 				navi_make_apair("symbol", symbol));
 

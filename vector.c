@@ -51,7 +51,7 @@ DEFUN(make_vector, "make-vector", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	navi_obj vec;
 
-	if (scm_nr_args > 2)
+	if (unlikely(scm_nr_args > 2))
 		navi_arity_error(scm_env, navi_make_symbol("make-vector"));
 
 	vec = navi_make_vector(navi_fixnum(scm_arg1));
@@ -71,7 +71,7 @@ DEFUN(vector_length, "vector-length", 1, 0, NAVI_VECTOR)
 
 DEFUN(vector_ref, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_FIXNUM)
 {
-	if (navi_fixnum(scm_arg2) >= (intptr_t) navi_vector(scm_arg1)->size)
+	if (unlikely(navi_fixnum(scm_arg2) >= (intptr_t) navi_vector(scm_arg1)->size))
 		navi_error(scm_env, "vector index out of bounds");
 
 	return navi_vector_ref(scm_arg1, navi_fixnum(scm_arg2));
@@ -79,7 +79,7 @@ DEFUN(vector_ref, "vector-ref", 2, 0, NAVI_VECTOR, NAVI_FIXNUM)
 
 DEFUN(vector_set, "vector-set!", 3, 0, NAVI_VECTOR, NAVI_FIXNUM, NAVI_ANY)
 {
-	if (navi_fixnum(scm_arg2) >= (intptr_t) navi_vector(scm_arg1)->size)
+	if (unlikely(navi_fixnum(scm_arg2) >= (intptr_t) navi_vector(scm_arg1)->size))
 		navi_error(scm_env, "vector index out of bounds");
 
 	navi_vector(scm_arg1)->data[navi_fixnum(scm_arg2)] = scm_arg3;

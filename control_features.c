@@ -186,7 +186,7 @@ static navi_obj error_object_irritants(navi_obj object)
 
 static navi_obj navi_type_check_error(navi_obj object, navi_env env)
 {
-	if (!is_error_object(object))
+	if (unlikely(!is_error_object(object)))
 		navi_error(env, "type error: not an error object");
 	return object;
 }

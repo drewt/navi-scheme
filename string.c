@@ -122,7 +122,7 @@ DEFUN(make_string, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	UChar32 ch = ' ';
 	intptr_t length = navi_fixnum(scm_arg1);
-	if (length < 0)
+	if (unlikely(length < 0))
 		navi_error(scm_env, "invalid length");
 	if (scm_nr_args > 1)
 		ch = navi_char_cast(scm_arg2, scm_env);
@@ -201,7 +201,7 @@ DEFUN(string_set, "string-set!", 3, 0, NAVI_STRING, NAVI_FIXNUM, NAVI_CHAR)
 	str = navi_string(scm_arg1);
 	k = navi_fixnum(scm_arg2);
 
-	if (k < 0 || k >= str->size)
+	if (unlikely(k < 0 || k >= str->size))
 		navi_error(scm_env, "string index out of bounds");
 
 	navi_string_set(str, k, navi_char(scm_arg3));

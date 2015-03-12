@@ -41,7 +41,7 @@ static bool lambda_valid(navi_obj lambda)
 
 DEFSPECIAL(lambda, "lambda", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
-	if (!lambda_valid(scm_args))
+	if (unlikely(!lambda_valid(scm_args)))
 		navi_error(scm_env, "invalid lambda list");
 	return navi_make_lambda(scm_arg1, navi_cdr(scm_args), scm_env);
 }
@@ -56,7 +56,7 @@ DEFSPECIAL(caselambda, "case-lambda", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 	vec = navi_vector(expr);
 
 	navi_list_for_each(cons, scm_args) {
-		if (!lambda_valid(navi_car(cons)))
+		if (unlikely(!lambda_valid(navi_car(cons))))
 			navi_error(scm_env, "invalid case-lambda list");
 		vec->data[i++] = navi_make_lambda(navi_caar(cons),
 				navi_cdar(cons), scm_env);
@@ -210,7 +210,7 @@ DEFSPECIAL(case, "case", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
 	navi_obj test, cons, inner;
 
-	if (!case_valid(scm_args))
+	if (unlikely(!case_valid(scm_args)))
 		navi_error(scm_env, "invalid case list");
 
 	test = navi_eval(scm_arg1, scm_env);
@@ -257,7 +257,7 @@ DEFSPECIAL(cond, "cond", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	navi_obj cons;
 
-	if (!cond_valid(scm_args))
+	if (unlikely(!cond_valid(scm_args)))
 		navi_error(scm_env, "invalid cond list");
 
 	navi_list_for_each(cons, scm_args) {
@@ -277,7 +277,7 @@ DEFSPECIAL(if, "if", 2, NAVI_PROC_VARIADIC, NAVI_ANY, NAVI_ANY)
 {
 	navi_obj test;
 
-	if (scm_nr_args > 3)
+	if (unlikely(scm_nr_args > 3))
 		navi_arity_error(scm_env, navi_make_symbol("if"));
 
 	test = navi_eval(scm_arg1, scm_env);
@@ -343,7 +343,7 @@ static unsigned check_apply(struct navi_procedure *proc, navi_obj args,
 		navi_env env)
 {
 	unsigned nr_args = navi_list_length(args);
-	if (!navi_arity_satisfied(proc, nr_args))
+	if (unlikely(!navi_arity_satisfied(proc, nr_args)))
 		navi_arity_error(env, proc->name);
 	if (proc->types) {
 		navi_obj cons;
@@ -424,7 +424,7 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	case NAVI_CASELAMBDA:
 		return caselambda_call(proc, navi_cdr(call), env);
 	case NAVI_PARAMETER:
-		if (!navi_is_nil(navi_cdr(call)))
+		if (unlikely(!navi_is_nil(navi_cdr(call))))
 			navi_arity_error(env, navi_car(proc));
 		return navi_parameter_lookup(proc, env);
 	default: break;
@@ -463,11 +463,11 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 		return navi_vector_ref(expr, 0);
 	case NAVI_SYMBOL:
 		val = navi_env_lookup(env.lexical, expr);
-		if (navi_type(val) == NAVI_VOID)
+		if (unlikely(navi_type(val) == NAVI_VOID))
 			navi_unbound_identifier_error(env, expr);
 		return val;
 	case NAVI_PAIR:
-		if (!navi_is_proper_list(expr))
+		if (unlikely(!navi_is_proper_list(expr)))
 			navi_error(env, "malformed expression",
 					navi_make_apair("expression", expr));
 		return eval_call(expr, env);

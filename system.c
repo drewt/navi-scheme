@@ -121,7 +121,7 @@ DEFUN(current_jiffy, "current-jiffy", 0, 0)
 {
 	static time_t first_second = 0;
 	struct timespec t;
-	if (gettime(&t) < 0)
+	if (unlikely(gettime(&t) < 0))
 		navi_error(scm_env, "unable to read system clock");
 
 	// start at (approximately) 0 to increase the range before overflow

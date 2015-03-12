@@ -32,7 +32,7 @@ _Noreturn void _navi_error(navi_env env, navi_obj type, const char *msg, ...);
 
 static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_env env)
 {
-	if (navi_type(obj) != type)
+	if (unlikely(navi_type(obj) != type))
 		navi_type_error(env, navi_typesym(type), navi_typesym(navi_type(obj)));
 	return obj;
 }
@@ -40,7 +40,7 @@ static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_e
 static inline intptr_t navi_type_check_range(navi_obj n, long min, long max, navi_env env)
 {
 	navi_type_check(n, NAVI_FIXNUM, env);
-	if (navi_fixnum(n) < min || navi_fixnum(n) >= max)
+	if (unlikely(navi_fixnum(n) < min || navi_fixnum(n) >= max))
 		navi_error(env, "argument not in allowed range",
 				navi_make_apair("min", navi_make_fixnum(min)),
 				navi_make_apair("max", navi_make_fixnum(max)),
@@ -50,7 +50,7 @@ static inline intptr_t navi_type_check_range(navi_obj n, long min, long max, nav
 
 static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
 {
-	if (!navi_is_list(list))
+	if (unlikely(!navi_is_list(list)))
 		navi_type_error(env, navi_make_symbol("list"),
 				navi_typesym(navi_type(list)));
 	return list;
@@ -58,7 +58,7 @@ static inline navi_obj navi_type_check_list(navi_obj list, navi_env env)
 
 static inline navi_obj navi_type_check_proper_list(navi_obj list, navi_env env)
 {
-	if (!navi_is_proper_list(list))
+	if (unlikely(!navi_is_proper_list(list)))
 		navi_error(env, "type error: not a proper list");
 	return list;
 }
@@ -66,7 +66,7 @@ static inline navi_obj navi_type_check_proper_list(navi_obj list, navi_env env)
 static inline navi_obj navi_check_arity(navi_obj proc, int arity, navi_env env)
 {
 	int actual = navi_procedure(proc)->arity;
-	if (!navi_arity_satisfied(navi_procedure(proc), arity))
+	if (unlikely(!navi_arity_satisfied(navi_procedure(proc), arity)))
 		navi_error(env, "wrong arity",
 				navi_make_apair("expected", navi_make_fixnum(arity)),
 				navi_make_apair("actual", navi_make_fixnum(actual)));
@@ -117,9 +117,10 @@ static inline unsigned char navi_type_check_byte(navi_obj byte, navi_env env)
 static inline void navi_check_copy_to(size_t to, long at, size_t from,
 		long start, long end, navi_env env)
 {
-	if (at < 0 || (size_t)at >= to || start < 0 || (size_t)start >= from
+	if (unlikely(at < 0 || (size_t)at >= to || start < 0
+			|| (size_t)start >= from
 			|| end < start || (size_t)end > from
-			|| to - at < (size_t)(end - start))
+			|| to - at < (size_t)(end - start)))
 		navi_error(env, "invalid indices for copy");
 }
 

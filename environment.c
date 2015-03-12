@@ -224,7 +224,7 @@ navi_env navi_get_global_env(navi_env env)
 /* Lexical Bindings {{{ */
 static navi_obj eval_defvar(navi_obj sym, navi_obj rest, navi_env env)
 {
-	if (navi_type(navi_cdr(rest)) != NAVI_NIL)
+	if (unlikely(navi_type(navi_cdr(rest)) != NAVI_NIL))
 		navi_arity_error(env, navi_make_symbol("define"));
 
 	navi_scope_set(env.lexical, sym, navi_eval(navi_car(rest), env));
@@ -235,7 +235,7 @@ static navi_obj eval_defun(navi_obj fundecl, navi_obj rest, navi_env env)
 {
 	navi_obj proc, name;
 
-	if (!navi_is_list_of(fundecl, NAVI_SYMBOL, true))
+	if (unlikely(!navi_is_list_of(fundecl, NAVI_SYMBOL, true)))
 		navi_error(env, "invalid defun list");
 
 	name = navi_car(fundecl);
@@ -268,13 +268,13 @@ static void extend_with_values(navi_obj vars, navi_obj vals, navi_obj which, nav
 	size_t i = 0;
 
 	if (navi_type(vals) != NAVI_VALUES) {
-		if (navi_list_length(vars) != 1)
+		if (unlikely(navi_list_length(vars) != 1))
 			navi_arity_error(env, which);
 		navi_scope_set(env.lexical, navi_car(vars), vals);
 		return;
 	}
 
-	if ((size_t)navi_list_length(vars) != navi_vector_length(vals))
+	if (unlikely((size_t)navi_list_length(vars) != navi_vector_length(vals)))
 		navi_arity_error(env, which);
 
 	navi_list_for_each(cons, vars) {
@@ -293,7 +293,7 @@ DEFSPECIAL(defmacro, "defmacro", 2, NAVI_PROC_VARIADIC, NAVI_PAIR, NAVI_ANY)
 {
 	navi_obj macro, name;
 
-	if (!navi_is_list_of(scm_arg1, NAVI_SYMBOL, true))
+	if (unlikely(!navi_is_list_of(scm_arg1, NAVI_SYMBOL, true)))
 		navi_error(scm_env, "invalid define-macro list");
 
 	name = navi_car(scm_arg1);
@@ -389,7 +389,7 @@ static navi_env letvals_extend_env(navi_obj def_list, navi_env env)
 		navi_obj result;                                             \
 		navi_env new_env;                                            \
 		                                                             \
-		if (!validate(scm_arg1))                                     \
+		if (unlikely(!validate(scm_arg1)))                           \
 			navi_error(scm_env, "invalid " scmname " list");     \
 		                                                             \
 		new_env = extend(scm_arg1, scm_env);                         \
@@ -408,7 +408,7 @@ DEFSPECIAL(set, "set!", 2, 0, NAVI_SYMBOL, NAVI_ANY)
 	navi_obj value;
 
 	binding = navi_env_binding(scm_env.lexical, scm_arg1);
-	if (binding == NULL)
+	if (unlikely(!binding))
 		navi_unbound_identifier_error(scm_env, scm_arg1);
 
 	value = navi_eval(scm_arg2, scm_env);
@@ -423,7 +423,7 @@ navi_obj navi_parameter_lookup(navi_obj param, navi_env env)
 {
 	struct navi_binding *binding;
 	binding = navi_env_binding(env.dynamic, navi_parameter_key(param));
-	if (!binding)
+	if (unlikely(!binding))
 		// XXX: this is a critical error and should never happen
 		navi_error(env, "unbound parameter object");
 	return binding->object;
@@ -458,7 +458,7 @@ navi_obj navi_make_named_parameter(navi_obj symbol, navi_obj value,
 DEFUN(make_parameter, "make-parameter", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
 	navi_obj converter = navi_make_void();
-	if (scm_nr_args > 2)
+	if (unlikely(scm_nr_args > 2))
 		navi_arity_error(scm_env, navi_make_symbol("make-parameter"));
 	if (scm_nr_args == 2)
 		converter = scm_arg2;
@@ -469,20 +469,20 @@ static navi_env parameterize_extend_env(navi_obj defs, navi_env env)
 {
 	navi_env new;
 	navi_obj cons, params = navi_make_nil();
-	if (!navi_is_pair(defs))
+	if (unlikely(!navi_is_pair(defs)))
 		navi_error(env, "invalid syntax in parameterize");
 
 	// first, eval the params and make sure they're actually parameters
 	navi_list_for_each(cons, defs) {
 		navi_obj param, def = navi_car(cons);
-		if (navi_list_length_safe(def) != 2)
+		if (unlikely(navi_list_length_safe(def) != 2))
 			navi_error(env, "invalid syntax in parameterize");
 		param = navi_eval(navi_car(def), env);
-		if (!navi_is_parameter(param))
+		if (unlikely(!navi_is_parameter(param)))
 			navi_error(env, "non-parameter in parameterize");
 		params = navi_make_pair(navi_make_pair(param, navi_cadr(def)), params);
 	}
-	if (!navi_is_nil(cons))
+	if (unlikely(!navi_is_nil(cons)))
 		navi_error(env, "not a proper list");
 
 	// then evaluate the values and bind them to the parameters
@@ -716,9 +716,9 @@ static bool declaration_valid(navi_obj declaration, navi_env env)
 static void check_library_syntax(navi_obj name, navi_obj declarations,
 		navi_env env)
 {
-	if (!navi_is_list_of(declarations, NAVI_PROPER_LIST, false))
+	if (unlikely(!navi_is_list_of(declarations, NAVI_PROPER_LIST, false)))
 		navi_error(env, "invalid library definition");
-	if (!libname_valid(name))
+	if (unlikely(!libname_valid(name)))
 		navi_error(env, "invalid library name",
 				navi_make_apair("name", name));
 
@@ -819,7 +819,7 @@ static struct navi_library *try_read_library(const char *path, navi_obj name,
 	if (navi_is_void(port))
 		return NULL;
 	defn = navi_read(navi_port(port), env);
-	if (!is_libdef(defn))
+	if (unlikely(!is_libdef(defn)))
 		navi_error(env, "error reading library",
 				navi_make_apair("library", name));
 	return define_library(navi_cdr(defn), env);
@@ -911,7 +911,7 @@ static void import_binding(struct navi_library *lib, navi_obj lib_name,
 		navi_obj export_name, navi_env env)
 {
 	struct navi_binding *binding = navi_env_binding(lib->env.lexical, lib_name);
-	if (!binding)
+	if (unlikely(!binding))
 		navi_error(env, "identifier not found in library",
 				navi_make_apair("identifier", lib_name));
 	navi_scope_set(env.lexical, export_name, binding->object);
@@ -939,7 +939,7 @@ static navi_env do_import_library(struct navi_library *lib, navi_env env)
 static navi_env import_library(navi_obj name, navi_env env)
 {
 	struct navi_library *lib = load_library(name, env);
-	if (!lib)
+	if (unlikely(!lib))
 		navi_error(env, "no such library",
 				navi_make_apair("library", name));
 	return do_import_library(lib, env);
@@ -1018,7 +1018,7 @@ static navi_env import_rename(navi_obj set, navi_obj renames, navi_env env)
 		navi_obj libname = navi_caar(cons);
 		navi_obj newname = navi_cadar(cons);
 		struct navi_binding *b = navi_scope_lookup(import_env.lexical, libname);
-		if (!b) {
+		if (unlikely(!b)) {
 			navi_env_unref(import_env);
 			navi_error(env, "unbound identifier",
 					navi_make_apair("identifier", libname));
@@ -1036,7 +1036,7 @@ static navi_env import_rename(navi_obj set, navi_obj renames, navi_env env)
 static navi_env get_import_env(navi_obj set, navi_env env)
 {
 	navi_obj sym, rest;
-	if (!import_valid(set))
+	if (unlikely(!import_valid(set)))
 		navi_error(env, "invalid import set");
 	sym = navi_car(set), rest = navi_cdr(set);
 	if (sym.p == navi_sym_only.p)
@@ -1062,7 +1062,7 @@ void navi_import(navi_obj imports, navi_env env)
 
 DEFSPECIAL(import, "import", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 {
-	if (!imports_valid(scm_args))
+	if (unlikely(!imports_valid(scm_args)))
 		navi_error(scm_env, "invalid import set");
 	navi_import(scm_args, scm_env);
 	return navi_unspecified();

@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 #include "navi.h"
 
 void navi_set_command_line(char *argv[], navi_env env)
@@ -101,12 +102,26 @@ DEFUN(current_second, "current-second", 0, 0)
 	return navi_make_fixnum(time(NULL));
 }
 
+static int gettime(struct timespec *tp)
+{
+#ifdef HAVE_CLOCK_GETTIME
+	return clock_gettime(CLOCK_REALTIME, tp);
+#else
+	struct timeval tv;
+	int rc = gettimeofday(&tv, NULL);
+	if (rc < 0)
+		return rc;
+	tp->tv_sec = tv.tv_sec;
+	tp->tv_nsec = tv.tv_usec * 1000;
+	return 0;
+#endif
+}
+
 DEFUN(current_jiffy, "current-jiffy", 0, 0)
 {
-	struct timespec t;
 	static time_t first_second = 0;
-
-	if (clock_gettime(CLOCK_REALTIME, &t) < 0)
+	struct timespec t;
+	if (gettime(&t) < 0)
 		navi_error(scm_env, "unable to read system clock");
 
 	// start at (approximately) 0 to increase the range before overflow

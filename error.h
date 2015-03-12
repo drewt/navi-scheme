@@ -37,7 +37,7 @@ static inline navi_obj navi_type_check(navi_obj obj, enum navi_type type, navi_e
 	return obj;
 }
 
-static inline intptr_t navi_type_check_range(navi_obj n, long min, long max, navi_env env)
+static inline long navi_type_check_range(navi_obj n, long min, long max, navi_env env)
 {
 	navi_type_check(n, NAVI_FIXNUM, env);
 	if (unlikely(navi_fixnum(n) < min || navi_fixnum(n) >= max))
@@ -79,7 +79,7 @@ static inline navi_obj navi_type_check_proc(navi_obj proc, int arity, navi_env e
 	return navi_check_arity(proc, arity, env);
 }
 
-static inline intptr_t navi_fixnum_cast(navi_obj num, navi_env env)
+static inline long navi_fixnum_cast(navi_obj num, navi_env env)
 {
 	return navi_fixnum(navi_type_check(num, NAVI_FIXNUM, env));
 }

@@ -7,7 +7,7 @@
 
 #include "unicode.h"
 
-bool navi_string_equal(navi_obj a, navi_obj b)
+int navi_string_equal(navi_obj a, navi_obj b)
 {
 	struct navi_string *sa = navi_string(a), *sb = navi_string(b);
 	if (sa->size != sb->size || sa->length != sb->length)
@@ -120,16 +120,16 @@ DEFUN(stringp, "string?", 1, 0, NAVI_ANY)
 DEFUN(make_string, "make-string", 1, NAVI_PROC_VARIADIC, NAVI_FIXNUM)
 {
 	UChar32 ch = ' ';
-	intptr_t length = navi_fixnum(scm_arg1);
+	long length = navi_fixnum(scm_arg1);
 	if (unlikely(length < 0))
 		navi_error(scm_env, "invalid length");
 	if (scm_nr_args > 1)
 		ch = navi_char_cast(scm_arg2, scm_env);
 
-	intptr_t size = length * u8_length(ch);
+	long size = length * u8_length(ch);
 	navi_obj obj = navi_make_string(size, size, length);
 	struct navi_string *str = navi_string(obj);
-	for (intptr_t i = 0; i < size;) {
+	for (long i = 0; i < size;) {
 		u8_append(str->data, i, size, ch);
 	}
 	return obj;
@@ -194,7 +194,7 @@ void navi_string_set(struct navi_string *str, long k, UChar32 new_ch)
 
 DEFUN(string_set, "string-set!", 3, 0, NAVI_STRING, NAVI_FIXNUM, NAVI_CHAR)
 {
-	intptr_t k;
+	long k;
 	struct navi_string *str;
 
 	str = navi_string(scm_arg1);
@@ -457,7 +457,7 @@ DEFUN(string_copy_to, "string-copy!", 3, NAVI_PROC_VARIADIC,
 		NAVI_STRING, NAVI_FIXNUM, NAVI_STRING)
 {
 	navi_obj to, from;
-	intptr_t at, start, end;
+	long at, start, end;
 
 	to = scm_arg1;
 	at = navi_fixnum(scm_arg2);

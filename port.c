@@ -85,7 +85,7 @@ navi_obj navi_make_file_output_port(FILE *file)
 	return navi_make_output_port(stdio_write, NULL, stdio_close, file);
 }
 
-static int32_t string_read(struct navi_port *port, navi_env env)
+static long string_read(struct navi_port *port, navi_env env)
 {
 	UChar32 ch;
 	struct navi_string *str = navi_string(port->expr);
@@ -95,7 +95,7 @@ static int32_t string_read(struct navi_port *port, navi_env env)
 	return ch;
 }
 
-static void string_write(int32_t ch, struct navi_port *port, navi_env env)
+static void string_write(long ch, struct navi_port *port, navi_env env)
 {
 	struct navi_string *str = navi_string(port->expr);
 
@@ -126,7 +126,7 @@ static void navi_port_buffer_byte(struct navi_port *port, navi_env env)
 	port->buffer = port->read_u8(port, env);
 }
 
-static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env env)
+static long navi_port_peek_c_byte(struct navi_port *port, navi_env env)
 {
 	check_can_read_u8(port, env);
 	if (port->flags & GOT_EOF)
@@ -140,11 +140,11 @@ static int32_t navi_port_peek_c_byte(struct navi_port *port, navi_env env)
 
 navi_obj navi_port_peek_byte(struct navi_port *port, navi_env env)
 {
-	int32_t b = navi_port_peek_c_byte(port, env);
+	long b = navi_port_peek_c_byte(port, env);
 	return b == EOF ? navi_make_eof() : navi_make_fixnum(b);
 }
 
-static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env env)
+static long navi_port_read_c_byte(struct navi_port *port, navi_env env)
 {
 	check_can_read_u8(port, env);
 	if (port->flags & GOT_EOF)
@@ -158,7 +158,7 @@ static int32_t navi_port_read_c_byte(struct navi_port *port, navi_env env)
 
 navi_obj navi_port_read_byte(struct navi_port *port, navi_env env)
 {
-	int32_t b = navi_port_read_c_byte(port, env);
+	long b = navi_port_read_c_byte(port, env);
 	if (b == EOF) {
 		port->flags |= GOT_EOF;
 		return navi_make_eof();
@@ -276,7 +276,7 @@ void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env env
 	port->write_u8(ch, port, env);
 }
 
-void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env env)
+void navi_port_write_char(long ch, struct navi_port *port, navi_env env)
 {
 	uint8_t buf[5];
 	int size;

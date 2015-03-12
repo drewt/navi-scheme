@@ -304,7 +304,7 @@ static const struct {
 	{ NULL,        0,     }
 };
 
-const char *navi_char_name(int32_t value)
+const char *navi_char_name(long value)
 {
 	for (int i = 0; named_chars[i].name; i++) {
 		if (named_chars[i].value == value)

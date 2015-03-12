@@ -96,8 +96,8 @@ struct navi_pair {
 struct navi_port {
 	int (*read_u8)(struct navi_port*, navi_env);
 	void (*write_u8)(uint8_t, struct navi_port*, navi_env);
-	int32_t (*read_char)(struct navi_port*, navi_env);
-	void (*write_char)(int32_t, struct navi_port*, navi_env);
+	long (*read_char)(struct navi_port*, navi_env);
+	void (*write_char)(long, struct navi_port*, navi_env);
 	void (*close_in)(struct navi_port*, navi_env);
 	void (*close_out)(struct navi_port*, navi_env);
 	unsigned long flags;
@@ -638,6 +638,13 @@ static inline bool navi_arity_satisfied(struct navi_procedure *p, unsigned n)
 }
 /* Procedures }}} */
 /* Pairs/Lists {{{ */
+navi_obj navi_vlist(navi_obj first, va_list ap);
+navi_obj _navi_list(navi_obj first, ...);
+#define navi_list(...) _navi_list(__VA_ARGS__, navi_make_void())
+int navi_list_length_safe(navi_obj list);
+bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
+navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
+
 #undef navi_set_car
 static inline void navi_set_car(navi_obj cons, navi_obj obj)
 {
@@ -649,11 +656,6 @@ static inline void navi_set_cdr(navi_obj cons, navi_obj obj)
 {
 	navi_pair(cons)->cdr = obj;
 }
-
-navi_obj navi_vlist(navi_obj first, va_list ap);
-int navi_list_length_safe(navi_obj list);
-bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
-navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 #undef navi_last_cons
 static inline navi_obj navi_last_cons(navi_obj list)
@@ -669,8 +671,6 @@ static inline bool navi_is_last_pair(navi_obj pair)
 	return navi_type(navi_cdr(pair)) == NAVI_NIL;
 }
 /* Lists }}} */
-/* Characters {{{ */
-/* Characters }}} */
 /* Ports {{{ */
 #undef navi_display
 static inline void navi_display(navi_obj obj, navi_env env)
@@ -709,8 +709,6 @@ static inline bool navi_is_output_port(navi_obj obj)
 }
 
 /* Ports }}} */
-/* Strings {{{ */
-/* Strings }}} */
 /* Vectors {{{ */
 navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env);
 
@@ -745,8 +743,6 @@ static inline size_t navi_bytevec_length(navi_obj vec)
 #define navi_parameter_key(prm) navi_car(prm)
 #define navi_parameter_converter(prm) navi_cdr(prm)
 /* Parameters }}} */
-/* Conversion {{{ */
-/* Conversion }}} */
 /* Misc {{{ */
 #undef navi_is_true
 static inline bool navi_is_true(navi_obj expr)

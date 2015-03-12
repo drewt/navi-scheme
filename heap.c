@@ -282,8 +282,8 @@ navi_obj navi_make_empty_pair(void)
 navi_obj navi_make_port(
 		int(*read_u8)(struct navi_port*, navi_env),
 		void(*write_u8)(uint8_t,struct navi_port*, navi_env),
-		int32_t(*read_char)(struct navi_port*, navi_env),
-		void(*write_char)(int32_t, struct navi_port*, navi_env),
+		long(*read_char)(struct navi_port*, navi_env),
+		void(*write_char)(long, struct navi_port*, navi_env),
 		void(*close_in)(struct navi_port*, navi_env),
 		void(*close_out)(struct navi_port*, navi_env),
 		void *specific)
@@ -446,7 +446,7 @@ navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env)
 	navi_die("navi_from_spec: unknown or unsupported type");
 }
 
-bool navi_eqvp(navi_obj fst, navi_obj snd)
+int navi_eqvp(navi_obj fst, navi_obj snd)
 {
 	if (navi_type(fst) != navi_type(snd))
 		return false;
@@ -533,7 +533,7 @@ static bool bytevec_equal(navi_obj fst, navi_obj snd)
 }
 
 // FIXME: doesn't terminate on circular data structures
-bool navi_equalp(navi_obj fst, navi_obj snd)
+int navi_equalp(navi_obj fst, navi_obj snd)
 {
 	if (navi_type(fst) != navi_type(snd))
 		return false;

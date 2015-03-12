@@ -8,6 +8,8 @@
 #ifndef _NAVI_EXTERN_H_
 #define _NAVI_EXTERN_H_
 
+#include <stdio.h>
+
 #define NAVI_IMMEDIATE_TAG_BITS 0x4
 #define NAVI_IMMEDIATE_TAG_MASK 0xF
 #define NAVI_VOID_TAG 0x0L
@@ -30,7 +32,7 @@ struct navi_escape;
 struct navi_object;
 
 typedef union {
-	intptr_t n;
+	long n;
 	struct navi_object *p;
 	const struct navi_spec *s;
 	void *v;
@@ -64,14 +66,14 @@ enum navi_type {
 	NAVI_ESCAPE,
 	NAVI_PARAMETER,
 	NAVI_BOUNCE,
-	NAVI_ENVIRONMENT,
+	NAVI_ENVIRONMENT
 };
 
 enum {
 	NAVI_LIST        = -1,
 	NAVI_PROPER_LIST = -2,
 	NAVI_BYTE        = -3,
-	NAVI_ANY         = -4,
+	NAVI_ANY         = -4
 };
 
 void navi_init(void);
@@ -123,8 +125,8 @@ navi_obj navi_make_empty_pair(void);
 navi_obj navi_make_port(
 		int(*read_u8)(struct navi_port*, navi_env),
 		void(*write_u8)(unsigned char,struct navi_port*, navi_env),
-		int32_t(*read_char)(struct navi_port*, navi_env),
-		void(*write_char)(int32_t, struct navi_port*, navi_env),
+		long(*read_char)(struct navi_port*, navi_env),
+		void(*write_char)(long, struct navi_port*, navi_env),
 		void(*close_in)(struct navi_port*, navi_env),
 		void(*close_out)(struct navi_port*, navi_env),
 		void *specific);
@@ -247,8 +249,6 @@ int navi_extern_is_list(navi_obj obj);
 int navi_is_proper_list(navi_obj list);
 /* Types }}} */
 /* Pairs/Lists {{{ */
-navi_obj _navi_list(navi_obj first, ...);
-#define navi_list(...) _navi_list(__VA_ARGS__, navi_make_void())
 int navi_list_length(navi_obj list);
 navi_obj navi_list_append_ip(navi_obj a, navi_obj b);
 navi_obj navi_list_tail(navi_obj list, long k);
@@ -280,7 +280,7 @@ void navi_extern_set_cdr(navi_obj cons, navi_obj obj);
 /* Characters {{{ */
 navi_obj navi_char_upcase(navi_obj ch);
 navi_obj navi_char_downcase(navi_obj ch);
-const char *navi_char_name(int32_t value);
+const char *navi_char_name(long value);
 /* Characters }}} */
 /* Ports {{{ */
 int navi_port_is_fold_case(struct navi_port *port);
@@ -292,7 +292,7 @@ navi_obj navi_port_peek_byte(struct navi_port *port, navi_env env);
 navi_obj navi_port_read_char(struct navi_port *port, navi_env env);
 navi_obj navi_port_peek_char(struct navi_port *port, navi_env env);
 void navi_port_write_byte(unsigned char ch, struct navi_port *port, navi_env env);
-void navi_port_write_char(int32_t ch, struct navi_port *port, navi_env env);
+void navi_port_write_char(long ch, struct navi_port *port, navi_env env);
 void navi_port_write_cstr(const char *str, struct navi_port *port, navi_env env);
 navi_obj navi_current_input_port(navi_env env);
 navi_obj navi_current_output_port(navi_env env);
@@ -324,7 +324,7 @@ int navi_extern_is_output_port(navi_obj obj);
 /* Ports }}} */
 /* Strings {{{ */
 navi_obj navi_string_copy(navi_obj str);
-bool navi_string_equal(navi_obj a, navi_obj b);
+int navi_string_equal(navi_obj a, navi_obj b);
 /* Vectors {{{ */
 navi_obj navi_extern_vector_ref(navi_obj vec, size_t i);
 #define navi_vector_ref(vec, i) navi_extern_vector_ref(vec, i)
@@ -347,8 +347,8 @@ navi_obj navi_list_to_bytevec(navi_obj list, navi_env env);
 char *navi_string_to_cstr(navi_obj string);
 /* Conversion }}} */
 /* Misc {{{ */
-bool navi_eqvp(navi_obj fst, navi_obj snd);
-bool navi_equalp(navi_obj fst, navi_obj snd);
+int navi_eqvp(navi_obj fst, navi_obj snd);
+int navi_equalp(navi_obj fst, navi_obj snd);
 
 #define navi_eqp(fst, snd) ((fst).p == (snd).p)
 int navi_extern_is_true(navi_obj obj);

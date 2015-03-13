@@ -20,9 +20,13 @@ ARFLAGS   = rcs
 LD        = $(CC)
 LDFLAGS   = @ICU_LIBS@
 
-INSTALL      = @INSTALL@
-INSTALL_DATA = @INSTALL_DATA@
-MKDIR_P      = @MKDIR_P@
+INSTALL         = @INSTALL@
+INSTALL_DATA    = @INSTALL_DATA@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+MKDIR_P         = @MKDIR_P@
+
+distname  = @PACKAGE_TARNAME@-$(VERSION)
+distfiles = $(shell git ls-tree -r master --name-only)
 
 libobjects  = arithmetic.o bytevector.o char.o control_features.o display.o \
 	      environment.o eval.o extern.o heap.o list.o port.o read.o \
@@ -33,10 +37,7 @@ objects     = $(libobjects) $(testobjects) navii.o
 binary      = navii
 static_lib  = libnavi.a
 clean       = $(objects) $(binary) $(static_lib)
-distclean   = config.h config.log config.status makefile
-
-distname  = @PACKAGE_TARNAME@-$(VERSION)
-distfiles = $(shell git ls-tree -r master --name-only)
+distclean   = config.h config.log config.status makefile $(distname).tar.gz
 
 all: $(binary)
 
@@ -57,27 +58,38 @@ $(distname).tar.gz: $(distfiles)
 
 dist: $(distname).tar.gz
 
-install: all
-	$(call cmd,mkdir_p,$(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/base.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/case-lambda.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/char.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/lazy.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/process-context.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/read.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/time.scm $(datadir)/navi/scheme)
-	$(call cmd,install_data,scheme/write.scm $(datadir)/navi/scheme)
-	$(call cmd,install,$(binary) $(bindir))
+installdirs:
+	$(call cmd,mkdir_p,$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,mkdir_p,$(DESTDIR)$(bindir))
+
+install: installdirs all
+	$(call cmd,install_data,scheme/base.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/case-lambda.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/char.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/lazy.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/process-context.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/read.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/time.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,scheme/write.scm \
+				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_program,$(binary) $(DESTDIR)$(bindir))
 
 uninstall:
-	rm -f $(datadir)/navi/scheme/base.scm
-	rm -f $(datadir)/navi/scheme/case-lambda.scm
-	rm -f $(datadir)/navi/scheme/char.scm
-	rm -f $(datadir)/navi/scheme/lazy.scm
-	rm -f $(datadir)/navi/scheme/process-context.scm
-	rm -f $(datadir)/navi/scheme/read.scm
-	rm -f $(datadir)/navi/scheme/time.scm
-	rm -f $(datadir)/navi/scheme/write.scm
-	rmdir $(datadir)/navi/scheme
-	rmdir $(datadir)/navi
-	rm -f $(bindir)/$(binary)
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/base.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/case-lambda.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/char.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/lazy.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/process-context.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/read.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/time.scm
+	rm -f $(DESTDIR)$(datadir)/navi/scheme/write.scm
+	rmdir $(DESTDIR)$(datadir)/navi/scheme
+	rmdir $(DESTDIR)$(datadir)/navi
+	rm -f $(DESTDIR)$(bindir)/$(binary)

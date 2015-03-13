@@ -83,7 +83,10 @@ quiet_cmd_mkdir_p = MKDIR   $(1)
 quiet_cmd_install = INSTALL $(1)
       cmd_install = $(INSTALL) $(1)
 
-quiet_cmd_install_data = INSTALL $(1)
+quiet_cmd_install_program = INSTALL $(word $(words $(1)), $(1))/$(notdir $(word 1, $(1)))
+      cmd_install_program = $(INSTALL_PROGRAM) $(1)
+
+quiet_cmd_install_data = INSTALL $(word $(words $(1)), $(1))/$(notdir $(word 1, $(1)))
       cmd_install_data = $(INSTALL_DATA) $(1)
 
 # cmd macro (taken from kbuild)

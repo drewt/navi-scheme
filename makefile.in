@@ -35,6 +35,9 @@ static_lib  = libnavi.a
 clean       = $(objects) $(binary) $(static_lib)
 distclean   = config.h config.log config.status makefile
 
+distname  = @PACKAGE_TARNAME@-$(VERSION)
+distfiles = $(shell git ls-tree -r master --name-only)
+
 all: $(binary)
 
 include rules.mk
@@ -48,6 +51,11 @@ $(binary): navii.o $(static_lib)
 check: $(testobjects) $(static_lib)
 	$(call cmd,ld,-lcheck)
 	@./check
+
+$(distname).tar.gz: $(distfiles)
+	$(call cmd,tar,$(distname))
+
+dist: $(distname).tar.gz
 
 install: all
 	$(call cmd,mkdir_p,$(datadir)/navi/scheme)

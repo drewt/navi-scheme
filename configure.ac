@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([NAVI Scheme], [v0.1])
+AC_INIT([NAVI Scheme], [0.1])
 AC_CONFIG_SRCDIR([navii.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])

@@ -72,6 +72,11 @@ quiet_cmd_ttman   = MAN     $@
 quiet_cmd_groff   = GROFF   $@
       cmd_groff   = groff -man -Tascii $< | col -bx > $@
 
+quiet_cmd_tar     = TAR     $@
+      cmd_tar     = ln -s . $(1) && \
+		    tar -c $(addprefix $(1)/,$^) | gzip > $(1).tar.gz && \
+		    rm $(1)
+
 quiet_cmd_mkdir_p = MKDIR   $(1)
       cmd_mkdir_p = $(MKDIR_P) $(1)
 

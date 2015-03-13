@@ -4,7 +4,7 @@
 *.d
 
 config.h
-makefile
+Makefile
 config.log
 config.status
 autom4te.cache

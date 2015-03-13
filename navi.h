@@ -34,7 +34,6 @@ struct navi_object;
 typedef union {
 	long n;
 	struct navi_object *p;
-	const struct navi_spec *s;
 	void *v;
 } navi_obj;
 

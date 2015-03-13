@@ -15,7 +15,7 @@ navi_obj navi_get_internal(navi_obj symbol, navi_env env)
 				navi_make_apair("symbol", symbol));
 
 	// make sure functions/etc. are bound in *global* environment
-	return navi_from_spec(binding->object.s, navi_get_global_env(env));
+	return navi_from_spec(binding->object.v, navi_get_global_env(env));
 }
 
 /*
@@ -267,7 +267,7 @@ void navi_internal_init(void)
 	internal_env = navi_empty_environment();
 	for (int i = 0; builtin_objects[i]; i++) {
 		navi_obj symbol = navi_make_symbol(builtin_objects[i]->ident);
-		navi_obj object = (navi_obj) { .s = builtin_objects[i] };
+		navi_obj object = (navi_obj) { .v = (void*) builtin_objects[i] };
 		navi_scope_set(internal_env.lexical, symbol, object);
 	}
 }

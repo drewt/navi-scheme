@@ -6,6 +6,7 @@ datarootdir = @datarootdir@
 bindir      = @bindir@
 datadir     = @datadir@
 mandir      = @mandir@
+man1dir     = $(mandir)/man1
 
 _ver0   = $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
 _ver1   = @PACKAGE_VERSION@
@@ -65,6 +66,7 @@ dist: $(distname).tar.gz
 
 installdirs:
 	$(call cmd,mkdir_p,$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,mkdir_p,$(DESTDIR)$(man1dir))
 	$(call cmd,mkdir_p,$(DESTDIR)$(bindir))
 
 install: installdirs all
@@ -84,6 +86,7 @@ install: installdirs all
 				$(DESTDIR)$(datadir)/navi/scheme)
 	$(call cmd,install_data,scheme/write.scm \
 				$(DESTDIR)$(datadir)/navi/scheme)
+	$(call cmd,install_data,doc/navii.1 $(DESTDIR)$(man1dir))
 	$(call cmd,install_program,$(binary) $(DESTDIR)$(bindir))
 
 uninstall:

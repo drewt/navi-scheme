@@ -1,0 +1,54 @@
+.\" Copyright (c) 2015 Drew Thoreson
+.\"
+.\" %%%LICENSE_START(VERBATIM)
+.\" Permission is granted to make and distribute verbatim copies of this
+.\" manual provided the copyright notice and this permission notice are
+.\" preserved on all copies.
+.\"
+.\" Permission is granted to copy and distribute modified versions of this
+.\" manual under the conditions for verbatim copying, provided that the
+.\" entire resulting derived work is distributed under the terms of a
+.\" permission notice identical to this one.
+.\"
+.\" This manual page may be incorrect or out-of-date.  The author(s) assume
+.\" no responsibility for errors or omissions, or for damages resulting from
+.\" the use of the information contained herein.  The author(s) may not
+.\" have taken the same level of care in the production of this manual,
+.\" which is licensed free of charge, as they might when working
+.\" professionally.
+.\"
+.\" Formatted or processed versions of this manual, if unaccompanied by
+.\" the source, must acknowledge the copyright and authors of this work.
+.\" %%%LICENSE_END
+.\"
+.TH NAVII 1 13/03/2015 navii "navii Manual"
+.nh
+.SH NAME
+navii \- NAVI Scheme Interpreter
+.SH SYNOPSIS
+navii [\fBOPTION\fR ...] [\fBFILENAME\fR [\fBARGUMENT\fR ...]]
+.SH DESCRIPTION
+navii is an interpreter for the Scheme programming language.
+.SH OPTIONS
+\fB\-L, \-\-lib-path\fR \fIDIRECTORY\fR
+.RS
+Add \fIDIRECTORY\fR to the library search path.  This is the list of
+directories that \fBnavii\fR will search for libraries if an import cannot be
+resolved to a user-defined library.  If this option is given multiple times,
+each \fIDIRECTORY\fR will be searched in the order given.
+.RE
+
+\fB\-h, \-\-help\fR
+.RS
+Print a help message and exit.
+.RE
+
+\fB\-\-version\fR
+.RS
+Print version and exit.
+.RE
+.SH BUGS
+You can submit bugs to the issue tracker on Github
+(https://github.com/drewt/navi-scheme/issues).
+.SH AUTHOR
+This program was written by Drew Thoreson <drew@lambdati.me>.

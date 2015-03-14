@@ -5,11 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-static navi_env internal_env = {0};
+static struct navi_scope *internal_env = NULL;
 
 navi_obj navi_get_internal(navi_obj symbol, navi_env env)
 {
-	struct navi_binding *binding = navi_env_binding(internal_env.lexical, symbol);
+	struct navi_binding *binding = navi_env_binding(internal_env, symbol);
 	if (unlikely(!binding))
 		navi_error(env, "no internal binding",
 				navi_make_apair("symbol", symbol));
@@ -264,10 +264,10 @@ static const struct navi_spec *builtin_objects[] = {
 
 void navi_internal_init(void)
 {
-	internal_env = navi_empty_environment();
+	internal_env = _navi_make_scope();
 	for (int i = 0; builtin_objects[i]; i++) {
 		navi_obj symbol = navi_make_symbol(builtin_objects[i]->ident);
 		navi_obj object = (navi_obj) { .v = (void*) builtin_objects[i] };
-		navi_scope_set(internal_env.lexical, symbol, object);
+		navi_scope_set(internal_env, symbol, object);
 	}
 }

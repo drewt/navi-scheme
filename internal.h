@@ -168,6 +168,8 @@ void navi_internal_init(void);
 
 /* Memory Management {{{ */
 void navi_free(struct navi_object *obj);
+struct navi_scope *_navi_make_scope(void);
+struct navi_scope *navi_make_scope(void);
 void navi_scope_free(struct navi_scope *scope);
 
 #undef _navi_scope_unref

@@ -61,20 +61,26 @@ struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
 	return NULL;
 }
 
-static inline struct navi_scope *make_scope(void)
+struct navi_scope *_navi_make_scope(void)
 {
-	struct navi_scope *scope = navi_critical_malloc(sizeof(struct navi_scope));
-	for (unsigned i = 0; i < NAVI_ENV_HT_SIZE; i++)
-		NAVI_LIST_INIT(&scope->bindings[i]);
+	struct navi_scope *s = navi_critical_malloc(sizeof(struct navi_scope));
+	for (unsigned int i = 0; i < NAVI_ENV_HT_SIZE; i++)
+		NAVI_LIST_INIT(&s->bindings[i]);
+	s->next = NULL;
+	return s;
+}
+
+struct navi_scope *navi_make_scope(void)
+{
+	struct navi_scope *scope = _navi_make_scope();
 	NAVI_LIST_INSERT_HEAD(&active_environments, scope, link);
 	scope->refs = 1;
-	scope->next = NULL;
 	return scope;
 }
 
 navi_env navi_env_new_scope(navi_env env)
 {
-	struct navi_scope *scope = make_scope();
+	struct navi_scope *scope = navi_make_scope();
 	navi_env_ref(env);
 	scope->next = env.lexical;
 	return (navi_env) { .lexical = scope, .dynamic = env.dynamic };
@@ -82,7 +88,7 @@ navi_env navi_env_new_scope(navi_env env)
 
 navi_env navi_dynamic_env_new_scope(navi_env env)
 {
-	struct navi_scope *scope = make_scope();
+	struct navi_scope *scope = navi_make_scope();
 	navi_env_ref(env);
 	scope->next = env.dynamic;
 	return (navi_env) { .lexical = env.lexical, .dynamic = scope };
@@ -159,7 +165,10 @@ static void navi_import_all(struct navi_scope *dst, struct navi_scope *src)
 
 navi_env _navi_empty_environment(void)
 {
-	return (navi_env) { .lexical = make_scope(), .dynamic = make_scope() };
+	return (navi_env) {
+		.lexical = navi_make_scope(),
+		.dynamic = navi_make_scope()
+	};
 }
 
 DEFLIST(lib_search_paths, "#lib-search-paths",
@@ -185,7 +194,7 @@ navi_env navi_empty_environment(void)
 static navi_env new_lexical_environment(navi_env env)
 {
 	return (navi_env) {
-		.lexical = make_scope(),
+		.lexical = navi_make_scope(),
 		.dynamic = _navi_scope_ref(env.dynamic)
 	};
 }

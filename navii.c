@@ -131,12 +131,14 @@ static _Noreturn void repl(struct navi_options *options)
 	exit(0);
 }
 
-static void program(struct navi_options *options, struct navi_port *p)
+static void program(struct navi_options *options, navi_obj port)
 {
 	navi_env env = options->env;
+	struct navi_guard *guard = navi_gc_guard(port, env);
 	navi_set_command_line(options->argv, env);
-	while (!navi_is_eof(navi_eval(navi_read(p, env), env)))
+	while (!navi_is_eof(navi_eval(navi_read(navi_port(port), env), env)))
 		/* nothing */;
+	navi_gc_unguard(guard);
 }
 
 int main(int argc, char *argv[])
@@ -156,7 +158,7 @@ int main(int argc, char *argv[])
 			navi_obj filename = navi_cstr_to_string(options.filename);
 			port = navi_open_input_file(filename, options.env);
 		}
-		program(&options, navi_port(port));
+		program(&options, port);
 	} else {
 		repl(&options);
 	}

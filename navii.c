@@ -133,7 +133,7 @@ static _Noreturn void repl(struct navi_options *options)
 
 static void program(struct navi_options *options, struct navi_port *p)
 {
-	navi_env env = navi_empty_environment();
+	navi_env env = options->env;
 	navi_set_command_line(options->argv, env);
 	while (!navi_is_eof(navi_eval(navi_read(p, env), env)))
 		/* nothing */;

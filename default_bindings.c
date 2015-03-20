@@ -14,7 +14,6 @@ navi_obj navi_get_internal(navi_obj symbol, navi_env env)
 		navi_error(env, "no internal binding",
 				navi_make_apair("symbol", symbol));
 
-	// make sure functions/etc. are bound in *global* environment
 	return navi_from_spec(binding->object.v, navi_get_global_env(env));
 }
 
@@ -256,9 +255,12 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(display),
 	DECL_SPEC(newline),
 
+	DECL_SPEC(gensym),
+	DECL_SPEC(env_list),
 	DECL_SPEC(env_count),
 	DECL_SPEC(gc_collect),
 	DECL_SPEC(gc_count),
+	DECL_SPEC(gc_stats),
 	NULL
 };
 
@@ -266,7 +268,7 @@ void navi_internal_init(void)
 {
 	internal_env = _navi_make_scope();
 	for (int i = 0; builtin_objects[i]; i++) {
-		navi_obj symbol = navi_make_symbol(builtin_objects[i]->ident);
+		navi_obj symbol = navi_gc_protect(navi_make_symbol(builtin_objects[i]->ident));
 		navi_obj object = (navi_obj) { .v = (void*) builtin_objects[i] };
 		navi_scope_set(internal_env, symbol, object);
 	}

@@ -73,25 +73,40 @@ navi_obj navi_call_escape(navi_obj escape, navi_obj arg, navi_env env)
 	esc->arg = arg;
 
 	// TODO: swap dynamic environment
+	// FIXME: the below *should* work (to prevent reference leaks), but
+	//        causes a segfault after two escapes are called.  Likely the
+	//        second call erroneously causes a reference count to fall to
+	//        zero.  Further investigation required.  For now, call/ec
+	//        leaks memory.
+	//navi_env_unref(env);
 	longjmp(esc->state, 1);
 }
 
 DEFUN(call_ec, "call/ec", 1, 0, NAVI_PROCEDURE)
 {
-	navi_obj cont;
+	navi_obj cont, result;
 	struct navi_escape *escape;
 	struct navi_procedure *proc = navi_procedure(scm_arg1);
+	struct navi_guard *guard = NULL;
 
 	navi_check_arity(scm_arg1, 1, scm_env);
 
 	cont = navi_make_escape();
+	guard = navi_gc_guard(cont, scm_env);
 	escape = navi_escape(cont);
 	escape->env = scm_env;
 
-	if (setjmp(escape->state))
-		return escape->arg;
+	navi_env_ref(scm_env);
+	if (setjmp(escape->state)) {
+		result = escape->arg;
+		goto end;
+	}
 
-	return navi_force_tail(navi_apply(proc, navi_make_pair(cont, navi_make_nil()), scm_env), scm_env);
+	result = navi_force_tail(navi_apply(proc, navi_make_pair(cont, navi_make_nil()), scm_env), scm_env);
+end:
+	navi_gc_unguard(guard);
+	navi_env_unref(scm_env);
+	return result;
 }
 
 DEFUN(values, "values", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
@@ -139,15 +154,18 @@ DEFUN(raise_continuable, "raise-continuable", 1, 0, NAVI_ANY)
 {
 	navi_obj handler, result;
 	struct navi_procedure *proc;
+	struct navi_guard *guard;
 
 	handler = navi_env_lookup(scm_env.dynamic, navi_sym_current_exn);
 	if (!navi_is_procedure(handler))
 		unhandled_exception(scm_args, scm_env);
 
+	guard = navi_gc_guard(handler, scm_env);
 	proc = navi_procedure(handler);
 	navi_scope_unset(scm_env.dynamic, navi_sym_current_exn);
 	result = navi_apply(proc, scm_args, scm_env);
 	navi_scope_set(scm_env.dynamic, navi_sym_current_exn, handler);
+	navi_gc_unguard(guard);
 	return result;
 }
 

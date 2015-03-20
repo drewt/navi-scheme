@@ -5,19 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-static navi_obj _eval(navi_obj expr, navi_env env);
-
-static inline bool can_bounce(navi_obj obj)
+static inline navi_obj eval_tail(navi_obj tail, navi_env env)
 {
-	enum navi_type type = navi_type(obj);
-	return (type == NAVI_SYMBOL || type == NAVI_PAIR);
-}
-
-static navi_obj eval_tail(navi_obj tail, navi_env env)
-{
-	if (!can_bounce(tail))
-		return tail;
-
 	return navi_make_bounce(tail, env);
 }
 
@@ -82,18 +71,23 @@ navi_obj navi_load(navi_obj filename, bool ci, navi_env in_env, navi_env out_env
 	// FIXME: need to protect unbound object from gc somehow...
 	navi_obj port_obj = navi_open_input_file(filename, out_env);
 	struct navi_port *port = navi_port(port_obj);
+	struct navi_guard *guard = navi_gc_guard(port_obj, out_env);
 
 	navi_port_set_fold_case(port, ci);
 	// read/eval until EOF with 1 expr lookahead for tail call
 	fst = navi_read(port, in_env);
 	// special case: if the file is empty, return void and not #!eof
-	if (navi_is_eof(fst))
+	if (navi_is_eof(fst)) {
+		navi_close_input_port(port, out_env);
+		navi_gc_unguard(guard);
 		return navi_make_void();
+	}
 	while (!navi_is_eof((snd = navi_read(port, in_env)))) {
 		navi_eval(fst, in_env);
 		fst = snd;
 	}
 	navi_close_input_port(port, out_env);
+	navi_gc_unguard(guard);
 	return eval_tail(fst, in_env);
 }
 
@@ -196,7 +190,7 @@ static navi_obj eval_clause(navi_obj arg, navi_obj begin, navi_env env)
 	if (navi_symbol_eq(navi_car(begin), navi_sym_eq_lt)) {
 		navi_obj proc = navi_eval(navi_cadr(begin), env);
 		navi_obj call = navi_make_pair(proc, navi_make_pair(arg, navi_make_nil()));
-		return _eval(call, env);
+		return eval_tail(call, env);
 	}
 	return scm_begin(0, begin, env, NULL);
 }
@@ -235,17 +229,7 @@ static bool cond_valid(navi_obj cond)
 		if (navi_symbol_eq(navi_cadr(fst), navi_sym_eq_lt) && length != 3)
 			return false;
 	}
-	return navi_type(cons) == NAVI_NIL;
-}
-
-static navi_obj scm_cond_clause(navi_obj test, navi_obj clause, navi_env env)
-{
-	if (navi_symbol_eq(navi_car(clause), navi_sym_eq_lt)) {
-		navi_obj proc = navi_eval(navi_cadr(clause), env);
-		navi_obj call = navi_make_pair(proc, navi_make_pair(test, navi_make_nil()));
-		return _eval(call, env);
-	}
-	return scm_begin(0, clause, env, NULL);
+	return navi_is_nil(cons);
 }
 
 DEFSPECIAL(cond, "cond", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
@@ -256,14 +240,14 @@ DEFSPECIAL(cond, "cond", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
 		navi_error(scm_env, "invalid cond list");
 
 	navi_list_for_each(cons, scm_args) {
-		navi_obj test, fst = scm_arg1;
+		navi_obj test, fst = navi_car(cons);
 
 		if (navi_symbol_eq(navi_car(fst), navi_sym_else))
 			return eval_clause(navi_make_bool(true), navi_cdr(fst), scm_env);
 
 		test = navi_eval(navi_car(fst), scm_env);
 		if (navi_is_true(test))
-			return scm_cond_clause(test, navi_cdr(fst), scm_env);
+			return eval_clause(test, navi_cdr(fst), scm_env);
 	}
 	return navi_unspecified();
 }
@@ -324,13 +308,19 @@ DEFUN(force, "force", 1, 0, NAVI_PROCEDURE)
 static navi_obj do_apply(struct navi_procedure *proc, unsigned nr_args,
 		navi_obj args, navi_env env)
 {
-	navi_env new_env;
 	navi_obj result;
-	if (proc->flags & NAVI_PROC_BUILTIN)
-		return proc->c_proc(nr_args, args, env, proc);
-	new_env = navi_extend_environment(env, proc->args, args);
-	result = scm_begin(0, proc->body, new_env, NULL);
-	navi_env_unref(new_env);
+	if (navi_proc_is_builtin(proc)) {
+		struct navi_guard *guard = navi_gc_guard(args, env);
+		result = proc->c_proc(nr_args, args, env, proc);
+		navi_gc_unguard(guard);
+	} else {
+		navi_env new = navi_extend_environment(env, proc->args, args);
+		result = scm_begin(0, proc->body, new, NULL);
+		navi_env_unref(new);
+	}
+	struct navi_guard *guard = navi_gc_guard(result, env);
+	navi_gc_check();
+	navi_gc_unguard(guard);
 	return result;
 }
 
@@ -372,16 +362,24 @@ navi_obj _navi_apply(struct navi_procedure *proc, navi_obj args, navi_env env)
 	return do_apply(proc, check_apply(proc, args, env), args, env);
 }
 
-static navi_obj map_eval(navi_obj obj, void *data)
+static navi_obj procedure_call(struct navi_procedure *proc, navi_obj args,
+		navi_env env)
 {
-	return navi_eval(obj, *((navi_env*)data));
-}
+	navi_obj cons;
+	struct navi_pair head, *ptr = &head;
+	struct navi_guard *guard = NULL;
 
-static inline navi_obj make_args(navi_obj args, navi_env env)
-{
-	if (navi_type(args) == NAVI_NIL)
-		return navi_make_nil();
-	return navi_map(args, map_eval, &env);
+	navi_list_for_each(cons, args) {
+		ptr->cdr = navi_make_pair(navi_make_void(), navi_make_nil());
+		if (ptr == &head)
+			guard = navi_gc_guard(ptr->cdr, env);
+		ptr = navi_pair(ptr->cdr);
+		ptr->car = navi_eval(navi_car(cons), env);
+	}
+	ptr->cdr = navi_make_nil();
+
+	navi_gc_unguard(guard);
+	return navi_apply(proc, head.cdr, env);
 }
 
 static navi_obj caselambda_call(navi_obj lambda, navi_obj args, navi_env env)
@@ -399,32 +397,40 @@ static navi_obj caselambda_call(navi_obj lambda, navi_obj args, navi_env env)
 
 static navi_obj eval_call(navi_obj call, navi_env env)
 {
-	navi_obj expr, proc = navi_eval(navi_car(call), env);
+	navi_obj obj, proc = navi_eval(navi_car(call), env);
+	struct navi_guard *guard = navi_gc_guard(proc, env);
 	switch (navi_type(proc)) {
-	/* special: pass args unevaluated, return result */
+	// special: pass args unevaluated, return result
 	case NAVI_SPECIAL:
-		return _navi_apply(navi_procedure(proc), navi_cdr(call), env);
-	/* procedure: pass args evaluated, return result */
+		obj = _navi_apply(navi_procedure(proc), navi_cdr(call), env);
+		break;
+	// procedure: pass args evaluated, return result
 	case NAVI_PROCEDURE:
-		expr = make_args(navi_cdr(call), env);
-		return navi_apply(navi_procedure(proc), expr, env);
-	/* macro: pass args unevaluated, return eval(result) */
+		obj = procedure_call(navi_procedure(proc), navi_cdr(call), env);
+		break;
+	// macro: pass args unevaluated, return eval(result)
 	case NAVI_MACRO:
-		return _eval(_navi_apply(navi_procedure(proc), navi_cdr(call), env), env);
-	/* escape: magic */
+		obj = eval_tail(_navi_apply(navi_procedure(proc), navi_cdr(call), env), env);
+		break;
+	// escape: magic
 	case NAVI_ESCAPE:
-		expr = navi_list_length(call) < 2 ? navi_make_nil() : navi_cadr(call);
-		return navi_call_escape(proc, expr, env);
-	/* caselambda: magic */
+		obj = navi_list_length(call) < 2 ? navi_make_nil() : navi_cadr(call);
+		obj = navi_call_escape(proc, obj, env);
+		break;
+	// caselambda: magic
 	case NAVI_CASELAMBDA:
-		return caselambda_call(proc, navi_cdr(call), env);
+		obj = caselambda_call(proc, navi_cdr(call), env);
+		break;
 	case NAVI_PARAMETER:
 		if (unlikely(!navi_is_nil(navi_cdr(call))))
 			navi_arity_error(env, navi_car(proc));
-		return navi_parameter_lookup(proc, env);
-	default: break;
+		obj = navi_parameter_lookup(proc, env);
+		break;
+	default:
+		navi_error(env, "call of non-procedure", navi_make_apair("value", proc));
 	}
-	navi_error(env, "call of non-procedure", navi_make_apair("value", proc));
+	navi_gc_unguard(guard);
+	return obj;
 }
 
 static navi_obj _eval(navi_obj expr, navi_env env)
@@ -466,20 +472,20 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 			navi_error(env, "malformed expression",
 					navi_make_apair("expression", expr));
 		return eval_call(expr, env);
+	case NAVI_TRAP:
+		navi_die("trap!");
 	}
 	return navi_unspecified();
 }
 
 navi_obj navi_eval(navi_obj expr, navi_env env)
 {
-	navi_obj result;
 	navi_env_ref(env);
-	expr = _eval(expr, env);
-	while (navi_type(expr) == NAVI_BOUNCE) {
-		result = _eval(expr, env);
-		navi_free(expr.p);
-		expr = result;
-	}
+	do {
+		struct navi_guard *guard = navi_gc_guard(expr, env);
+		expr = _eval(expr, env);
+		navi_gc_unguard(guard);
+	} while (navi_is_bounce(expr));
 	navi_env_unref(env);
 	return expr;
 }

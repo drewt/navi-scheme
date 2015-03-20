@@ -368,9 +368,8 @@ static void consume_line(struct navi_port *port, navi_env env)
 
 static navi_obj read_list(struct navi_port *port, navi_env env)
 {
-	struct navi_pair head, *elmptr;
-
-	elmptr = &head;
+	struct navi_pair head, *elmptr = &head;
+	struct navi_guard *guard = NULL;
 	for (;;) {
 		navi_obj expr;
 		char c = ipeek_first_char(port, env);
@@ -378,7 +377,7 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 		case ')':
 			read_char(port, env);
 			elmptr->cdr = navi_make_nil();
-			return head.cdr;
+			goto end;
 		case '.':
 			read_char(port, env);
 			c = ipeek_char(port, env);
@@ -404,9 +403,13 @@ static navi_obj read_list(struct navi_port *port, navi_env env)
 			expr = navi_iread(port, env);
 		}
 		elmptr->cdr = navi_make_empty_pair();
+		if (!guard)
+			guard = navi_gc_guard(elmptr->cdr, env);
 		elmptr = navi_pair(elmptr->cdr);
 		elmptr->car = expr;
 	}
+end:
+	navi_gc_unguard(guard);
 	return head.cdr;
 }
 

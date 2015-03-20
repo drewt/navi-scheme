@@ -182,14 +182,14 @@ DEFUN(vector_map_ip, "vector-map!", 2, 0, NAVI_PROCEDURE, NAVI_VECTOR)
 
 static navi_obj arg_list(struct navi_vector *vecs[], size_t nr_vecs, size_t k)
 {
-	navi_obj args, cons;
-	cons = args = navi_make_pair(navi_make_nil(), navi_make_nil());
+	struct navi_pair head, *ptr = &head;
 	for (size_t i = 0; i < nr_vecs; i++) {
-		navi_obj cdr = navi_make_pair(vecs[i]->data[k], navi_make_nil());
-		navi_set_cdr(cons, cdr);
-		cons = navi_cdr(cons);
+		ptr->cdr = navi_make_empty_pair();
+		ptr = navi_pair(ptr->cdr);
+		ptr->car = vecs[i]->data[k];
 	}
-	return navi_cdr(args);
+	ptr->cdr = navi_make_nil();
+	return head.cdr;
 }
 
 static navi_obj do_apply(navi_obj proc, navi_obj args, navi_env env)

@@ -23,16 +23,22 @@
 #define NAVI_ENV_HT_SIZE 64
 
 /* C types {{{ */
+
+struct navi_guard {
+	NAVI_LIST_ENTRY(navi_guard) link;
+	navi_obj obj;
+};
+
 struct navi_scope {
 	NAVI_LIST_ENTRY(navi_scope) link;
 	struct navi_scope *next;
 	unsigned int refs;
+	NAVI_LIST_HEAD(navi_guard_head, navi_guard) guards;
 	NAVI_LIST_HEAD(navi_bucket, navi_binding) bindings[NAVI_ENV_HT_SIZE];
 };
 
 typedef navi_obj (*navi_builtin)(unsigned, navi_obj, navi_env,
 		struct navi_procedure*);
-typedef navi_obj (*navi_leaf)(navi_obj, void*);
 
 struct navi_escape {
 	jmp_buf state;
@@ -55,11 +61,9 @@ struct navi_procedure {
 	unsigned arity;
 	navi_obj name;
 	struct navi_scope *env;
+	navi_obj args;
 	union {
-		struct {
-			navi_obj args;
-			navi_obj body;
-		};
+		navi_obj body;
 		navi_builtin c_proc;
 	};
 	navi_obj specific;
@@ -141,16 +145,17 @@ struct navi_library {
 };
 
 enum {
-	NAVI_GC_MARK = 1,
-	NAVI_PAT_ELLIPSIS = 2,
+	NAVI_GC_MARK      = 1,
+	NAVI_GC_PROTECT   = 2,
+	NAVI_PAT_ELLIPSIS = 4,
 };
 
 struct navi_object {
-	NAVI_LIST_ENTRY(navi_object) link;
+	NAVI_SLIST_ENTRY(navi_object) link;
 	enum navi_type type;
 	uint16_t flags;
 	_Alignas(sizeof(int)) unsigned char data[];
-};
+} __attribute__((packed));
 
 struct navi_binding {
 	NAVI_LIST_ENTRY(navi_binding) link;
@@ -166,49 +171,6 @@ void *navi_critical_realloc(void *p, size_t size);
 
 void navi_internal_init(void);
 
-/* Memory Management {{{ */
-void navi_free(struct navi_object *obj);
-struct navi_scope *_navi_make_scope(void);
-struct navi_scope *navi_make_scope(void);
-void navi_scope_free(struct navi_scope *scope);
-
-#undef _navi_scope_unref
-static inline void _navi_scope_unref(struct navi_scope *scope)
-{
-	if (--scope->refs == 0)
-		navi_scope_free(scope);
-}
-
-#undef _navi_scope_ref
-static inline struct navi_scope *_navi_scope_ref(struct navi_scope *scope)
-{
-	scope->refs++;
-	return scope;
-}
-
-#undef navi_env_ref
-static inline void navi_env_ref(navi_env env)
-{
-	_navi_scope_ref(env.lexical);
-	_navi_scope_ref(env.dynamic);
-}
-
-#undef navi_env_unref
-static inline void navi_env_unref(navi_env env)
-{
-	_navi_scope_unref(env.lexical);
-	_navi_scope_unref(env.dynamic);
-}
-
-#define navi_scope_for_each(binding, scope) \
-	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
-		NAVI_LIST_FOREACH(binding, &scope->bindings[navi_i___], link)
-
-#define navi_scope_for_each_safe(binding, n, scope) \
-	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
-		NAVI_LIST_FOREACH_SAFE(binding, &scope->bindings[navi_i___], link, n)
-
-/* Memory Management }}} */
 /* Accessors {{{ */
 #undef navi_ptr
 static inline struct navi_object *navi_ptr(navi_obj obj)
@@ -369,6 +331,7 @@ static inline navi_obj navi_caddddr(navi_obj obj)
 /* Constructors {{{ */
 navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env);
 void navi_string_grow_storage(struct navi_string *str, long need);
+navi_obj navi_make_uninterned(const char *str);
 navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_env env);
 navi_obj navi_make_lambda(navi_obj args, navi_obj body, navi_env env);
 navi_obj navi_make_thunk(navi_obj expr, navi_env env);
@@ -484,6 +447,12 @@ static inline navi_obj navi_apply(struct navi_procedure *proc, navi_obj args,
 }
 /* Environments/Evaluation }}} */
 /* Types {{{ */
+#undef navi_is_immediate
+static inline bool navi_is_immediate(navi_obj obj)
+{
+	return obj.n & 3;
+}
+
 #undef navi_immediate_type
 static inline enum navi_type navi_immediate_type(navi_obj obj)
 {
@@ -542,6 +511,7 @@ static inline const char *navi_strtype(enum navi_type type)
 	case NAVI_PARAMETER:   return "parameter";
 	case NAVI_ENVIRONMENT: return "environment";
 	case NAVI_BOUNCE:      return "bounce";
+	case NAVI_TRAP:        return "trap";
 	}
 	return "unknown";
 }
@@ -619,6 +589,118 @@ static inline bool navi_is_list(navi_obj obj)
 	return navi_type(obj) == NAVI_PAIR || navi_type(obj) == NAVI_NIL;
 }
 /* Types }}} */
+/* Memory Management {{{ */
+extern unsigned int _navi_gc_disabled;
+void navi_gc_collect(void);
+void navi_gc_check(void);
+
+#undef navi_gc_disable
+static inline void navi_gc_disable(void)
+{
+	_navi_gc_disabled++;
+}
+
+#undef navi_gc_enable
+static inline void navi_gc_enable(void)
+{
+	if (_navi_gc_disabled)
+		_navi_gc_disabled--;
+}
+
+/*
+ * GC protect bit:
+ *
+ *   The navi_gc_protect/navi_gc_release functions are used to protect objects
+ *   from garbage collection.  Since they use only a single bit in the object's
+ *   flags field, they provide an exceptionally efficient means of protecting
+ *   objects on the heap.  However, it is very easy to write broken code using
+ *   this protection mechanism:
+ *
+ *     * Nested protect/release calls on the same object are always broken.
+ *     * Protecting non-atomic objects is probably broken (referenced objects
+ *       are not automatically protected).
+ *     * If a continuation is invoked before a protected object is released,
+ *       the memory will leak.
+ *
+ *   The only situation where it's definitely safe to use this mechanism is
+ *   to protect atomic objects which are *never* released (e.g. certain symbols
+ *   which are used internally are protected this way).
+ */
+#undef navi_gc_protect
+static inline navi_obj navi_gc_protect(navi_obj obj)
+{
+	if (!navi_is_immediate(obj))
+		obj.p->flags |= NAVI_GC_PROTECT;
+	return obj;
+}
+
+#undef navi_gc_release
+static inline navi_obj navi_gc_release(navi_obj obj)
+{
+	if (!navi_is_immediate(obj))
+		obj.p->flags &= ~NAVI_GC_PROTECT;
+	return obj;
+}
+
+/*
+ * GC "guards":
+ *
+ *   A guarded object *and every object it references* are protected from
+ *   garbage collection.  Guards are less efficient than the protect/release
+ *   mechanism (in terms of both time and space), however:
+ *
+ *     * It is not necessary to explicitly protect objects referenced by a
+ *       guarded object.
+ *     * The lifetime of a guard is the same as the lifetime of its
+ *       associated environment, so it is not necessary to manually clean up
+ *       after guards.
+ *
+ *   Guards should almost always be preferred to protect/release.
+ */
+struct navi_guard *navi_gc_guard(navi_obj obj, navi_env env);
+void navi_gc_unguard(struct navi_guard *guard);
+
+struct navi_scope *_navi_make_scope(void);
+struct navi_scope *navi_make_scope(void);
+void navi_scope_free(struct navi_scope *scope);
+
+#undef _navi_scope_unref
+static inline void _navi_scope_unref(struct navi_scope *scope)
+{
+	if (--scope->refs == 0)
+		navi_scope_free(scope);
+}
+
+#undef _navi_scope_ref
+static inline struct navi_scope *_navi_scope_ref(struct navi_scope *scope)
+{
+	scope->refs++;
+	return scope;
+}
+
+#undef navi_env_ref
+static inline void navi_env_ref(navi_env env)
+{
+	_navi_scope_ref(env.lexical);
+	_navi_scope_ref(env.dynamic);
+}
+
+#undef navi_env_unref
+static inline void navi_env_unref(navi_env env)
+{
+	_navi_scope_unref(env.lexical);
+	_navi_scope_unref(env.dynamic);
+}
+
+#define navi_scope_for_each(binding, scope) \
+	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
+		NAVI_LIST_FOREACH(binding, &scope->bindings[navi_i___], link)
+
+#define navi_scope_for_each_safe(binding, n, scope) \
+	for (unsigned navi_i___ = 0; navi_i___ < NAVI_ENV_HT_SIZE; navi_i___++) \
+		NAVI_LIST_FOREACH_SAFE(binding, &scope->bindings[navi_i___], link, n)
+
+/* Memory Management }}} */
 /* Procedures {{{ */
 #undef navi_proc_is_builtin
 static inline bool navi_proc_is_builtin(struct navi_procedure *p)
@@ -645,7 +727,6 @@ navi_obj _navi_list(navi_obj first, ...);
 #define navi_list(...) _navi_list(__VA_ARGS__, navi_make_void())
 int navi_list_length_safe(navi_obj list);
 bool navi_is_list_of(navi_obj list, int type, bool allow_dotted_tail);
-navi_obj navi_map(navi_obj list, navi_leaf fn, void *data);
 
 #undef navi_set_car
 static inline void navi_set_car(navi_obj cons, navi_obj obj)
@@ -711,6 +792,13 @@ static inline bool navi_is_output_port(navi_obj obj)
 }
 
 /* Ports }}} */
+/* Symbols {{{ */
+#undef navi_symbol_is_interned
+static inline bool navi_symbol_is_interned(navi_obj symbol)
+{
+	return navi_symbol(symbol)->link.le_prev;
+}
+/* Symbols }}} */
 /* Vectors {{{ */
 navi_obj navi_vector_map(navi_obj proc, navi_obj to, navi_obj from, navi_env env);
 

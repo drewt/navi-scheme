@@ -10,7 +10,6 @@
 NAVI_LIST_HEAD(active_environments, navi_scope) active_environments
 	= NAVI_LIST_HEAD_INITIALIZER(active_environments);
 
-/* FIXME: this is a REALLY bad hash function! */
 static unsigned long ptr_hash(navi_obj ptr)
 {
 	return ptr.n;
@@ -66,6 +65,7 @@ struct navi_scope *_navi_make_scope(void)
 	struct navi_scope *s = navi_critical_malloc(sizeof(struct navi_scope));
 	for (unsigned int i = 0; i < NAVI_ENV_HT_SIZE; i++)
 		NAVI_LIST_INIT(&s->bindings[i]);
+	NAVI_LIST_INIT(&s->guards);
 	s->next = NULL;
 	return s;
 }
@@ -209,6 +209,8 @@ void navi_scope_free(struct navi_scope *scope)
 	}
 	if (scope->next != NULL)
 		_navi_scope_unref(scope->next);
+	memset(scope, 0, sizeof(struct navi_scope));
+	free(scope);
 }
 
 static struct navi_scope *get_global_scope(struct navi_scope *s)
@@ -435,18 +437,21 @@ navi_obj navi_parameter_lookup(navi_obj param, navi_env env)
 
 navi_obj navi_parameter_convert(navi_obj param, navi_obj obj, navi_env env)
 {
-	navi_obj args = navi_make_pair(obj, navi_make_nil());
 	navi_obj converter = navi_parameter_converter(param);
 	if (navi_is_void(converter))
 		return obj;
+
+	navi_obj args = navi_make_pair(obj, navi_make_nil());
 	return navi_force_tail(navi_apply(navi_procedure(converter), args, env), env);
 }
 
 navi_obj navi_make_parameter(navi_obj value, navi_obj converter, navi_env env)
 {
 	navi_obj param = _navi_make_parameter(converter);
+	struct navi_guard *guard = navi_gc_guard(param, env);
 	navi_scope_set(get_global_scope(env.dynamic), navi_parameter_key(param),
 			navi_parameter_convert(param, value, env));
+	navi_gc_unguard(guard);
 	return param;
 }
 
@@ -454,8 +459,10 @@ navi_obj navi_make_named_parameter(navi_obj symbol, navi_obj value,
 		navi_obj converter, navi_env env)
 {
 	navi_obj param = _navi_make_named_parameter(symbol, converter);
+	struct navi_guard *guard = navi_gc_guard(param, env);
 	navi_scope_set(get_global_scope(env.dynamic), navi_parameter_key(param),
 			navi_parameter_convert(param, value, env));
+	navi_gc_unguard(guard);
 	return param;
 }
 
@@ -1057,11 +1064,14 @@ static navi_env get_import_env(navi_obj set, navi_env env)
 void navi_import(navi_obj imports, navi_env env)
 {
 	navi_obj cons;
+	// FIXME: shouldn't have to disable gc during import
+	navi_gc_disable();
 	navi_list_for_each(cons, imports) {
 		navi_env import_env = get_import_env(navi_car(cons), env);
 		navi_import_all(get_global_scope(env.lexical), import_env.lexical);
 		navi_env_unref(import_env);
 	}
+	navi_gc_enable();
 }
 
 DEFSPECIAL(import, "import", 1, NAVI_PROC_VARIADIC, NAVI_ANY)
@@ -1115,6 +1125,27 @@ navi_env _navi_interaction_environment(navi_env env)
 navi_env navi_interaction_environment(void)
 {
 	return _navi_interaction_environment(navi_empty_environment());
+}
+
+DEFUN(env_list, "env-list", 0, 0)
+{
+	struct navi_scope *it;
+	struct navi_guard *guard;
+	struct navi_binding *bind;
+	NAVI_LIST_FOREACH(it, &active_environments, link) {
+		printf("Scope <%p>:\n", (void*)it);
+		NAVI_LIST_FOREACH(guard, &it->guards, link) {
+			printf("\tguarded: ");
+			navi_display(guard->obj, scm_env);
+			putchar('\n');
+		}
+		navi_scope_for_each(bind, it) {
+			printf("\t%s: ", navi_symbol(bind->symbol)->data);
+			navi_display(bind->object, scm_env);
+			putchar('\n');
+		}
+	}
+	return navi_unspecified();
 }
 
 DEFUN(env_count, "env-count", 0, 0)

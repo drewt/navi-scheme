@@ -111,21 +111,6 @@ navi_obj navi_list_append_ip(navi_obj a, navi_obj b)
 	return a;
 }
 
-navi_obj navi_map(navi_obj list, navi_leaf fn, void *data)
-{
-	navi_obj cons;
-	struct navi_pair head, *ptr;
-
-	ptr = &head;
-	navi_list_for_each(cons, list) {
-		ptr->cdr = navi_make_empty_pair();
-		ptr = navi_pair(ptr->cdr);
-		ptr->car = fn(navi_car(cons), data);
-	}
-	ptr->cdr = navi_make_nil();
-	return head.cdr;
-}
-
 DEFUN(cons, "cons", 2, 0, NAVI_ANY, NAVI_ANY)
 {
 	return navi_make_pair(scm_arg1, scm_arg2);

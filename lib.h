@@ -222,8 +222,10 @@ DECLARE(bytevector_copy_to);
 DECLARE(utf8_to_string);
 DECLARE(string_to_utf8);
 
+DECLARE(env_list);
 DECLARE(env_count);
 DECLARE(gc_collect);
 DECLARE(gc_count);
+DECLARE(gc_stats);
 
 #endif

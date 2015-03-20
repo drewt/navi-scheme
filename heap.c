@@ -148,12 +148,14 @@ static void navi_free(struct navi_object *obj)
 	free(obj);
 }
 
-/* FIXME: this is a really bad hash function! */
 static unsigned long symbol_hash(const char *symbol)
 {
-	unsigned long hash = 0;
-	while (*symbol != '\0')
-		hash += *symbol++;
+	unsigned long hash = 5381;
+	int c;
+
+	while ((c = *symbol++))
+		hash = ((hash << 5) + hash) ^ c; // hash * 33 ^ c
+
 	return hash;
 }
 

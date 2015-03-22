@@ -209,7 +209,6 @@ void navi_scope_free(struct navi_scope *scope)
 	}
 	if (scope->next != NULL)
 		_navi_scope_unref(scope->next);
-	memset(scope, 0, sizeof(struct navi_scope));
 	free(scope);
 }
 

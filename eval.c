@@ -305,7 +305,7 @@ DEFUN(force, "force", 1, 0, NAVI_PROCEDURE)
 	return r;
 }
 
-static navi_obj do_apply(struct navi_procedure *proc, unsigned nr_args,
+static __hot navi_obj do_apply(struct navi_procedure *proc, unsigned nr_args,
 		navi_obj args, navi_env env)
 {
 	navi_obj result;
@@ -433,7 +433,7 @@ static navi_obj eval_call(navi_obj call, navi_env env)
 	return obj;
 }
 
-static navi_obj _eval(navi_obj expr, navi_env env)
+static __hot navi_obj _eval(navi_obj expr, navi_env env)
 {
 	navi_obj val;
 
@@ -478,7 +478,7 @@ static navi_obj _eval(navi_obj expr, navi_env env)
 	return navi_unspecified();
 }
 
-navi_obj navi_eval(navi_obj expr, navi_env env)
+__hot navi_obj navi_eval(navi_obj expr, navi_env env)
 {
 	navi_env_ref(env);
 	do {

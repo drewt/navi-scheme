@@ -73,7 +73,7 @@ static navi_obj to_obj(struct navi_object *obj)
 	return (navi_obj) { .p = obj };
 }
 
-static size_t object_size(struct navi_object *obj)
+static __const size_t object_size(struct navi_object *obj)
 {
 	switch(obj->type) {
 	case NAVI_VOID: case NAVI_NIL:  case NAVI_FIXNUM:
@@ -128,7 +128,7 @@ static size_t object_size(struct navi_object *obj)
 	navi_port_write(navi_port(port), obj, env);
 }*/
 
-static void navi_free(struct navi_object *obj)
+static __hot void navi_free(struct navi_object *obj)
 {
 	gc_stats.bytes -= sizeof(struct navi_object) + object_size(obj);
 	gc_stats.objects--;
@@ -156,7 +156,7 @@ static void navi_free(struct navi_object *obj)
 	free(obj);
 }
 
-static unsigned long symbol_hash(const char *symbol)
+static __hot __const unsigned long symbol_hash(const char *symbol)
 {
 	unsigned long hash = 5381;
 	int c;
@@ -675,7 +675,7 @@ DEFUN(equalp, "equal?", 2, 0, NAVI_ANY, NAVI_ANY)
 	return navi_make_bool(navi_equalp(scm_arg1, scm_arg2));
 }
 
-struct navi_guard *navi_gc_guard(navi_obj obj, navi_env env)
+__hot struct navi_guard *navi_gc_guard(navi_obj obj, navi_env env)
 {
 	if (navi_is_immediate(obj))
 		return NULL;
@@ -686,7 +686,7 @@ struct navi_guard *navi_gc_guard(navi_obj obj, navi_env env)
 	return guard;
 }
 
-void navi_gc_unguard(struct navi_guard *guard)
+__hot void navi_gc_unguard(struct navi_guard *guard)
 {
 	if (guard) {
 		NAVI_LIST_REMOVE(guard, link);
@@ -713,7 +713,7 @@ static inline void gc_clear_mark(struct navi_object *obj)
 {
 	obj->flags &= ~NAVI_GC_MARK;
 }
-static void gc_mark_obj(navi_obj obj)
+static __hot void gc_mark_obj(navi_obj obj)
 {
 	struct navi_vector *vec;
 	struct navi_procedure *proc;

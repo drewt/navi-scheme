@@ -47,7 +47,7 @@ struct navi_binding *navi_scope_lookup(struct navi_scope *scope, navi_obj symbol
 	return scope_lookup(scope, symbol, ptr_hash(symbol));
 }
 
-struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
+__hot struct navi_binding *navi_env_binding(struct navi_scope *env, navi_obj symbol)
 {
 	struct navi_binding *binding;
 	unsigned long hashcode = ptr_hash(symbol);

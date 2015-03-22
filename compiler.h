@@ -21,18 +21,22 @@
 #endif
 #endif
 
-#if defined(__GNUC__)
+#ifdef __GNUC__
 /* Optimization: Condition @x is likely */
 #define likely(x) __builtin_expect(!!(x), 1)
 /* Optimization: Condition @x is unlikely */
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+#define __hot    __attribute__((hot))
+#define __const  __attribute__((const))
 #define __used   __attribute__((used))
 #define __unused __attribute__((unused))
 #else
 #define likely(x) (x)
 #define unlikely(x) (x)
 
+#define __hot
+#define __const
 #define __used
 #define __unused
 #endif /* defined(__GNUC__) */

@@ -35,7 +35,7 @@ struct slab_cache *navi_slab_cache_create(size_t size)
 	return cache;
 }
 
-void *get_object(struct slab_cache *cache, struct slab *slab, unsigned i)
+__const void *get_object(struct slab_cache *cache, struct slab *slab, unsigned i)
 {
 	return (void*)((uintptr_t)slab->mem + cache->obj_size*i);
 }
@@ -71,7 +71,7 @@ static struct slab *get_slab(struct slab_cache *cache)
 	return NAVI_LIST_FIRST(&cache->partial);
 }
 
-void *navi_slab_alloc(struct slab_cache *cache)
+__hot void *navi_slab_alloc(struct slab_cache *cache)
 {
 	struct slab *slab = get_slab(cache);
 	struct navi_object *obj = NAVI_SLIST_FIRST(&slab->free);
@@ -88,7 +88,7 @@ void *navi_slab_alloc(struct slab_cache *cache)
 	return obj;
 }
 
-static inline void *slab_end(struct slab_cache *cache, struct slab *slab)
+static inline __const void *slab_end(struct slab_cache *cache, struct slab *slab)
 {
 	return (void*) ((uintptr_t)slab->mem + SLAB_MEM_SIZE);
 }
@@ -96,7 +96,7 @@ static inline void *slab_end(struct slab_cache *cache, struct slab *slab)
 /*
  * TODO: Use trees for full/partial/empty lists for logarithmic lookup time.
  */
-static struct slab *find_slab(struct slab_cache *cache, void *mem)
+static __hot __const struct slab *find_slab(struct slab_cache *cache, void *mem)
 {
 	struct slab *slab;
 	NAVI_LIST_FOREACH(slab, &cache->full, link) {
@@ -110,7 +110,7 @@ static struct slab *find_slab(struct slab_cache *cache, void *mem)
 	return NULL;
 }
 
-void navi_slab_free(struct slab_cache *cache, void *mem)
+void __hot navi_slab_free(struct slab_cache *cache, void *mem)
 {
 	struct slab *slab;
 	if (!(slab = find_slab(cache, mem)))

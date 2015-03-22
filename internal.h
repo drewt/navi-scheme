@@ -173,61 +173,61 @@ void navi_internal_init(void);
 
 /* Accessors {{{ */
 #undef navi_ptr
-static inline struct navi_object *navi_ptr(navi_obj obj)
+static inline __const struct navi_object *navi_ptr(navi_obj obj)
 {
 	return obj.p;
 }
 
 #undef navi_vector
-static inline struct navi_vector *navi_vector(navi_obj obj)
+static inline __const struct navi_vector *navi_vector(navi_obj obj)
 {
 	return (struct navi_vector*) obj.p->data;
 }
 
 #undef navi_bytevec
-static inline struct navi_bytevec *navi_bytevec(navi_obj obj)
+static inline __const struct navi_bytevec *navi_bytevec(navi_obj obj)
 {
 	return (struct navi_bytevec*) obj.p->data;
 }
 
 #undef navi_string
-static inline struct navi_string *navi_string(navi_obj obj)
+static inline __const struct navi_string *navi_string(navi_obj obj)
 {
 	return (struct navi_string*) obj.p->data;
 }
 
 #undef navi_symbol
-static inline struct navi_symbol *navi_symbol(navi_obj obj)
+static inline __const struct navi_symbol *navi_symbol(navi_obj obj)
 {
 	return (struct navi_symbol*) obj.p->data;
 }
 
 #undef navi_thunk
-static inline struct navi_thunk *navi_thunk(navi_obj obj)
+static inline __const struct navi_thunk *navi_thunk(navi_obj obj)
 {
 	return (struct navi_thunk*) obj.p->data;
 }
 
 #undef navi_procedure
-static inline struct navi_procedure *navi_procedure(navi_obj obj)
+static inline __const struct navi_procedure *navi_procedure(navi_obj obj)
 {
 	return (struct navi_procedure*) obj.p->data;
 }
 
 #undef navi_escape
-static inline struct navi_escape *navi_escape(navi_obj obj)
+static inline __const struct navi_escape *navi_escape(navi_obj obj)
 {
 	return (struct navi_escape*) obj.p->data;
 }
 
 #undef navi_port
-static inline struct navi_port *navi_port(navi_obj obj)
+static inline __const struct navi_port *navi_port(navi_obj obj)
 {
 	return (struct navi_port*) obj.p->data;
 }
 
 #undef navi_environment
-static inline navi_env navi_environment(navi_obj obj)
+static inline __const navi_env navi_environment(navi_obj obj)
 {
 	// XXX: cast through a union to bypass the strict aliasing rule
 	union { unsigned char *c; navi_env *e; } u = { .c = obj.p->data };
@@ -235,7 +235,7 @@ static inline navi_env navi_environment(navi_obj obj)
 }
 
 #undef navi_pair
-static inline struct navi_pair *navi_pair(navi_obj obj)
+static inline __const struct navi_pair *navi_pair(navi_obj obj)
 {
 	return (struct navi_pair*) obj.p->data;
 }
@@ -244,85 +244,85 @@ static inline struct navi_pair *navi_pair(navi_obj obj)
 	((type *)(void *)( (char *)(ptr) - offsetof(type, member) ))
 
 #undef navi_object
-static inline struct navi_object *navi_object(void *concrete)
+static inline __const struct navi_object *navi_object(void *concrete)
 {
 	return navi_container_of(concrete, struct navi_object, data);
 }
 
 #undef navi_car
-static inline navi_obj navi_car(navi_obj obj)
+static inline __const navi_obj navi_car(navi_obj obj)
 {
 	return navi_pair(obj)->car;
 }
 
 #undef navi_cdr
-static inline navi_obj navi_cdr(navi_obj obj)
+static inline __const navi_obj navi_cdr(navi_obj obj)
 {
 	return navi_pair(obj)->cdr;
 }
 
 #undef navi_caar
-static inline navi_obj navi_caar(navi_obj obj)
+static inline __const navi_obj navi_caar(navi_obj obj)
 {
 	return navi_pair(navi_car(obj))->car;
 }
 
 #undef navi_cadr
-static inline navi_obj navi_cadr(navi_obj obj)
+static inline __const navi_obj navi_cadr(navi_obj obj)
 {
 	return navi_pair(navi_cdr(obj))->car;
 }
 
 #undef navi_cdar
-static inline navi_obj navi_cdar(navi_obj obj)
+static inline __const navi_obj navi_cdar(navi_obj obj)
 {
 	return navi_pair(navi_car(obj))->cdr;
 }
 
 #undef navi_cddr
-static inline navi_obj navi_cddr(navi_obj obj)
+static inline __const navi_obj navi_cddr(navi_obj obj)
 {
 	return navi_pair(navi_cdr(obj))->cdr;
 }
 
 #undef navi_caddr
-static inline navi_obj navi_caddr(navi_obj obj)
+static inline __const navi_obj navi_caddr(navi_obj obj)
 {
 	return navi_pair(navi_cddr(obj))->car;
 }
 
 #undef navi_cadar
-static inline navi_obj navi_cadar(navi_obj obj)
+static inline __const navi_obj navi_cadar(navi_obj obj)
 {
 	return navi_pair(navi_cdar(obj))->car;
 }
 
 #undef navi_cdaar
-static inline navi_obj navi_cdaar(navi_obj obj)
+static inline __const navi_obj navi_cdaar(navi_obj obj)
 {
 	return navi_pair(navi_caar(obj))->cdr;
 }
 
 #undef navi_cdddr
-static inline navi_obj navi_cdddr(navi_obj obj)
+static inline __const navi_obj navi_cdddr(navi_obj obj)
 {
 	return navi_pair(navi_cddr(obj))->cdr;
 }
 
 #undef navi_cadddr
-static inline navi_obj navi_cadddr(navi_obj obj)
+static inline __const navi_obj navi_cadddr(navi_obj obj)
 {
 	return navi_pair(navi_cdddr(obj))->car;
 }
 
 #undef navi_cddddr
-static inline navi_obj navi_cddddr(navi_obj obj)
+static inline __const navi_obj navi_cddddr(navi_obj obj)
 {
 	return navi_pair(navi_cdddr(obj))->cdr;
 }
 
 #undef navi_caddddr
-static inline navi_obj navi_caddddr(navi_obj obj)
+static inline __const navi_obj navi_caddddr(navi_obj obj)
 {
 	return navi_pair(navi_cddddr(obj))->car;
 }
@@ -448,13 +448,13 @@ static inline navi_obj navi_apply(struct navi_procedure *proc, navi_obj args,
 /* Environments/Evaluation }}} */
 /* Types {{{ */
 #undef navi_is_immediate
-static inline bool navi_is_immediate(navi_obj obj)
+static inline __const bool navi_is_immediate(navi_obj obj)
 {
 	return obj.n & 3;
 }
 
 #undef navi_immediate_type
-static inline enum navi_type navi_immediate_type(navi_obj obj)
+static inline __const enum navi_type navi_immediate_type(navi_obj obj)
 {
 	unsigned long tag = obj.n & NAVI_IMMEDIATE_TAG_MASK;
 	switch (tag) {
@@ -467,7 +467,7 @@ static inline enum navi_type navi_immediate_type(navi_obj obj)
 }
 
 #undef navi_type
-static inline enum navi_type navi_type(navi_obj obj)
+static inline __const enum navi_type navi_type(navi_obj obj)
 {
 	if (obj.n == 0)
 		return NAVI_VOID;
@@ -479,13 +479,13 @@ static inline enum navi_type navi_type(navi_obj obj)
 }
 
 #undef navi_ptr_type
-static inline bool navi_ptr_type(navi_obj obj)
+static inline __const bool navi_ptr_type(navi_obj obj)
 {
 	return obj.n != 0 && (obj.n & 3) == 0;
 }
 
 #undef navi_strtype
-static inline const char *navi_strtype(enum navi_type type)
+static inline __const const char *navi_strtype(enum navi_type type)
 {
 	switch (type) {
 	case NAVI_VOID:        return "void";
@@ -523,7 +523,7 @@ static inline navi_obj navi_typesym(enum navi_type type)
 }
 
 #define NAVI_TYPE_PREDICATE(name, type) \
-	static inline bool name(navi_obj obj) \
+	static inline __const bool name(navi_obj obj) \
 	{ \
 		return navi_type(obj) == type; \
 	}
@@ -571,20 +571,20 @@ NAVI_TYPE_PREDICATE(navi_is_bounce, NAVI_BOUNCE)
 #undef NAVI_TYPE_PREDICATE
 
 #undef navi_is_byte
-static inline bool navi_is_byte(navi_obj obj)
+static inline __const bool navi_is_byte(navi_obj obj)
 {
 	return navi_is_fixnum(obj) && navi_fixnum(obj) >= 0 && navi_fixnum(obj) < 256;
 }
 
 #undef navi_is_builtin
-static inline bool navi_is_builtin(navi_obj obj)
+static inline __const bool navi_is_builtin(navi_obj obj)
 {
 	return navi_is_procedure(obj) &&
 		navi_procedure(obj)->flags & NAVI_PROC_BUILTIN;
 }
 
 #undef navi_is_list
-static inline bool navi_is_list(navi_obj obj)
+static inline __const bool navi_is_list(navi_obj obj)
 {
 	return navi_type(obj) == NAVI_PAIR || navi_type(obj) == NAVI_NIL;
 }

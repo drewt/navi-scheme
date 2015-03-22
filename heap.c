@@ -5,11 +5,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "slab.h"
+
 #define SYMTAB_SIZE 64
 
 extern NAVI_LIST_HEAD(active_environments, navi_scope) active_environments;
 static NAVI_SLIST_HEAD(heap, navi_object) heap = NAVI_SLIST_HEAD_INITIALIZER(heap);
 static NAVI_LIST_HEAD(sym_bucket, navi_symbol) symbol_table[SYMTAB_SIZE];
+
+static struct slab_cache *pair_cache = NULL;
 
 navi_obj navi_sym_begin;
 navi_obj navi_sym_quote;
@@ -126,7 +130,13 @@ static size_t object_size(struct navi_object *obj)
 
 static void navi_free(struct navi_object *obj)
 {
+	gc_stats.bytes -= sizeof(struct navi_object) + object_size(obj);
+	gc_stats.objects--;
 	switch (obj->type) {
+	case NAVI_PAIR:
+	case NAVI_PARAMETER:
+		navi_slab_free(pair_cache, obj);
+		return;
 	case NAVI_THUNK:
 	case NAVI_BOUNCE:
 		navi_env_unref(navi_thunk(to_obj(obj))->env);
@@ -142,8 +152,6 @@ static void navi_free(struct navi_object *obj)
 	default:
 		break;
 	}
-	gc_stats.bytes -= sizeof(struct navi_object) + object_size(obj);
-	gc_stats.objects--;
 	obj->type = NAVI_TRAP;
 	free(obj);
 }
@@ -201,6 +209,7 @@ static void symbol_table_init(void)
 
 void navi_init(void)
 {
+	pair_cache = navi_slab_cache_create(sizeof(struct navi_object) + sizeof(struct navi_pair));
 	symbol_table_init();
 	navi_internal_init();
 }
@@ -217,13 +226,26 @@ static navi_obj symbol_lookup(const char *str, unsigned long hashcode)
 	return navi_make_void();
 }
 
+static void register_object(struct navi_object *obj, size_t size)
+{
+	NAVI_SLIST_INSERT_HEAD(&heap, obj, link);
+	gc_stats.bytes += size;
+	gc_stats.objects++;
+}
+
+static navi_obj slab_make_object(struct slab_cache *cache, enum navi_type type)
+{
+	struct navi_object *obj = navi_slab_alloc(cache);
+	obj->type = type;
+	register_object(obj, cache->obj_size);
+	return to_obj(obj);
+}
+
 static navi_obj make_object(enum navi_type type, size_t size)
 {
 	struct navi_object *obj = navi_critical_malloc(sizeof(struct navi_object) + size);
-	NAVI_SLIST_INSERT_HEAD(&heap, obj, link);
 	obj->type = type;
-	gc_stats.bytes += sizeof(struct navi_object) + size;
-	gc_stats.objects++;
+	register_object(obj, sizeof(struct navi_object) + size);
 	return to_obj(obj);
 }
 
@@ -336,18 +358,17 @@ void navi_string_grow_storage(struct navi_string *str, long need)
 	str->data[str->capacity] = '\0';
 }
 
-navi_obj navi_make_pair(navi_obj car, navi_obj cdr)
-{
-	navi_obj obj = make_object(NAVI_PAIR, sizeof(struct navi_pair));
-	struct navi_pair *pair = navi_pair(obj);
-	pair->car = car;
-	pair->cdr = cdr;
-	return obj;
-}
-
 navi_obj navi_make_empty_pair(void)
 {
-	return make_object(NAVI_PAIR, sizeof(struct navi_pair));
+	return slab_make_object(pair_cache, NAVI_PAIR);
+}
+
+navi_obj navi_make_pair(navi_obj car, navi_obj cdr)
+{
+	navi_obj obj = navi_make_empty_pair();
+	navi_set_car(obj, car);
+	navi_set_cdr(obj, cdr);
+	return obj;
 }
 
 navi_obj navi_make_port(
@@ -807,7 +828,7 @@ static void do_gc_collect(void)
 {
 	gc_mark();
 	gc_sweep();
-	gc_stats.threshold = gc_stats.bytes * 2;
+	gc_stats.threshold = gc_stats.bytes * 4;
 }
 
 void navi_gc_collect(void)

@@ -8,22 +8,22 @@
 #ifndef _NAVI_SLAB_H_
 #define _NAVI_SLAB_H_
 
-struct slab {
-	NAVI_LIST_ENTRY(slab) link;
-	NAVI_SLIST_HEAD(slab_head, navi_object) free;
-	unsigned int in_use;
-	unsigned long mem[];
+enum {
+	NAVI_SLAB_DOUBLY_LINKED,
 };
+
+struct slab;
 
 struct slab_cache {
 	NAVI_LIST_HEAD(sc_full, slab) full;
 	NAVI_LIST_HEAD(sc_partial, slab) partial;
 	NAVI_LIST_HEAD(sc_empty, slab) empty;
+	unsigned int flags;
 	unsigned int objs_per_slab;
 	size_t obj_size;
 };
 
-struct slab_cache *navi_slab_cache_create(size_t size);
+struct slab_cache *navi_slab_cache_create(size_t size, unsigned int flags);
 void *navi_slab_alloc(struct slab_cache *cache);
 void navi_slab_free(struct slab_cache *cache, void *mem);
 

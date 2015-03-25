@@ -14,6 +14,7 @@ static NAVI_SLIST_HEAD(heap, navi_object) heap = NAVI_SLIST_HEAD_INITIALIZER(hea
 static NAVI_LIST_HEAD(sym_bucket, navi_symbol) symbol_table[SYMTAB_SIZE];
 
 static struct slab_cache *pair_cache = NULL;
+static struct slab_cache *guard_cache = NULL;
 
 navi_obj navi_sym_begin;
 navi_obj navi_sym_quote;
@@ -209,7 +210,8 @@ static void symbol_table_init(void)
 
 void navi_init(void)
 {
-	pair_cache = navi_slab_cache_create(sizeof(struct navi_object) + sizeof(struct navi_pair));
+	pair_cache = navi_slab_cache_create(sizeof(struct navi_object) + sizeof(struct navi_pair), 0);
+	guard_cache = navi_slab_cache_create(sizeof(struct navi_guard), NAVI_SLAB_DOUBLY_LINKED);
 	symbol_table_init();
 	navi_internal_init();
 }
@@ -680,7 +682,7 @@ __hot struct navi_guard *navi_gc_guard(navi_obj obj, navi_env env)
 	if (navi_is_immediate(obj))
 		return NULL;
 
-	struct navi_guard *guard = navi_critical_malloc(sizeof(struct navi_guard));
+	struct navi_guard *guard = navi_slab_alloc(guard_cache);
 	guard->obj = obj;
 	NAVI_LIST_INSERT_HEAD(&env.lexical->guards, guard, link);
 	return guard;
@@ -690,7 +692,7 @@ __hot void navi_gc_unguard(struct navi_guard *guard)
 {
 	if (guard) {
 		NAVI_LIST_REMOVE(guard, link);
-		free(guard);
+		navi_slab_free(guard_cache, guard);
 	}
 }
 

@@ -14,6 +14,7 @@ static NAVI_SLIST_HEAD(heap, navi_object) heap = NAVI_SLIST_HEAD_INITIALIZER(hea
 static NAVI_LIST_HEAD(sym_bucket, navi_symbol) symbol_table[SYMTAB_SIZE];
 
 static struct slab_cache *pair_cache = NULL;
+static struct slab_cache *thunk_cache = NULL;
 static struct slab_cache *guard_cache = NULL;
 static struct slab_cache *binding_cache = NULL;
 
@@ -142,7 +143,8 @@ static __hot void navi_free(struct navi_object *obj)
 	case NAVI_THUNK:
 	case NAVI_BOUNCE:
 		navi_env_unref(navi_thunk(to_obj(obj))->env);
-		break;
+		navi_slab_free(thunk_cache, obj);
+		return;
 	case NAVI_ENVIRONMENT:
 		navi_env_unref(navi_environment(to_obj(obj)));
 		break;
@@ -213,6 +215,8 @@ void navi_init(void)
 {
 	pair_cache = navi_slab_cache_create(
 		sizeof(struct navi_object) + sizeof(struct navi_pair), 0);
+	thunk_cache = navi_slab_cache_create(
+		sizeof(struct navi_object) + sizeof(struct navi_thunk), 0);
 	guard_cache = navi_slab_cache_create(
 		sizeof(struct navi_guard), NAVI_SLAB_DOUBLY_LINKED);
 	binding_cache = navi_slab_cache_create(
@@ -317,7 +321,6 @@ navi_obj navi_make_symbol(const char *str)
 	return navi_is_void(symbol) ? new_symbol(str, hashcode) : symbol;
 }
 
-#define SLOW
 struct navi_binding *navi_make_binding(navi_obj symbol, navi_obj object)
 {
 	struct navi_binding *binding = navi_slab_alloc(binding_cache);
@@ -490,7 +493,7 @@ navi_obj navi_capture_env(navi_env env)
 
 navi_obj navi_make_thunk(navi_obj expr, navi_env env)
 {
-	navi_obj obj = make_object(NAVI_THUNK, sizeof(struct navi_thunk));
+	navi_obj obj = slab_make_object(thunk_cache, NAVI_THUNK);
 	struct navi_thunk *thunk = navi_thunk(obj);
 	thunk->expr = expr;
 	thunk->env = env;

@@ -15,6 +15,7 @@ static NAVI_LIST_HEAD(sym_bucket, navi_symbol) symbol_table[SYMTAB_SIZE];
 
 static struct slab_cache *pair_cache = NULL;
 static struct slab_cache *guard_cache = NULL;
+static struct slab_cache *binding_cache = NULL;
 
 navi_obj navi_sym_begin;
 navi_obj navi_sym_quote;
@@ -210,8 +211,12 @@ static void symbol_table_init(void)
 
 void navi_init(void)
 {
-	pair_cache = navi_slab_cache_create(sizeof(struct navi_object) + sizeof(struct navi_pair), 0);
-	guard_cache = navi_slab_cache_create(sizeof(struct navi_guard), NAVI_SLAB_DOUBLY_LINKED);
+	pair_cache = navi_slab_cache_create(
+		sizeof(struct navi_object) + sizeof(struct navi_pair), 0);
+	guard_cache = navi_slab_cache_create(
+		sizeof(struct navi_guard), NAVI_SLAB_DOUBLY_LINKED);
+	binding_cache = navi_slab_cache_create(
+		sizeof(struct navi_binding), NAVI_SLAB_DOUBLY_LINKED);
 	symbol_table_init();
 	navi_internal_init();
 }
@@ -310,6 +315,28 @@ navi_obj navi_make_symbol(const char *str)
 	navi_obj symbol = symbol_lookup(str, hashcode);
 
 	return navi_is_void(symbol) ? new_symbol(str, hashcode) : symbol;
+}
+
+#define SLOW
+struct navi_binding *navi_make_binding(navi_obj symbol, navi_obj object)
+{
+	struct navi_binding *binding = navi_slab_alloc(binding_cache);
+	binding->symbol = symbol;
+	binding->object = object;
+	return binding;
+}
+
+void navi_scope_free(struct navi_scope *scope)
+{
+	struct navi_binding *binding, *n;
+	NAVI_LIST_REMOVE(scope, link);
+	navi_scope_for_each_safe(binding, n, scope) {
+		NAVI_LIST_REMOVE(binding, link);
+		navi_slab_free(binding_cache, binding);
+	}
+	if (scope->next != NULL)
+		_navi_scope_unref(scope->next);
+	free(scope);
 }
 
 navi_obj navi_cstr_to_string(const char *cstr)

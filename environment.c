@@ -21,14 +21,6 @@ static struct navi_bucket *get_bucket(struct navi_scope *scope,
 	return &scope->bindings[hashcode % NAVI_ENV_HT_SIZE];
 }
 
-static struct navi_binding *make_binding(navi_obj symbol, navi_obj object)
-{
-	struct navi_binding *binding = navi_critical_malloc(sizeof(struct navi_binding));
-	binding->symbol = symbol;
-	binding->object = object;
-	return binding;
-}
-
 static struct navi_binding *scope_lookup(struct navi_scope *scope,
 		navi_obj symbol, unsigned long hashcode)
 {
@@ -107,7 +99,7 @@ void env_set(navi_env env, navi_obj symbol, navi_obj object)
 
 	/* FIXME: hash() already computed in navi_env_binding */
 	head = get_bucket(env.lexical, ptr_hash(symbol));
-	binding = make_binding(symbol, object);
+	binding = navi_make_binding(symbol, object);
 	NAVI_LIST_INSERT_HEAD(head, binding, link);
 }
 
@@ -121,7 +113,7 @@ void navi_scope_set(struct navi_scope *env, navi_obj symbol, navi_obj object)
 		return;
 	}
 
-	binding = make_binding(symbol, object);
+	binding = navi_make_binding(symbol, object);
 	NAVI_LIST_INSERT_HEAD(get_bucket(env, hashcode), binding, link);
 }
 
@@ -197,19 +189,6 @@ static navi_env new_lexical_environment(navi_env env)
 		.lexical = navi_make_scope(),
 		.dynamic = _navi_scope_ref(env.dynamic)
 	};
-}
-
-void navi_scope_free(struct navi_scope *scope)
-{
-	struct navi_binding *binding, *n;
-	NAVI_LIST_REMOVE(scope, link);
-	navi_scope_for_each_safe(binding, n, scope) {
-		NAVI_LIST_REMOVE(binding, link);
-		free(binding);
-	}
-	if (scope->next != NULL)
-		_navi_scope_unref(scope->next);
-	free(scope);
 }
 
 static struct navi_scope *get_global_scope(struct navi_scope *s)

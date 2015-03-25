@@ -155,7 +155,7 @@ struct navi_object {
 	enum navi_type type;
 	uint16_t flags;
 	_Alignas(sizeof(int)) unsigned char data[];
-} __attribute__((packed));
+};
 
 struct navi_binding {
 	NAVI_LIST_ENTRY(navi_binding) link;
@@ -332,6 +332,7 @@ static inline __const navi_obj navi_caddddr(navi_obj obj)
 navi_obj navi_from_spec(const struct navi_spec *spec, navi_env env);
 void navi_string_grow_storage(struct navi_string *str, long need);
 navi_obj navi_make_uninterned(const char *str);
+struct navi_binding *navi_make_binding(navi_obj symbol, navi_obj object);
 navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_env env);
 navi_obj navi_make_lambda(navi_obj args, navi_obj body, navi_env env);
 navi_obj navi_make_thunk(navi_obj expr, navi_env env);

@@ -8,6 +8,8 @@
 #ifndef _NAVI_SLAB_H_
 #define _NAVI_SLAB_H_
 
+#include "rbtree.h"
+
 enum {
 	NAVI_SLAB_DOUBLY_LINKED,
 };
@@ -15,9 +17,9 @@ enum {
 struct slab;
 
 struct slab_cache {
-	NAVI_LIST_HEAD(sc_full, slab) full;
-	NAVI_LIST_HEAD(sc_partial, slab) partial;
-	NAVI_LIST_HEAD(sc_empty, slab) empty;
+	struct rb_tree full;
+	struct rb_tree partial;
+	struct rb_tree empty;
 	unsigned int flags;
 	unsigned int objs_per_slab;
 	size_t obj_size;

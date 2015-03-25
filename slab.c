@@ -21,6 +21,8 @@
 #define SLAB_DESC_SIZE offsetof(struct slab, mem)
 #define SLAB_MEM_SIZE (SLAB_SIZE - SLAB_DESC_SIZE)
 
+#define slab_entry(n) rb_entry(n, struct slab, node)
+
 /*
  * Some objects that use the slab allocator have NAVI_SLIST_ENTRYs, while
  * other's have NAVI_LIST_ENTRYs -- but all of them have their link(s)
@@ -42,7 +44,7 @@ struct slab_list_entry {
 };
 
 struct slab {
-	NAVI_LIST_ENTRY(slab) link;
+	struct rb_node node;
 	union {
 		NAVI_SLIST_HEAD(slab_slist_head, slab_slist_entry) free;
 		NAVI_LIST_HEAD(slab_list_head, slab_list_entry) _free;
@@ -55,9 +57,9 @@ struct slab_cache *navi_slab_cache_create(size_t size, unsigned int flags)
 {
 	struct slab_cache *cache = navi_critical_malloc(sizeof(struct slab_cache));
 
-	NAVI_LIST_INIT(&cache->full);
-	NAVI_LIST_INIT(&cache->partial);
-	NAVI_LIST_INIT(&cache->empty);
+	cache->full    = (struct rb_tree) RB_ROOT_INIT;
+	cache->partial = (struct rb_tree) RB_ROOT_INIT;
+	cache->empty   = (struct rb_tree) RB_ROOT_INIT;
 
 	cache->flags = flags;
 	cache->obj_size = (size < 16) ? 16 : size;
@@ -103,20 +105,42 @@ static struct slab *new_slab(struct slab_cache *cache)
 	return slab;
 }
 
+static void slab_insert(struct rb_tree *tree, struct slab *slab)
+{
+	struct slab *ptr;
+	struct rb_node **p = rb_root_link(tree);
+	struct rb_node *parent = rb_root_parent(tree);
+
+	while (*p) {
+		parent = *p;
+		ptr = rb_entry(parent, struct slab, node);
+
+		if (slab < ptr)
+			p = &(*p)->left;
+		else
+			p = &(*p)->right;
+	}
+
+	navi_rb_insert(&slab->node, parent, p);
+}
+
+static inline void slab_remove(struct slab *slab)
+{
+	navi_rb_remove(&slab->node);
+}
+
 static struct slab *get_slab(struct slab_cache *cache)
 {
 	struct slab *slab;
-
-	if (NAVI_LIST_EMPTY(&cache->partial) && NAVI_LIST_EMPTY(&cache->empty)) {
+	if (rb_empty(&cache->partial) && rb_empty(&cache->empty)) {
 		slab = new_slab(cache);
-		NAVI_LIST_INSERT_HEAD(&cache->partial, slab, link);
+		slab_insert(&cache->partial, slab);
 		return slab;
 	}
 
-	if (NAVI_LIST_EMPTY(&cache->partial))
-		return NAVI_LIST_FIRST(&cache->empty);
-
-	return NAVI_LIST_FIRST(&cache->partial);
+	if (rb_empty(&cache->partial))
+		return slab_entry(rb_root(&cache->empty));
+	return slab_entry(rb_root(&cache->partial));
 }
 
 static void *slab_pop(struct slab_cache *cache, struct slab *slab)
@@ -138,34 +162,42 @@ __hot void *navi_slab_alloc(struct slab_cache *cache)
 
 	// move slab to full/partial list, as appropriate
 	if (++slab->in_use == cache->objs_per_slab) {
-		NAVI_LIST_REMOVE(slab, link);
-		NAVI_LIST_INSERT_HEAD(&cache->full, slab, link);
+		slab_remove(slab);
+		slab_insert(&cache->full, slab);
 	} else if (slab->in_use == 1) {
-		NAVI_LIST_REMOVE(slab, link);
-		NAVI_LIST_INSERT_HEAD(&cache->partial, slab, link);
+		slab_remove(slab);
+		slab_insert(&cache->partial, slab);
 	}
 	return obj;
 }
 
-static inline __const void *slab_end(struct slab_cache *cache, struct slab *slab)
+static inline __const void *slab_end(struct slab *slab)
 {
 	return (void*) ((uintptr_t)slab->mem + SLAB_MEM_SIZE);
 }
 
-/*
- * TODO: Use trees for full/partial/empty lists for logarithmic lookup time.
- */
-static __hot __const struct slab *find_slab(struct slab_cache *cache, void *mem)
+static __hot struct slab *_find_slab(struct rb_tree *tree, void *mem)
+{
+	struct rb_node *n = rb_root(tree);
+	while (n) {
+		struct slab *slab = slab_entry(n);
+		if (mem < (void*)slab)
+			n = n->left;
+		else if (mem >= slab_end(slab))
+			n = n->right;
+		else
+			return slab;
+	}
+	return NULL;
+}
+
+static __hot struct slab *find_slab(struct slab_cache *cache, void *mem)
 {
 	struct slab *slab;
-	NAVI_LIST_FOREACH(slab, &cache->full, link) {
-		if (mem >= (void*)slab->mem && mem < slab_end(cache, slab))
-			return slab;
-	}
-	NAVI_LIST_FOREACH(slab, &cache->partial, link) {
-		if (mem >= (void*)slab->mem && mem < slab_end(cache, slab))
-			return slab;
-	}
+	if ((slab = _find_slab(&cache->full, mem)))
+		return slab;
+	if ((slab = _find_slab(&cache->partial, mem)))
+		return slab;
 	return NULL;
 }
 
@@ -185,11 +217,11 @@ void __hot navi_slab_free(struct slab_cache *cache, void *mem)
 
 	// update slab status within cache
 	if (--slab->in_use == 0) {
-		NAVI_LIST_REMOVE(slab, link);
-		NAVI_LIST_INSERT_HEAD(&cache->empty, slab, link);
+		slab_remove(slab);
+		slab_insert(&cache->empty, slab);
 	} else if (slab->in_use + 1 == cache->objs_per_slab) {
-		NAVI_LIST_REMOVE(slab, link);
-		NAVI_LIST_INSERT_HEAD(&cache->partial, slab, link);
+		slab_remove(slab);
+		slab_insert(&cache->partial, slab);
 	}
 }
 

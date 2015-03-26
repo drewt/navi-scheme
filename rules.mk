@@ -32,6 +32,9 @@ distclean: clean
 %.o: %.c
 	$(call cmd,cc)
 
+%.s: %.c
+	$(call cmd,ccs)
+
 %.o: %.S
 	$(call cmd,ccas)
 
@@ -41,6 +44,9 @@ distclean: clean
 # CC for program object files (.o)
 quiet_cmd_cc      = CC      $@
       cmd_cc      = $(CC) -c $(CPPFLAGS) $(ALLCFLAGS) $(1) -o $@ $<
+
+quiet_cmd_ccs     = CC -S   $@
+      cmd_ccs     = $(CC) -S $(CPPFLAGS) $(ALLCFLAGS) $(1) -o $@ $<
 
 # create archive
 quiet_cmd_ar      = AR      $@

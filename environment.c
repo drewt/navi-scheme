@@ -1111,7 +1111,7 @@ DEFUN(env_list, "env-list", 0, 0)
 	struct navi_guard *guard;
 	struct navi_binding *bind;
 	NAVI_LIST_FOREACH(it, &active_environments, link) {
-		printf("Scope <%p>:\n", (void*)it);
+		printf("Scope <%p> (%u refs):\n", (void*)it, it->refs);
 		NAVI_LIST_FOREACH(guard, &it->guards, link) {
 			printf("\tguarded: ");
 			navi_display(guard->obj, scm_env);
@@ -1134,5 +1134,21 @@ DEFUN(env_count, "env-count", 0, 0)
 		i++;
 	}
 	printf("nr active environments = %u\n", i);
+	return navi_unspecified();
+}
+
+DEFUN(env_show, "env-show", 0, 0)
+{
+	int total = 0;
+	struct navi_scope *head, *it;
+	NAVI_LIST_FOREACH(head, &active_environments, link) {
+		printf("<%p/%u> ", (void*)head, head->refs);
+		for (it = head->next; it; it = it->next) {
+			printf("-> <%p/%u> ", (void*)it, it->refs);
+		}
+		putchar('\n');
+		total++;
+	}
+	printf("Total: %d environments\n", total);
 	return navi_unspecified();
 }

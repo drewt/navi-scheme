@@ -224,6 +224,7 @@ DECLARE(string_to_utf8);
 
 DECLARE(env_list);
 DECLARE(env_count);
+DECLARE(env_show);
 DECLARE(gc_collect);
 DECLARE(gc_count);
 DECLARE(gc_stats);

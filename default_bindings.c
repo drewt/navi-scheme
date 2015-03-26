@@ -258,6 +258,7 @@ static const struct navi_spec *builtin_objects[] = {
 	DECL_SPEC(gensym),
 	DECL_SPEC(env_list),
 	DECL_SPEC(env_count),
+	DECL_SPEC(env_show),
 	DECL_SPEC(gc_collect),
 	DECL_SPEC(gc_count),
 	DECL_SPEC(gc_stats),

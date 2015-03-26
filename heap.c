@@ -145,6 +145,9 @@ static __hot void navi_free(struct navi_object *obj)
 		navi_env_unref(navi_thunk(to_obj(obj))->env);
 		navi_slab_free(thunk_cache, obj);
 		return;
+	case NAVI_PROCEDURE:
+		_navi_scope_unref(navi_procedure(to_obj(obj))->env);
+		break;
 	case NAVI_ENVIRONMENT:
 		navi_env_unref(navi_environment(to_obj(obj)));
 		break;
@@ -460,13 +463,12 @@ navi_obj navi_make_procedure(navi_obj args, navi_obj body, navi_obj name, navi_e
 	proc->name = name;
 	proc->args = args;
 	proc->body = body;
-	proc->env = env.lexical;
+	proc->env = _navi_scope_ref(env.lexical);
 	proc->arity = count_pairs(args);
 	proc->flags = 0;
 	proc->types = NULL;
 	if (!navi_is_proper_list(args))
 		proc->flags |= NAVI_PROC_VARIADIC;
-	navi_env_ref(env);
 	return obj;
 }
 
@@ -508,7 +510,7 @@ static navi_obj proc_from_spec(const struct navi_spec *spec, navi_env env)
 	memcpy(proc, &spec->proc, sizeof(*proc));
 	proc->name = navi_make_symbol(spec->ident);
 	proc->args = navi_make_symbol("scm_args");
-	proc->env = env.lexical;
+	proc->env = _navi_scope_ref(env.lexical);
 	return obj;
 }
 

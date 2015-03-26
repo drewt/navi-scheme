@@ -44,6 +44,8 @@ distclean   = config.h config.log config.status makefile $(distname).tar.gz
 
 all: $(binary)
 
+$(libobjects): config.h compiler.h internal.h
+
 include rules.mk
 
 $(static_lib): $(libobjects)
